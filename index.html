@@ -86,6 +86,7 @@ main{max-width:980px;margin:0 auto;padding:20px 18px 50px}
 @keyframes pjump{from{transform:translateY(0) rotate(-6deg)}to{transform:translateY(-16px) rotate(6deg)}}
 .pcheer{font-family:Fredoka;font-weight:700;font-size:clamp(34px,7vw,56px);color:var(--aa);margin-top:6px}
 .pstreak{font-family:Fredoka;font-size:24px;color:var(--aa2);margin-top:4px}
+.pclap{font-size:44px;margin-top:4px;animation:pclap .3s ease-in-out infinite alternate}@keyframes pclap{to{transform:scale(1.18) rotate(-6deg)}}
 .pstar{display:inline-block;margin-top:12px;background:var(--honey);color:var(--ink);font-family:Fredoka;font-size:26px;padding:6px 18px;border-radius:999px;animation:pjump .5s ease-in-out infinite alternate}
 .stars.pop{animation:spop .6s ease}@keyframes spop{40%{transform:scale(1.4);background:var(--honey);color:var(--ink)}}
 @media (prefers-reduced-motion:reduce){.party .cf,.pemo,.pstar{animation:none}.party .cf{display:none}}
@@ -169,7 +170,7 @@ const HAS_SPEECH=('speechSynthesis' in window)&&('SpeechSynthesisUtterance' in w
 const BADV=/^(Eddy|Flo|Grandma|Grandpa|Reed|Rocko|Sandy|Shelley|Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Good News|Jester|Organ|Pipe Organ|Superstar|Trinoids|Whisper|Wobble|Zarvox|Fred|Junior|Ralph|Kathy|Princess|Deranged|Hysterical|Agnes|Bruce|Vicki|Victoria)\b/i;
 const VKEY='aa-sbee-voice';
 function vScore(x){if(!x||BADV.test(x.name))return -1;const l=x.lang||'';let s;
- if(/en[-_]GB/i.test(l))s=30;else if(/en[-_](AU|IE|NZ|ZA)/i.test(l))s=20;else if(/en[-_]US/i.test(l))s=15;else if(/^en/i.test(l))s=10;else return -1;
+ if(/en[-_]GB/i.test(l))s=30;else return -1; /* UK English voices only */
  const n=x.name;if(/Premium/i.test(n))s+=25;if(/Enhanced|Neural|Natural|Online/i.test(n))s+=20;
  if(/Google UK English Female/i.test(n))s+=22;else if(/Google UK English/i.test(n))s+=16;
  if(/Microsoft (Libby|Sonia|Maisie|Ryan|Thomas|Hazel)/i.test(n))s+=24;
@@ -188,7 +189,7 @@ function say(t,el){if(!t)return;
  try{const s=window.speechSynthesis;
   if(s.speaking||s.pending)s.cancel();
   if(!voice)pv();
-  const u=new SpeechSynthesisUtterance(t);u.lang=voice?voice.lang:'en-GB';u.rate=0.9;u.pitch=1;u.volume=1;if(voice){try{u.voice=voice}catch(e){}}
+  const u=new SpeechSynthesisUtterance(t);u.lang='en-GB';u.rate=0.9;u.pitch=1;u.volume=1;if(voice){try{u.voice=voice}catch(e){}}
   lastU=u;s.resume();s.speak(u);
  }catch(e){note('Sound didn’t play — check the volume is turned up.')}}
 let noteT;function note(m){let n=document.getElementById('note');if(!n){n=document.createElement('div');n.id='note';n.style.cssText='position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1F2A44;color:#fff;padding:12px 18px;border-radius:14px;font-weight:800;z-index:20;max-width:90vw;text-align:center';document.body.appendChild(n)}n.textContent=m;n.style.display='block';clearTimeout(noteT);noteT=setTimeout(()=>n.style.display='none',3500)}
@@ -200,17 +201,26 @@ let AC=null,STREAK=0;
 function ac(){try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();return AC}catch(e){return null}}
 function tone(f,t,d,type,vol){const a=ac();if(!a)return;const o=a.createOscillator(),g=a.createGain();o.type=type||'triangle';o.frequency.setValueAtTime(f,a.currentTime+t);g.gain.setValueAtTime(0.0001,a.currentTime+t);g.gain.exponentialRampToValueAtTime(vol||0.22,a.currentTime+t+0.02);g.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+t+d);o.connect(g);g.connect(a.destination);o.start(a.currentTime+t);o.stop(a.currentTime+t+d+0.05)}
 function happySound(big){[523.25,659.25,783.99,1046.5].forEach((f,i)=>tone(f,i*0.09,0.35));tone(1318.5,0.4,0.5,'sine',0.12);if(big){[783.99,1046.5,1318.5,1567.98].forEach((f,i)=>tone(f,0.75+i*0.08,0.4))}}
+let NOISE=null;
+function clapSound(){const a=ac();if(!a)return;
+ if(!NOISE){const len=Math.floor(a.sampleRate*0.12);NOISE=a.createBuffer(1,len,a.sampleRate);const d=NOISE.getChannelData(0);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2)}
+ const out=a.createGain();out.gain.value=0.9;out.connect(a.destination);const now=a.currentTime+0.05;
+ const claps=[];for(let c=0;c<4;c++){let t=Math.random()*0.08;while(t<1.7){claps.push(t);t+=0.17+Math.random()*0.07}}
+ claps.forEach(t=>{const src=a.createBufferSource();src.buffer=NOISE;const bp=a.createBiquadFilter();bp.type='bandpass';bp.frequency.value=900+Math.random()*1400;bp.Q.value=0.9;
+  const g=a.createGain();const fade=t>1.2?(1.7-t)/0.5:1;const peak=(0.35+Math.random()*0.25)*fade;
+  g.gain.setValueAtTime(0.0001,now+t);g.gain.exponentialRampToValueAtTime(Math.max(peak,0.001),now+t+0.004);g.gain.exponentialRampToValueAtTime(0.0001,now+t+0.09);
+  src.connect(bp);bp.connect(g);g.connect(out);src.start(now+t);src.stop(now+t+0.12)})}
 function gentleSound(){tone(392,0,0.25,'sine',0.12);tone(329.6,0.18,0.35,'sine',0.1)}
 const PARTY_EMO=['🐝','🌟','🎉','🦄','🏆','🥳','🍯','🚀','💛'];
-const CHEERS=['Buzz-tastic!','Bee-autiful!','Super speller!','You did it!','Brilliant!','Amazing!','High five! ✋','Spell-tacular!','Woohoo!','Star speller!'];
+const CHEERS=['Buzz-tastic!','Bee-autiful!','Super speller!','You did it!','Brilliant!','Amazing!','High five! ✋','Give yourself a clap!','Spell-tacular!','Woohoo!','Star speller!'];
 const STREAKS={3:'3 in a row! 🔥',5:'5 in a row! You’re on fire! 🔥🔥',8:'8 in a row! Spelling superstar! 🌟',10:'10 in a row! Champion bee! 🏆'};
-function celebrate(big){STREAK++;happySound(big);
+function celebrate(big){STREAK++;happySound(big);clapSound();
  const old=document.getElementById('party');if(old)old.remove();
  const cheer=pick(CHEERS),emo=pick(PARTY_EMO),streak=STREAKS[STREAK]||'';
  const d=document.createElement('div');d.id='party';d.className='party';
  let conf='';const cols=['#F5B700','#FFD54A','#F472B6','#60A5FA','#34D399','#A78BFA','#FB923C'];
  for(let i=0;i<46;i++){const isE=i%5===0;conf+=`<i class="cf" style="left:${Math.random()*100}vw;animation-delay:${(Math.random()*0.5).toFixed(2)}s;animation-duration:${(1.6+Math.random()*1.2).toFixed(2)}s;${isE?'':'background:'+cols[i%cols.length]+';'}">${isE?pick(['🐝','⭐','🌼','✨']):''}</i>`}
- d.innerHTML=`${conf}<div class="pcard"><div class="pemo">${emo}</div><div class="pcheer">${cheer}</div>${streak?`<div class="pstreak">${streak}</div>`:''}<div class="pstar">+1 ⭐</div></div>`;
+ d.innerHTML=`${conf}<div class="pcard"><div class="pemo">${emo}</div><div class="pcheer">${cheer}</div>${streak?`<div class="pstreak">${streak}</div>`:''}<div class="pclap">👏👏👏</div><div class="pstar">+1 ⭐</div></div>`;
  d.addEventListener('click',()=>d.remove());document.body.appendChild(d);
  setTimeout(()=>say(cheer.replace(/[^A-Za-z!'’ -]/g,'')),550);
  setTimeout(()=>{d.classList.add('out');setTimeout(()=>d.remove(),400)},big?3200:2100);
@@ -223,8 +233,8 @@ let V={screen:'home',team:null};
 function top(){return `<div class="top"><div style="width:40px;height:40px">${BEE}</div><div><div class="t">Spelling Bee</div><div class="s">Practice Zone</div></div><div class="stars">⭐ ${totalStars()}</div><button data-voice="1">🔊 Voice</button></div>`}
 function voicePanel(){pv();const g=goodVoices();const cur=voice&&voice.name;
  let m=document.getElementById('vmodal');if(!m){m=document.createElement('div');m.id='vmodal';document.body.appendChild(m)}
- m.innerHTML=`<div class="vback" data-vclose="1"><div class="vcard"><h2 style="font-size:26px">🔊 Choose a voice</h2><p class="muted" style="margin:6px 0 14px">Tap <b>Try</b> to listen, then pick the one that sounds nicest. It’s remembered on this device.</p>
- ${g.length?`<div class="vlist">${g.slice(0,12).map(x=>`<div class="vrow ${x.name===cur?'on':''}"><div><b>${esc(x.name)}</b><div class="muted" style="font-size:13px">${esc(x.lang)}</div></div><div class="row" style="gap:8px"><button class="w" data-vtry="${esc(x.name)}">▶ Try</button><button class="${x.name===cur?'g':'y'}" data-vpick="${esc(x.name)}">${x.name===cur?'✓ Chosen':'Choose'}</button></div></div>`).join('')}</div>`:`<p><b>No English voice was found on this device.</b></p>`}
+ m.innerHTML=`<div class="vback" data-vclose="1"><div class="vcard"><h2 style="font-size:26px">🔊 Choose a voice</h2><p class="muted" style="margin:6px 0 14px">All voices here speak <b>UK English</b>. Tap <b>Try</b> to listen, then pick the one that sounds nicest. It’s remembered on this device.</p>
+ ${g.length?`<div class="vlist">${g.slice(0,12).map(x=>`<div class="vrow ${x.name===cur?'on':''}"><div><b>${esc(x.name)}</b><div class="muted" style="font-size:13px">${esc(x.lang)}</div></div><div class="row" style="gap:8px"><button class="w" data-vtry="${esc(x.name)}">▶ Try</button><button class="${x.name===cur?'g':'y'}" data-vpick="${esc(x.name)}">${x.name===cur?'✓ Chosen':'Choose'}</button></div></div>`).join('')}</div>`:`<p><b>No UK English voice was found on this device.</b> Words will still be read in UK English if the device can. For the best sound, download a UK voice (see below).</p>`}
  <div class="tipbox" style="margin-top:14px;font-size:15px"><b>Want an even nicer voice?</b><br>On a Mac: System Settings → Accessibility → Spoken Content → System voice → Manage Voices → English (United Kingdom) → download <b>Daniel (Enhanced)</b> or <b>Kate (Enhanced)</b>.<br>On iPad/iPhone: Settings → Accessibility → Spoken Content → Voices → English → UK → download an Enhanced voice.<br>Then come back and choose it here.</div>
  <div class="row" style="margin-top:16px"><button class="w" data-vclose="1">Done</button></div></div></div>`}
 function render(){
@@ -338,7 +348,7 @@ document.addEventListener('click',e=>{
  if(d.k){const i=$('#ans');if(!i||i.disabled)return;i.value=d.k==='back'?i.value.slice(0,-1):i.value+d.k;if(LC)LC.val=i.value;if(TS)TS.val=i.value;return}
  if(d.lc){if(d.lc==='cover'){LC.step=2;LC.val='';render()}else if(d.lc==='check'){LC.val=readAns();if(!LC.val)return;LC.ok=same(LC.val,LC.w);award(V.team,LC.w,LC.ok);LC.step=3;render();if(LC.ok)celebrate();else oops()}else if(d.lc==='next'){newLC();render();setTimeout(()=>say(LC.w),200)}return}
  if(d.ts){if(d.ts==='check'){const v=readAns();if(!v)return;TS.val=v;const w=TS.list[TS.i];const ok=same(v,w);TS.fb=ok?'ok':'bad';if(ok)TS.score++;else TS.missed.push(w);award(V.team,w,ok);render();if(ok)celebrate();else oops()}
-  else if(d.ts==='next'){if(TS.i+1<TS.list.length){TS.i++;TS.val='';TS.fb=null;render();setTimeout(()=>sayWordSentence(TS.list[TS.i]),200)}else{V.screen='done';render();if(TS.score>=TS.list.length*0.7){burst();happySound(true)}}}
+  else if(d.ts==='next'){if(TS.i+1<TS.list.length){TS.i++;TS.val='';TS.fb=null;render();setTimeout(()=>sayWordSentence(TS.list[TS.i]),200)}else{V.screen='done';render();if(TS.score>=TS.list.length*0.7){burst();happySound(true);clapSound()}}}
   else if(d.ts==='again'){TS=null;V.screen='test';render();setTimeout(()=>sayWordSentence(TS.list[0]),250)}return}
  if(d.tile!==undefined){if(MS.fb||MS.fill.length>=MS.idxs.length)return;MS.fill.push(MS.tiles[+d.tile]);render();return}
  if(d.ms){if(d.ms==='undo'){MS.fill.pop();render()}else if(d.ms==='check'){const ok=MS.idxs.every((ix,k)=>MS.w[ix].toLowerCase()===MS.fill[k]);MS.fb=ok?'ok':'bad';award(V.team,MS.w,ok);render();if(ok)celebrate();else{oops();setTimeout(()=>say(MS.w),400)}}else{newMiss();render();setTimeout(()=>sayWord(MS.w),200)}return}
