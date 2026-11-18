@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spelling Bee</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--aa:#1B3A6B;--aa2:#D62839;--honey:#F5B700;--honey2:#FFD54A;--honeyL:#FFF3C4;--ink:#1F2A44;--ink2:#46506B;--bg:#FFFBEF;--line:#F1E7C8;--ok:#1E9E5A;--okL:#E3F6EA;--bad:#D64545;--badL:#FDE8E8}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Nunito,system-ui,sans-serif;font-size:17px}
+h1,h2,h3,.f{font-family:Fredoka,Nunito,sans-serif;font-weight:600;margin:0}
+button{font-family:Fredoka,Nunito,sans-serif;font-weight:600;font-size:19px;border:0;border-radius:18px;padding:13px 22px;cursor:pointer;background:var(--aa);color:#fff;box-shadow:0 5px 0 rgba(0,0,0,.18);transition:transform .06s}
+button:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.18)}
+button.y{background:var(--honey);color:var(--ink)}button.w{background:#fff;color:var(--aa);border:2px solid var(--line)}button.r{background:var(--aa2)}button.g{background:var(--ok)}
+button:disabled{opacity:.45}
+.top{background:var(--aa);color:#fff;padding:12px 18px;display:flex;align-items:center;gap:12px}
+.top .t{font-family:Fredoka;font-size:20px}.top .s{font-size:13px;opacity:.75}
+.top .stars{margin-left:auto;background:rgba(255,255,255,.14);padding:7px 14px;border-radius:999px;font-family:Fredoka;font-size:18px}
+.top button{font-size:15px;padding:8px 14px;border-radius:12px;box-shadow:none;background:rgba(255,255,255,.15)}
+main{max-width:980px;margin:0 auto;padding:20px 18px 50px}
+.hero{position:relative;overflow:hidden;background:var(--aa);color:#fff;text-align:center;padding:34px 20px 54px;border-radius:0 0 38px 38px}
+.hero h1{font-size:clamp(40px,8vw,80px);color:var(--honey2);line-height:1;text-shadow:0 5px 0 rgba(0,0,0,.18)}
+.hero h1 small{display:block;font-size:.45em;color:#fff;margin-bottom:6px}
+.hero p{font-family:Fredoka;font-size:clamp(18px,3vw,26px);margin:12px 0 0}
+.combs{position:absolute;inset:0;opacity:.13;pointer-events:none}
+.flybee{position:absolute;width:76px;height:76px;animation:fly 10s ease-in-out infinite}
+@keyframes fly{0%{left:5%;top:60%}25%{left:35%;top:8%;transform:rotate(8deg)}50%{left:84%;top:35%;transform:scaleX(-1)}75%{left:58%;top:70%;transform:scaleX(-1) rotate(6deg)}100%{left:5%;top:60%}}
+.wing{animation:flap .18s ease-in-out infinite alternate;transform-origin:center bottom}@keyframes flap{to{transform:scaleY(.55)}}
+.h2{text-align:center;font-size:clamp(26px,4vw,36px);margin:28px 0 16px}
+.teams{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.team{border-radius:28px;padding:22px 16px;text-align:center;cursor:pointer;border:4px solid transparent;transition:transform .12s;background:#fff}
+.team:hover{transform:translateY(-4px) rotate(-1deg)}
+.team .e{font-size:62px;line-height:1}.team h3{font-size:25px;margin-top:8px}.team .gr{font-weight:800;opacity:.7}
+.buz{background:#FFE8F1;border-color:#F9A8D4}.hon{background:#FFF4CC;border-color:#FFD54A}.bum{background:#E0ECFF;border-color:#93C5FD}.cha{background:#EFE7FF;border-color:#C4B5FD}
+.acts{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.act{background:#fff;border-radius:26px;padding:22px;text-align:center;border:3px solid var(--line);cursor:pointer;transition:transform .12s}
+.act:hover{transform:translateY(-4px)}
+.act .e{font-size:54px}.act h3{font-size:24px;margin:6px 0}.act p{margin:0;color:var(--ink2);font-size:15.5px}
+.panel{background:#fff;border-radius:28px;padding:24px;border:3px solid var(--line);text-align:center}
+.big{font-family:Fredoka;font-size:clamp(40px,9vw,72px);letter-spacing:.03em;margin:10px 0;word-break:break-word}
+.hear{font-size:24px;padding:18px 30px;border-radius:999px}
+.ans{font-family:Fredoka;font-size:clamp(28px,6vw,42px);text-align:center;letter-spacing:.08em;width:100%;max-width:520px;padding:12px 16px;border:4px solid var(--honey);border-radius:20px;background:var(--honeyL);color:var(--ink);outline:none}
+.kb{display:flex;flex-direction:column;gap:7px;align-items:center;margin-top:16px}
+.kb .r{display:flex;gap:6px;justify-content:center;flex-wrap:nowrap}
+.kb button{width:clamp(28px,8vw,52px);height:clamp(40px,10vw,56px);padding:0;font-size:clamp(17px,4vw,24px);border-radius:12px;background:#fff;color:var(--ink);border:2px solid var(--line);box-shadow:0 3px 0 var(--line)}
+.kb button.wide{width:auto;padding:0 16px;background:var(--honeyL)}
+.fb{font-family:Fredoka;font-size:26px;padding:14px;border-radius:20px;margin-top:14px}
+.fb.ok{background:var(--okL);color:#166534}.fb.bad{background:var(--badL);color:#991B1B}
+.prog{height:16px;background:#F3EBD2;border-radius:99px;overflow:hidden;margin:6px 0 16px}.prog i{display:block;height:100%;background:var(--honey);border-radius:99px;transition:width .3s}
+.row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;align-items:center}
+.muted{color:var(--ink2)}
+.blanks{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:18px 0}
+.blanks span{font-family:Fredoka;font-size:clamp(30px,7vw,52px);min-width:clamp(32px,7vw,54px);padding:4px 6px;border-bottom:5px solid var(--ink);text-align:center}
+.blanks span.gap{border-color:var(--honey);color:var(--aa2);background:var(--honeyL);border-radius:10px 10px 0 0}
+.tiles{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.tiles button{width:64px;height:64px;padding:0;font-size:30px;background:var(--honey);color:var(--ink)}
+.wordgrid{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));margin-top:16px}
+.wc{background:#fff;border:3px solid var(--line);border-radius:18px;padding:12px;font-family:Fredoka;font-size:21px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
+.wc.m{border-color:#A7E3BF;background:var(--okL)}
+.back{background:#fff;color:var(--aa);border:2px solid var(--line);font-size:16px;padding:9px 16px;box-shadow:none}
+.steps{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:10px}
+.steps span{padding:6px 14px;border-radius:99px;background:#F1ECDD;font-weight:800;font-size:14px}.steps span.on{background:var(--honey)}
+.result .e{font-size:80px}
+.burst{position:fixed;inset:0;pointer-events:none;z-index:9;overflow:hidden}
+.burst i{position:absolute;top:-40px;font-style:normal;font-size:30px;animation:fall 2.4s linear forwards}
+@keyframes fall{to{transform:translateY(110vh) rotate(360deg)}}
+.tipbox{margin-top:22px;background:#fff;border-left:8px solid var(--honey);border-radius:18px;padding:14px 18px;text-align:left}
+.sitenav{position:sticky;top:0;z-index:5;display:flex;gap:6px;justify-content:center;flex-wrap:wrap;padding:10px;background:rgba(255,251,239,.94);backdrop-filter:blur(6px);border-bottom:2px solid var(--line)}
+.sitenav button{font-size:16px;padding:8px 16px;border-radius:999px;background:#fff;color:var(--aa);border:2px solid var(--line);box-shadow:none}
+.sitenav button:hover{background:var(--honeyL)}
+.sec2{scroll-margin-top:70px;margin-top:10px}
+.about{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.aboutcard{background:#fff;border-radius:24px;padding:18px;border:3px solid var(--line);text-align:center}
+.aboutcard .e{font-size:44px}.aboutcard b{font-family:Fredoka;font-size:21px;color:var(--aa)}.aboutcard p{margin:6px 0 0;color:var(--ink2);font-size:15.5px}
+.lead2{text-align:center;font-size:18px;margin:18px auto 0;max-width:640px;font-weight:700}
+.countbox{background:var(--aa);color:#fff;border-radius:24px;padding:16px 22px;display:flex;gap:16px;align-items:center;justify-content:center;flex-wrap:wrap;margin-bottom:16px;font-size:18px}
+.countbox .n{font-family:Fredoka;font-size:52px;color:var(--honey2);line-height:1}
+.dates{display:grid;gap:10px}
+.date{display:grid;grid-template-columns:150px 1fr;gap:14px;align-items:center;background:#fff;border-radius:20px;padding:14px 18px;border:3px solid var(--line)}
+.date .when{font-family:Fredoka;font-size:19px;color:var(--aa2)}.date b{font-family:Fredoka;font-size:20px}.date p{margin:3px 0 0;color:var(--ink2);font-size:15.5px}
+.date.final{border-color:var(--honey);background:var(--honeyL)}
+.rules{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.rule{background:#fff;border-radius:18px;padding:14px 16px;border:3px solid var(--line);display:flex;gap:12px;align-items:center;font-size:16px}
+.rule span{flex:none;width:38px;height:38px;border-radius:12px;background:var(--honey);display:grid;place-items:center;font-family:Fredoka;font-size:19px}
+.foot{text-align:center;margin-top:36px;padding:22px;border-top:3px dashed var(--line);color:var(--ink2)}
+@media (max-width:600px){.date{grid-template-columns:1fr;gap:4px}}
+@media (prefers-reduced-motion:reduce){.flybee,.wing,.burst i{animation:none}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+(function(){
+"use strict";
+const STUDY={
+buz:"the do to today of said says are were was is his has you your they be he me she we no go so by my here there where love come some one once ask friend school put push pull full house our Monday Tuesday Wednesday Thursday Friday Saturday Sunday",
+hon:"because door floor poor find kind mind behind child children wild climb most only both cold gold hold told every everybody even great break steak pretty beautiful after fast last past father class grass pass plant path bath hour move prove improve sure sugar eye could should would who whole any many clothes busy people water again half money parents",
+bum:"accident accidentally actual actually address answer appear arrive believe bicycle breath breathe build busy business calendar caught centre century certain circle complete consider continue decide describe different difficult disappear early earth eight eighth enough exercise experience experiment extreme famous favourite February forward forwards fruit grammar group guard guide heard heart height history imagine increase important interest island knowledge learn length library material medicine mention minute natural naughty notice occasion occasionally often opposite ordinary particular peculiar perhaps popular position possess possession possible potatoes pressure probably promise purpose quarter question recent regular reign remember sentence separate special straight strange strength suppose surprise therefore though although thought through various weight woman women",
+cha:"accommodate accompany according achieve aggressive amateur ancient apparent appreciate attached available average awkward bargain bruise category cemetery committee communicate community competition conscience conscious controversy convenience correspond criticise curiosity definite desperate determined develop dictionary disastrous embarrass environment equip equipped equipment especially exaggerate excellent existence explanation familiar foreign forty frequently government guarantee harass hindrance identity immediate immediately individual interfere interrupt language leisure lightning marvellous mischievous muscle necessary neighbour nuisance occupy occur opportunity parliament persuade physical prejudice privilege profession programme pronunciation queue recognise recommend relevant restaurant rhyme rhythm sacrifice secretary shoulder signature sincere sincerely soldier stomach sufficient suggest symbol system temperature thorough twelfth variety vegetable vehicle yacht"
+};
+const SENT={there:"Put the book over there.",where:"Where is my school bag?",our:"This is our classroom.",one:"I have one sister.",hour:"The lesson lasts one hour.",break:"We play outside at break time.",steak:"Dad cooked steak for dinner.",whole:"She ate the whole apple.",great:"We had a great day at the park.",eye:"I closed one eye.",who:"Who is at the door?",would:"Would you like some water?",heard:"I heard a bird singing.",breath:"Take a deep breath.",breathe:"Fish breathe through their gills.",eight:"A spider has eight legs.",reign:"The king's reign lasted forty years.",weight:"Check the weight of the parcel.",though:"It was windy, though it was sunny.",through:"We walked through the forest.",thought:"I thought carefully about my answer.",knowledge:"Reading builds your knowledge.",guard:"A guard stood at the gate.",minute:"Wait one minute, please.",programme:"We watched a programme about the ocean.",lightning:"We saw lightning during the storm.",queue:"We stood in a queue for lunch.",muscle:"Exercise makes your muscles strong.",yacht:"The yacht sailed across the bay.",conscience:"Her conscience told her to say sorry.",conscious:"He was conscious of everyone watching."};
+
+const TEAMS=[
+ {id:'buz',name:'Buzzy Bees',e:'🌼',label:'KG2',yr:'Year 1',blanks:1,kb:true},
+ {id:'hon',name:'Honey Bees',e:'🍯',label:'Grade 1',yr:'Year 2',blanks:1,kb:true},
+ {id:'bum',name:'Bumble Bees',e:'🐝',label:'Grades 2–3',yr:'Years 3–4',blanks:2,kb:false},
+ {id:'cha',name:'Champion Bees',e:'🏆',label:'Grades 4–5',yr:'Years 5–6',blanks:3,kb:false}];
+const FINAL='2027-01-22';
+const DATES=[
+ ['23 Nov – 4 Dec','Launch & sign-up','Find out about the Spelling Bee in assembly and sign up with your class teacher.'],
+ ['Dec – Jan','Practice time','Practise your word list at home and at school — use this website every day!'],
+ ['7 – 11 Dec','Class rounds','A short spelling quiz in class. The top spellers in each class move on.'],
+ ['Week of 11 Jan','Grade semi-finals','Spell out loud in front of your grade. The best spellers go to the final.'],
+ ['22 Jan','Grand Final 🏆','Spellers meet on stage with families watching. Champions are crowned!'],
+ ['Week of 25 Jan','Celebration','Certificates for everyone who took part and trophies for our champions.']];
+const RULES=['The pronouncer says your word, uses it in a sentence, then says it again.','You can ask to hear the word again, its meaning, or the sentence.','Say the word, spell it letter by letter, then say the word again.','You have 30 seconds to finish spelling.','Once you say a letter you can’t change it — so take your time!','If you miss a word, you are out at the end of that round. Well done for trying!','The last speller standing spells one more word to become champion.'];
+const PARENTS=[['⏱️','Little and often','Five to ten minutes a day works better than a long session once a week.'],['🗣️','Say, spell, say','Ask your child to say the word, spell it out loud, then say it again — just like on stage.'],['👀','Look, cover, write, check','Look at the word, cover it, write it from memory, then check. Repeat the tricky ones.'],['🎉','Celebrate effort','Taking part is brave! Praise practice and courage, not just correct answers.']];
+const WORDS={};for(const t of TEAMS)WORDS[t.id]=STUDY[t.id].split(/\s+/).filter(Boolean);
+const BEE=`<svg viewBox="0 0 100 100"><ellipse class="wing" cx="40" cy="30" rx="16" ry="20" fill="#fff" opacity=".85"/><ellipse class="wing" cx="60" cy="28" rx="14" ry="18" fill="#E8F4FF" opacity=".85"/><ellipse cx="50" cy="58" rx="30" ry="22" fill="#FFC72C"/><path d="M36 39 Q32 58 36 78" stroke="#1F2A44" stroke-width="7" fill="none"/><path d="M52 36 Q48 58 52 80" stroke="#1F2A44" stroke-width="7" fill="none"/><circle cx="78" cy="54" r="13" fill="#1F2A44"/><circle cx="82" cy="51" r="3.4" fill="#fff"/><path d="M76 62 Q81 66 86 61" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M76 42 Q74 30 68 28 M84 42 Q88 31 94 31" stroke="#1F2A44" stroke-width="2.5" fill="none"/><circle cx="68" cy="28" r="3" fill="#1F2A44"/><circle cx="94" cy="31" r="3" fill="#1F2A44"/></svg>`;
+const PRAISE=['Brilliant!','Bee-autiful spelling!','Buzzing brilliant!','Super speller!','Amazing!','You did it!','Fantastic!'];
+const TRY=['Good try!','Nearly there!','Keep buzzing!','Have another go next time!'];
+const $=s=>document.querySelector(s);
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function pick(a){return a[Math.floor(Math.random()*a.length)]}
+function T(id){return TEAMS.find(t=>t.id===id)}
+
+/* progress on this device only */
+const KEY='aa-sbee-practice-v1';let PR={};
+try{PR=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){PR={}}
+function prog(team){PR[team]=PR[team]||{stars:0,ok:{}};return PR[team]}
+function savePR(){try{localStorage.setItem(KEY,JSON.stringify(PR))}catch(e){}}
+function award(team,w,ok){const p=prog(team);if(ok){p.stars++;p.ok[w]=(p.ok[w]||0)+1}savePR()}
+function mastered(team){const p=prog(team);return WORDS[team].filter(w=>(p.ok[w]||0)>=2).length}
+function totalStars(){return TEAMS.reduce((n,t)=>n+(PR[t.id]?.stars||0),0)}
+
+/* speech */
+let tts=null,voice=null;
+function pv(){try{const v=speechSynthesis.getVoices();voice=v.find(x=>/en-GB/i.test(x.lang))||v.find(x=>/^en/i.test(x.lang))||null}catch(e){}}
+try{pv();speechSynthesis.onvoiceschanged=pv}catch(e){}
+async function say(t){if(!t)return;if(tts){try{await tts.speak(t,{language:'en',rate:0.8});return}catch(e){if(e&&e.code==='not_granted')tts=null}}
+ try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='en-GB';u.rate=0.75;if(voice)u.voice=voice;speechSynthesis.speak(u)}catch(e){}}
+function sayWord(w){say(w)}
+function sayWordSentence(w){say(SENT[w]?w+'. '+SENT[w]+' '+w+'.':w)}
+
+function burst(){const b=document.createElement('div');b.className='burst';for(let i=0;i<26;i++){const e=document.createElement('i');e.textContent=pick(['🐝','⭐','🌼','🍯','✨']);e.style.left=Math.random()*100+'vw';e.style.animationDelay=Math.random()*0.8+'s';b.appendChild(e)}document.body.appendChild(b);setTimeout(()=>b.remove(),3400)}
+
+/* ---------- views ---------- */
+let V={screen:'home',team:null};
+function top(){return `<div class="top"><div style="width:40px;height:40px">${BEE}</div><div><div class="t">Spelling Bee</div><div class="s">Practice Zone</div></div><div class="stars">⭐ ${totalStars()}</div></div>`}
+function render(){
+ const a=$('#app');
+ if(V.screen==='home')a.innerHTML=home();
+ else a.innerHTML=top()+`<main>${({team:teamView,learn:learnView,lcwc:lcwcView,test:testView,miss:missView,done:doneView})[V.screen]()}</main>`;
+ after();
+}
+function home(){
+ const combs=`<svg class="combs" viewBox="0 0 100 60" preserveAspectRatio="xMidYMid slice"><defs><pattern id="hc" width="12" height="20.78" patternUnits="userSpaceOnUse"><polygon points="6,0 12,3.46 12,10.39 6,13.86 0,10.39 0,3.46" fill="none" stroke="#FFD54A" stroke-width=".7"/><polygon points="12,10.39 18,13.86 18,20.78 12,24.25 6,20.78 6,13.86" fill="none" stroke="#FFD54A" stroke-width=".7"/></pattern></defs><rect width="100" height="60" fill="url(#hc)"/></svg>`;
+ return `<section class="hero">${combs}<div class="flybee">${BEE}</div><div style="position:relative"><h1><small>The Big</small>Spelling Bee</h1><p>Spell it! Say it! Shine! ✨</p><p style="font-size:18px;opacity:.85;margin-top:4px">KG2 – Grade 5 · Grand Final Friday 22 January 2027</p>${totalStars()?`<p style="font-size:20px">You have ⭐ ${totalStars()} stars!</p>`:''}<div class="row" style="margin-top:20px"><button class="y" data-jump="practise">🐝 Start practising</button><button class="w" data-jump="dates">📅 Key dates</button></div></div></section>
+ <nav class="sitenav">${[['about','About'],['dates','Key dates'],['how','How it works'],['practise','Practise'],['parents','Parents']].map(([k,l])=>`<button data-jump="${k}">${l}</button>`).join('')}</nav>
+ <main>
+ <section id="about" class="sec2"><h2 class="h2">What is the Spelling Bee? 🐝</h2>
+ <div class="about"><div class="aboutcard"><div class="e">✏️</div><b>Learn</b><p>Every child learns the spelling words for their year group from the National Curriculum.</p></div>
+ <div class="aboutcard"><div class="e">🎤</div><b>Be brave</b><p>Spellers stand up, listen to a word and spell it out loud, letter by letter.</p></div>
+ <div class="aboutcard"><div class="e">🏆</div><b>Shine</b><p>The best spellers from KG2 to Grade 5 meet in the Grand Final. Every child who takes part gets a certificate!</p></div></div>
+ <p class="lead2">Joining is optional, and every child from KG2 to Grade 5 is warmly invited. Ask your class teacher how to sign up!</p></section>
+ <section id="dates" class="sec2"><h2 class="h2">Key dates 📅</h2>
+ <div class="countbox"><div class="n">${Math.max(0,Math.ceil((new Date(FINAL+'T00:00:00')-new Date())/864e5))}</div><div>days until the Grand Final · <b>Friday 22 January 2027</b></div></div>
+ <div class="dates">${DATES.map((d,i)=>`<div class="date ${i===DATES.length-2?'final':''}"><div class="when">${d[0]}</div><div><b>${d[1]}</b><p>${d[2]}</p></div></div>`).join('')}</div></section>
+ <section id="how" class="sec2"><h2 class="h2">How it works on stage 🎤</h2>
+ <div class="rules">${RULES.map((r,i)=>`<div class="rule"><span>${i+1}</span>${r}</div>`).join('')}</div></section>
+ <section id="practise" class="sec2"><h2 class="h2">Which bee are you? Let’s practise!</h2><div class="teams">${TEAMS.map(t=>`<div class="team ${t.id}" data-go="team" data-t="${t.id}" role="button" tabindex="0"><div class="e">${t.e}</div><h3>${t.name}</h3><div class="gr">${t.label}</div><div class="muted" style="margin-top:8px;font-size:15px">⭐ ${prog(t.id).stars} · ${mastered(t.id)}/${WORDS[t.id].length} words learnt</div></div>`).join('')}</div>
+ </section>
+ <section id="parents" class="sec2"><h2 class="h2">For parents 💛</h2>
+ <div class="about">${PARENTS.map(p=>`<div class="aboutcard" style="text-align:left"><div class="e">${p[0]}</div><b>${p[1]}</b><p>${p[2]}</p></div>`).join('')}</div>
+ <div class="tipbox">Stars and progress on the Practise page are saved on the device your child uses. Turn the sound on so your child can hear each word.</div></section>
+ <footer class="foot"><div style="width:46px;height:46px;margin:0 auto 6px">${BEE}</div><b class="f" style="font-size:20px">Spelling Bee 2026–2027</b><div>Spell it! Say it! Shine!</div></footer>
+ </main>`;
+}
+function teamView(){
+ const t=T(V.team);const m=mastered(t.id),n=WORDS[t.id].length;
+ return `<div class="row" style="justify-content:space-between;margin-bottom:14px"><button class="back" data-go="home">← All teams</button><div class="f" style="font-size:22px">${t.e} ${t.name} · ${t.label}</div></div>
+ <div class="panel" style="margin-bottom:18px"><div class="f" style="font-size:22px">I have learnt ${m} of ${n} words</div><div class="prog"><i style="width:${Math.round(m/n*100)}%"></i></div><div class="muted">Spell a word correctly twice to learn it. ⭐ ${prog(t.id).stars} stars</div></div>
+ <div class="acts">
+  <div class="act" data-go="learn"><div class="e">📖</div><h3>My word list</h3><p>See all my words and tap to hear them.</p></div>
+  <div class="act" data-go="lcwc"><div class="e">👀</div><h3>Look, Cover, Write</h3><p>Look at the word, cover it, write it, check it!</p></div>
+  <div class="act" data-go="test"><div class="e">🎧</div><h3>Spelling test</h3><p>Listen to 10 words and spell them.</p></div>
+  <div class="act" data-go="miss"><div class="e">🧩</div><h3>Missing letters</h3><p>Find the letters that fell out of the word!</p></div>
+ </div>`;
+}
+function learnView(){
+ const t=T(V.team),p=prog(t.id);
+ return `<div class="row" style="justify-content:space-between"><button class="back" data-go="team">← Back</button><div class="f" style="font-size:22px">📖 My word list</div></div>
+ <p class="muted" style="text-align:center">Tap a word to hear it. Green words are ones you have learnt. ✅</p>
+ <div class="wordgrid">${WORDS[t.id].map(w=>`<div class="wc ${(p.ok[w]||0)>=2?'m':''}" data-say="${esc(w)}">🔊 ${esc(w)}</div>`).join('')}</div>`;
+}
+
+/* Look, Cover, Write, Check */
+let LC=null;
+function newLC(){const p=prog(V.team);const ws=WORDS[V.team];const fresh=ws.filter(w=>(p.ok[w]||0)<2);LC={w:pick(fresh.length?fresh:ws),step:0,val:'',ok:null}}
+function lcwcView(){
+ if(!LC)newLC();const st=['Look & say','Cover','Write','Check'];
+ let body='';
+ if(LC.step===0)body=`<div class="big">${esc(LC.w)}</div><div class="row"><button class="w" data-say="${esc(LC.w)}">🔊 Hear it</button><button class="y" data-lc="cover">Cover it 🙈</button></div><p class="muted">Look carefully. Say the word out loud. Spot the tricky part!</p>`;
+ else if(LC.step===2)body=`<div class="big">🙈</div><input class="ans" id="ans" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="write it here" value="${esc(LC.val)}">${kb()}<div class="row" style="margin-top:16px"><button class="w" data-say="${esc(LC.w)}">🔊 Hear it</button><button class="y" data-lc="check">Check ✔</button></div>`;
+ else body=`<div class="fb ${LC.ok?'ok':'bad'}">${LC.ok?pick(PRAISE)+' ⭐':pick(TRY)}</div><div class="row" style="margin-top:14px;gap:30px"><div><div class="muted">You wrote</div><div class="big" style="font-size:40px">${esc(LC.val||'—')}</div></div><div><div class="muted">The word is</div><div class="big" style="font-size:40px;color:var(--ok)">${esc(LC.w)}</div></div></div><div class="row"><button class="y" data-lc="next">Next word →</button></div>`;
+ return `<div class="row" style="justify-content:space-between"><button class="back" data-go="team">← Back</button><div class="f" style="font-size:22px">👀 Look, Cover, Write, Check</div></div>
+ <div class="steps" style="margin-top:14px">${st.map((s,i)=>`<span class="${(LC.step===0&&i===0)||(LC.step===2&&(i===1||i===2))||(LC.step===3&&i===3)?'on':''}">${i+1}. ${s}</span>`).join('')}</div><div class="panel">${body}</div>`;
+}
+
+/* Spelling test */
+let TS=null;
+function newTest(){const p=prog(V.team);const ws=shuffle(WORDS[V.team]);const fresh=ws.filter(w=>(p.ok[w]||0)<2);const list=(fresh.length>=10?fresh:fresh.concat(ws.filter(w=>!fresh.includes(w)))).slice(0,10);TS={list,i:0,val:'',fb:null,score:0,missed:[]}}
+function testView(){
+ if(!TS)newTest();const w=TS.list[TS.i];
+ return `<div class="row" style="justify-content:space-between"><button class="back" data-go="team">← Back</button><div class="f" style="font-size:22px">🎧 Spelling test · ${TS.i+1} of ${TS.list.length}</div></div>
+ <div class="prog"><i style="width:${TS.i/TS.list.length*100}%"></i></div>
+ <div class="panel"><div class="row"><button class="y hear" data-sayw="${esc(w)}">🔊 Hear the word</button>${SENT[w]?`<button class="w" data-say="${esc(SENT[w])}">💬 Sentence</button>`:''}</div>
+ <div style="margin-top:18px"><input class="ans" id="ans" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="spell it here" value="${esc(TS.val)}" ${TS.fb?'disabled':''}></div>
+ ${TS.fb?`<div class="fb ${TS.fb==='ok'?'ok':'bad'}">${TS.fb==='ok'?pick(PRAISE)+' ⭐':pick(TRY)+' It’s spelt <u>'+esc(w)+'</u>'}</div><div class="row" style="margin-top:14px"><button class="y" data-ts="next">${TS.i+1<TS.list.length?'Next word →':'See my score 🏁'}</button></div>`:`${kb()}<div class="row" style="margin-top:16px"><button class="y" data-ts="check">Check ✔</button></div>`}</div>`;
+}
+
+/* Missing letters */
+let MS=null;
+function newMiss(){const t=T(V.team);const ws=WORDS[t.id].filter(w=>w.length>=3);const w=pick(ws);const idxs=shuffle([...w].map((c,i)=>i)).slice(0,Math.min(t.blanks,Math.max(1,w.length-2))).sort((a,b)=>a-b);
+ const need=idxs.map(i=>w[i].toLowerCase());const letters='abcdefghijklmnopqrstuvwxyz';const extra=shuffle([...letters].filter(c=>!need.includes(c))).slice(0,Math.max(3,6-need.length));
+ MS={w,idxs,fill:[],tiles:shuffle(need.concat(extra)),fb:null}}
+function missView(){
+ if(!MS)newMiss();
+ const shown=[...MS.w].map((c,i)=>{const k=MS.idxs.indexOf(i);if(k<0)return `<span>${esc(c)}</span>`;return `<span class="gap">${MS.fill[k]?esc(MS.fill[k]):'&nbsp;'}</span>`}).join('');
+ return `<div class="row" style="justify-content:space-between"><button class="back" data-go="team">← Back</button><div class="f" style="font-size:22px">🧩 Missing letters</div></div>
+ <div class="panel" style="margin-top:14px"><div class="row"><button class="w" data-say="${esc(MS.w)}">🔊 Hear the word</button></div><div class="blanks">${shown}</div>
+ ${MS.fb?`<div class="fb ${MS.fb==='ok'?'ok':'bad'}">${MS.fb==='ok'?pick(PRAISE)+' ⭐':pick(TRY)+' The word is <u>'+esc(MS.w)+'</u>'}</div><div class="row" style="margin-top:14px"><button class="y" data-ms="next">Next word →</button></div>`:`<div class="tiles">${MS.tiles.map((c,i)=>`<button data-tile="${i}">${c}</button>`).join('')}</div><div class="row" style="margin-top:16px"><button class="w" data-ms="undo">↶ Undo</button><button class="y" data-ms="check" ${MS.fill.length<MS.idxs.length?'disabled':''}>Check ✔</button></div>`}</div>`;
+}
+function doneView(){const s=TS.score,n=TS.list.length;const stars=s===n?'🌟🌟🌟':s>=n*0.7?'🌟🌟':s>=n*0.4?'🌟':'💛';
+ return `<div class="panel result"><div class="e">${s===n?'🏆':'🐝'}</div><h2 style="font-size:34px">${s===n?'Perfect score!':s>=n*0.7?'Great spelling!':'Well done for trying!'}</h2><div class="big">${s} / ${n}</div><div style="font-size:44px">${stars}</div>
+ ${TS.missed.length?`<p class="muted">Practise these words again:</p><div class="wordgrid" style="max-width:640px;margin:0 auto">${TS.missed.map(w=>`<div class="wc" data-say="${esc(w)}">🔊 ${esc(w)}</div>`).join('')}</div>`:''}
+ <div class="row" style="margin-top:20px"><button class="y" data-ts="again">Another test 🎧</button><button class="w" data-go="team">Back to my bee</button></div></div>`}
+
+function kb(){if(!T(V.team).kb)return '';const rows=['qwertyuiop','asdfghjkl','zxcvbnm'];return `<div class="kb">${rows.map((r,i)=>`<div class="r">${[...r].map(c=>`<button data-k="${c}">${c}</button>`).join('')}${i===2?'<button class="wide" data-k="back">⌫</button>':''}</div>`).join('')}</div>`}
+function after(){const i=$('#ans');if(i&&!i.disabled&&!T(V.team).kb)i.focus()}
+function readAns(){const i=$('#ans');return i?i.value.trim():''}
+function same(a,b){return a.trim().toLowerCase()===b.toLowerCase()}
+
+document.addEventListener('click',e=>{
+ const j=e.target.closest('[data-jump]');if(j){document.getElementById(j.dataset.jump)?.scrollIntoView({behavior:'smooth'});return}
+ const el=e.target.closest('[data-go],[data-say],[data-sayw],[data-lc],[data-ts],[data-ms],[data-tile],[data-k]');if(!el)return;const d=el.dataset;
+ if(d.go){if(d.t)V.team=d.t;V.screen=d.go;if(d.go==='lcwc')LC=null;if(d.go==='test')TS=null;if(d.go==='miss')MS=null;render();if(d.go==='home'&&V.team)setTimeout(()=>document.getElementById('practise')?.scrollIntoView(),0);else window.scrollTo(0,0);
+  if(d.go==='test')setTimeout(()=>sayWordSentence(TS.list[0]),250);if(d.go==='miss')setTimeout(()=>sayWord(MS.w),250);return}
+ if(d.say!==undefined){say(d.say);return}
+ if(d.sayw!==undefined){sayWordSentence(d.sayw);$('#ans')?.focus();return}
+ if(d.k){const i=$('#ans');if(!i||i.disabled)return;i.value=d.k==='back'?i.value.slice(0,-1):i.value+d.k;if(LC)LC.val=i.value;if(TS)TS.val=i.value;return}
+ if(d.lc){if(d.lc==='cover'){LC.step=2;LC.val='';render()}else if(d.lc==='check'){LC.val=readAns();if(!LC.val)return;LC.ok=same(LC.val,LC.w);award(V.team,LC.w,LC.ok);LC.step=3;render();if(LC.ok)say(pick(PRAISE))}else if(d.lc==='next'){newLC();render();setTimeout(()=>say(LC.w),200)}return}
+ if(d.ts){if(d.ts==='check'){const v=readAns();if(!v)return;TS.val=v;const w=TS.list[TS.i];const ok=same(v,w);TS.fb=ok?'ok':'bad';if(ok)TS.score++;else TS.missed.push(w);award(V.team,w,ok);render();if(ok)say(pick(PRAISE))}
+  else if(d.ts==='next'){if(TS.i+1<TS.list.length){TS.i++;TS.val='';TS.fb=null;render();setTimeout(()=>sayWordSentence(TS.list[TS.i]),200)}else{V.screen='done';render();if(TS.score>=TS.list.length*0.7)burst()}}
+  else if(d.ts==='again'){TS=null;V.screen='test';render();setTimeout(()=>sayWordSentence(TS.list[0]),250)}return}
+ if(d.tile!==undefined){if(MS.fb||MS.fill.length>=MS.idxs.length)return;MS.fill.push(MS.tiles[+d.tile]);render();return}
+ if(d.ms){if(d.ms==='undo'){MS.fill.pop();render()}else if(d.ms==='check'){const ok=MS.idxs.every((ix,k)=>MS.w[ix].toLowerCase()===MS.fill[k]);MS.fb=ok?'ok':'bad';award(V.team,MS.w,ok);render();say(ok?pick(PRAISE):MS.w)}else{newMiss();render();setTimeout(()=>sayWord(MS.w),200)}return}
+});
+document.addEventListener('keydown',e=>{
+ if(e.key==='Enter'){if(e.target.id==='ans'){e.preventDefault();if(V.screen==='test'&&!TS.fb)document.querySelector('[data-ts=check]')?.click();else if(V.screen==='lcwc')document.querySelector('[data-lc=check]')?.click()}
+  else if(e.target.classList&&e.target.classList.contains('team'))e.target.click()}
+});
+document.addEventListener('input',e=>{if(e.target.id==='ans'){if(V.screen==='lcwc'&&LC)LC.val=e.target.value;if(V.screen==='test'&&TS)TS.val=e.target.value}});
+
+render();
+(async()=>{try{tts=await window.claude?.use?.('tts')}catch(e){}})();
+})();
+</script>
+</body>
+</html>
