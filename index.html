@@ -6,6 +6,7 @@
 <title>Spelling Bee</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{--aa:#1B3A6B;--aa2:#D62839;--honey:#F5B700;--honey2:#FFD54A;--honeyL:#FFF3C4;--ink:#1F2A44;--ink2:#46506B;--bg:#FFFBEF;--line:#F1E7C8;--ok:#1E9E5A;--okL:#E3F6EA;--bad:#D64545;--badL:#FDE8E8}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -93,6 +94,10 @@ main{max-width:980px;margin:0 auto;padding:20px 18px 50px}
 .burst{position:fixed;inset:0;pointer-events:none;z-index:9;overflow:hidden}
 .burst i{position:absolute;top:-40px;font-style:normal;font-size:30px;animation:fall 2.4s linear forwards}
 @keyframes fall{to{transform:translateY(110vh) rotate(360deg)}}
+.codecard{max-width:620px;margin:0 auto;background:#fff;border:4px solid var(--honey);border-radius:30px;padding:26px 22px;text-align:center;box-shadow:0 10px 0 var(--honeyL)}
+.codecard.buz{border-color:#F9A8D4}.codecard.hon{border-color:#FFD54A}.codecard.bum{border-color:#93C5FD}.codecard.cha{border-color:#C4B5FD}
+.codemsg{display:none;margin-top:12px;background:var(--badL);color:#991B1B;font-weight:800;padding:10px 14px;border-radius:14px}.codemsg.show{display:block}
+.team.still{cursor:default}.team.still:hover{transform:none}
 .tipbox{margin-top:22px;background:#fff;border-left:8px solid var(--honey);border-radius:18px;padding:14px 18px;text-align:left}
 .sitenav{position:sticky;top:0;z-index:5;display:flex;gap:6px;justify-content:center;flex-wrap:wrap;padding:10px;background:rgba(255,251,239,.94);backdrop-filter:blur(6px);border-bottom:2px solid var(--line)}
 .sitenav button{font-size:16px;padding:8px 16px;border-radius:999px;background:#fff;color:var(--aa);border:2px solid var(--line);box-shadow:none}
@@ -159,7 +164,42 @@ const KEY='aa-sbee-practice-v1';let PR={};
 try{PR=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){PR={}}
 function prog(team){PR[team]=PR[team]||{stars:0,ok:{}};return PR[team]}
 function savePR(){try{localStorage.setItem(KEY,JSON.stringify(PR))}catch(e){}}
-function award(team,w,ok){const p=prog(team);if(ok){p.stars++;p.ok[w]=(p.ok[w]||0)+1}savePR()}
+/* ---------- online accounts (bee codes) ---------- */
+const SUPABASE_URL='https://xpbkdnkfufkahaszfycd.supabase.co';
+const SUPABASE_KEY='sb_publishable_QIAV_9tLUBbDCu7FHqaTEw_zYQ0teEG';
+const ONLINE_READY=/^https:\/\/.+\.supabase\.co$/.test(SUPABASE_URL)&&SUPABASE_KEY.length>20;
+let DB=null;function db(){if(!DB&&ONLINE_READY&&window.supabase){try{DB=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:false}})}catch(e){}}return DB}
+const ME_KEY='aa-sbee-me',Q_KEY='aa-sbee-queue';let ME=null;
+try{ME=JSON.parse(localStorage.getItem(ME_KEY)||'null')}catch(e){ME=null}
+function teamOfGrade(g){g=+g;return g===0?'buz':g===1?'hon':g<=3?'bum':'cha'}
+function gradeLabel(g){return +g===0?'KG2':'Grade '+g}
+function saveMe(){try{ME?localStorage.setItem(ME_KEY,JSON.stringify(ME)):localStorage.removeItem(ME_KEY)}catch(e){}}
+function cleanCode(c){return String(c||'').toUpperCase().replace(/[^A-Z0-9]/g,'')}
+async function loginCode(code){code=cleanCode(code);if(code.length<4)return {err:'Please type your whole code.'};
+ const c=db();if(!c)return {err:'Practice will open very soon — please try again later.'};
+ try{const {data,error}=await c.rpc('student_login',{p_code:code});if(error)throw error;if(!data)return {err:'Hmm, that code didn’t work. Check it and try again!'};
+  ME={code,first_name:data.first_name,grade:data.grade,team:teamOfGrade(data.grade)};saveMe();
+  PR={};PR[ME.team]={stars:data.stars||0,ok:data.words||{}};savePR();return {ok:true}}
+ catch(e){return {err:'We couldn’t connect. Check the internet and try again.'}}}
+async function refreshMe(){if(!ME||!db())return;try{const {data,error}=await db().rpc('student_login',{p_code:ME.code});if(error)return;
+ if(!data){ME=null;saveMe();render();return}
+ ME.first_name=data.first_name;ME.grade=data.grade;ME.team=teamOfGrade(data.grade);saveMe();
+ const p=prog(ME.team);p.stars=Math.max(data.stars||0,p.stars);p.ok=Object.assign({},p.ok,data.words||{});savePR();if(V.screen==='home'||V.screen==='team')render()}catch(e){}}
+function logout(){ME=null;saveMe();PR={};savePR();try{localStorage.removeItem(Q_KEY)}catch(e){};V={screen:'home',team:null};render();setTimeout(()=>document.getElementById('practise')?.scrollIntoView(),0)}
+let flushing=false;
+let MEMQ=[];
+function readQ(){try{return JSON.parse(localStorage.getItem(Q_KEY)||'null')||MEMQ}catch(e){return MEMQ}}
+function writeQ(q){MEMQ=q;try{localStorage.setItem(Q_KEY,JSON.stringify(q))}catch(e){}}
+async function flush(){if(flushing||!ME||!db())return;flushing=true;
+ try{for(let guard=0;guard<600;guard++){const q=readQ();if(!q.length)break;const it=q[0];
+  let ok=false;try{const {data,error}=await db().rpc('record_attempt',{p_code:ME.code,p_word:it.w,p_correct:it.ok,p_activity:it.a});
+   if(!error){ok=true;if(typeof data==='number'){const p=prog(ME.team);if(data>p.stars){p.stars=data;savePR()}}}}catch(e){}
+  if(!ok)break;const now=readQ();if(now.length&&now[0].id===it.id)now.shift();writeQ(now)}}
+ finally{flushing=false}}
+setInterval(()=>{if(ME&&readQ().length)flush()},20000);
+window.addEventListener('online',flush);
+function award(team,w,ok){const p=prog(team);if(ok){p.stars++;p.ok[w]=(p.ok[w]||0)+1}savePR();
+ if(ME){const q=readQ();q.push({id:Date.now()+'-'+Math.random().toString(36).slice(2,7),w,ok,a:V.screen});writeQ(q.slice(-500));flush()}}
 function mastered(team){const p=prog(team);return WORDS[team].filter(w=>(p.ok[w]||0)>=2).length}
 function totalStars(){return TEAMS.reduce((n,t)=>n+(PR[t.id]?.stars||0),0)}
 
@@ -182,14 +222,14 @@ function pv(){try{const g=goodVoices();if(!g.length){voice=null;return}let saved
  voice=(saved&&g.find(x=>x.name===saved))||g[0]}catch(e){}}
 if(HAS_SPEECH){try{pv();speechSynthesis.addEventListener?speechSynthesis.addEventListener('voiceschanged',pv):(speechSynthesis.onvoiceschanged=pv)}catch(e){}}
 let lastU=null; /* keep a reference so Safari/Chrome don't cut the word off */
-function say(t,el){if(!t)return;
+function say(t,el,opts){if(!t)return;opts=opts||{};
  if(el){el.classList.add('talking');setTimeout(()=>el.classList.remove('talking'),1400)}
- if(tts){tts.speak(t,{language:'en',rate:0.8}).catch(e=>{if(e&&e.code==='not_granted'){tts=null;say(t)}});return}
+ if(tts){tts.speak(t,{language:'en',rate:opts.rate||0.8}).catch(e=>{if(e&&e.code==='not_granted'){tts=null;say(t)}});return}
  if(!HAS_SPEECH){note('Sound isn’t available in this browser. Try Chrome or Safari.');return}
  try{const s=window.speechSynthesis;
   if(s.speaking||s.pending)s.cancel();
   if(!voice)pv();
-  const u=new SpeechSynthesisUtterance(t);u.lang='en-GB';u.rate=0.9;u.pitch=1;u.volume=1;if(voice){try{u.voice=voice}catch(e){}}
+  const u=new SpeechSynthesisUtterance(t);u.lang='en-GB';u.rate=opts.rate||0.9;u.pitch=opts.pitch||1;u.volume=1;if(voice){try{u.voice=voice}catch(e){}}
   lastU=u;s.resume();s.speak(u);
  }catch(e){note('Sound didn’t play — check the volume is turned up.')}}
 let noteT;function note(m){let n=document.getElementById('note');if(!n){n=document.createElement('div');n.id='note';n.style.cssText='position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1F2A44;color:#fff;padding:12px 18px;border-radius:14px;font-weight:800;z-index:20;max-width:90vw;text-align:center';document.body.appendChild(n)}n.textContent=m;n.style.display='block';clearTimeout(noteT);noteT=setTimeout(()=>n.style.display='none',3500)}
@@ -212,17 +252,27 @@ function clapSound(){const a=ac();if(!a)return;
   src.connect(bp);bp.connect(g);g.connect(out);src.start(now+t);src.stop(now+t+0.12)})}
 function gentleSound(){tone(392,0,0.25,'sine',0.12);tone(329.6,0.18,0.35,'sine',0.1)}
 const PARTY_EMO=['🐝','🌟','🎉','🦄','🏆','🥳','🍯','🚀','💛'];
-const CHEERS=['Buzz-tastic!','Bee-autiful!','Super speller!','You did it!','Brilliant!','Amazing!','High five! ✋','Give yourself a clap!','Spell-tacular!','Woohoo!','Star speller!'];
+/* [what the card shows, what the voice shouts] */
+const CHEERS=[['Woo-hoo!','Woo hoo! You did it!'],['Yaaay!','Yay! Amazing spelling!'],['Hooray!','Hooray! You are a super speller!'],['WOW!','Wow! That was bee-autiful!'],['Spell-tacular!','Yes! Spell tacular!'],['High five! ✋','Brilliant! High five!'],['Buzz-tastic!','Awesome! Buzz tastic!'],['Superstar!','Wow wow wow! Superstar!'],['Hip hip hooray!','Hip hip hooray!'],['You rock!','Yes yes yes! You rock!'],['Give yourself a clap!','Fantastic! Give yourself a big clap!'],['Amazing!','Amazing! Keep buzzing!']];
+/* sound effects */
+function slideWhistle(t0){const a=ac();if(!a)return;const o=a.createOscillator(),g=a.createGain();o.type='sine';const n=a.currentTime+t0;o.frequency.setValueAtTime(520,n);o.frequency.exponentialRampToValueAtTime(1700,n+0.32);g.gain.setValueAtTime(0.0001,n);g.gain.exponentialRampToValueAtTime(0.18,n+0.03);g.gain.exponentialRampToValueAtTime(0.0001,n+0.4);o.connect(g);g.connect(a.destination);o.start(n);o.stop(n+0.45)}
+function partyHorn(t0){const a=ac();if(!a)return;const n=a.currentTime+t0;const o=a.createOscillator(),lfo=a.createOscillator(),lg=a.createGain(),f=a.createBiquadFilter(),g=a.createGain();
+ o.type='sawtooth';o.frequency.setValueAtTime(330,n);o.frequency.linearRampToValueAtTime(390,n+0.55);lfo.frequency.value=22;lg.gain.value=18;lfo.connect(lg);lg.connect(o.frequency);
+ f.type='lowpass';f.frequency.value=2000;g.gain.setValueAtTime(0.0001,n);g.gain.exponentialRampToValueAtTime(0.12,n+0.04);g.gain.setValueAtTime(0.12,n+0.45);g.gain.exponentialRampToValueAtTime(0.0001,n+0.65);
+ o.connect(f);f.connect(g);g.connect(a.destination);o.start(n);lfo.start(n);o.stop(n+0.7);lfo.stop(n+0.7)}
+/* optional recorded cheers: put cheer1.mp3 … cheer12.mp3 in a "cheers" folder and they are used instead of the computer voice */
+let RECORDED=[];(function(){if(location.protocol.indexOf('http')!==0)return;for(let i=1;i<=12;i++){const u='cheers/cheer'+i+'.mp3';fetch(u,{method:'HEAD'}).then(r=>{if(r.ok)RECORDED.push(u)}).catch(()=>{})}})();
+function shout(text){if(RECORDED.length){try{const au=new Audio(pick(RECORDED));au.volume=1;au.play().catch(()=>say(text,null,{pitch:1.5,rate:1.12}));return}catch(e){}}say(text,null,{pitch:1.5,rate:1.12})}
 const STREAKS={3:'3 in a row! 🔥',5:'5 in a row! You’re on fire! 🔥🔥',8:'8 in a row! Spelling superstar! 🌟',10:'10 in a row! Champion bee! 🏆'};
 function celebrate(big){STREAK++;happySound(big);clapSound();
  const old=document.getElementById('party');if(old)old.remove();
- const cheer=pick(CHEERS),emo=pick(PARTY_EMO),streak=STREAKS[STREAK]||'';
+ const ch=pick(CHEERS),cheer=ch[0],emo=pick(PARTY_EMO),streak=STREAKS[STREAK]||'';
  const d=document.createElement('div');d.id='party';d.className='party';
  let conf='';const cols=['#F5B700','#FFD54A','#F472B6','#60A5FA','#34D399','#A78BFA','#FB923C'];
  for(let i=0;i<46;i++){const isE=i%5===0;conf+=`<i class="cf" style="left:${Math.random()*100}vw;animation-delay:${(Math.random()*0.5).toFixed(2)}s;animation-duration:${(1.6+Math.random()*1.2).toFixed(2)}s;${isE?'':'background:'+cols[i%cols.length]+';'}">${isE?pick(['🐝','⭐','🌼','✨']):''}</i>`}
  d.innerHTML=`${conf}<div class="pcard"><div class="pemo">${emo}</div><div class="pcheer">${cheer}</div>${streak?`<div class="pstreak">${streak}</div>`:''}<div class="pclap">👏👏👏</div><div class="pstar">+1 ⭐</div></div>`;
  d.addEventListener('click',()=>d.remove());document.body.appendChild(d);
- setTimeout(()=>say(cheer.replace(/[^A-Za-z!'’ -]/g,'')),550);
+ (Math.random()<0.5?slideWhistle:partyHorn)(0.3);setTimeout(()=>shout((ME?ch[1].replace(/!$/,', '+ME.first_name+'!'):ch[1])),600);
  setTimeout(()=>{d.classList.add('out');setTimeout(()=>d.remove(),400)},big?3200:2100);
  const st=document.querySelector('.top .stars');if(st){st.classList.remove('pop');void st.offsetWidth;st.classList.add('pop')}}
 function oops(){STREAK=0;gentleSound()}
@@ -230,7 +280,7 @@ function burst(){const b=document.createElement('div');b.className='burst';for(l
 
 /* ---------- views ---------- */
 let V={screen:'home',team:null};
-function top(){return `<div class="top"><div style="width:40px;height:40px">${BEE}</div><div><div class="t">Spelling Bee</div><div class="s">Practice Zone</div></div><div class="stars">⭐ ${totalStars()}</div><button data-voice="1">🔊 Voice</button></div>`}
+function top(){return `<div class="top"><div style="width:40px;height:40px">${BEE}</div><div><div class="t">Spelling Bee</div><div class="s">${ME?'Hi '+esc(ME.first_name)+'! 🐝':'Practice Zone'}</div></div><div class="stars">⭐ ${totalStars()}</div><button data-voice="1">🔊 Voice</button></div>`}
 function voicePanel(){pv();const g=goodVoices();const cur=voice&&voice.name;
  let m=document.getElementById('vmodal');if(!m){m=document.createElement('div');m.id='vmodal';document.body.appendChild(m)}
  m.innerHTML=`<div class="vback" data-vclose="1"><div class="vcard"><h2 style="font-size:26px">🔊 Choose a voice</h2><p class="muted" style="margin:6px 0 14px">All voices here speak <b>UK English</b>. Tap <b>Try</b> to listen, then pick the one that sounds nicest. It’s remembered on this device.</p>
@@ -240,6 +290,7 @@ function voicePanel(){pv();const g=goodVoices();const cur=voice&&voice.name;
 function render(){
  const a=$('#app');
  if(V.screen==='home')a.innerHTML=home();
+ else if(!ME){V={screen:'home',team:null};a.innerHTML=home()}
  else a.innerHTML=top()+`<main>${({team:teamView,learn:learnView,lcwc:lcwcView,test:testView,miss:missView,done:doneView})[V.screen]()}</main>`;
  after();
 }
@@ -252,23 +303,35 @@ function home(){
  <div class="about"><div class="aboutcard"><div class="e">✏️</div><b>Learn</b><p>Every child learns the spelling words for their year group from the National Curriculum.</p></div>
  <div class="aboutcard"><div class="e">🎤</div><b>Be brave</b><p>Spellers stand up, listen to a word and spell it out loud, letter by letter.</p></div>
  <div class="aboutcard"><div class="e">🏆</div><b>Shine</b><p>The best spellers from KG2 to Grade 5 meet in the Grand Final. Every child who takes part gets a certificate!</p></div></div>
- <p class="lead2">Joining is optional, and every child from KG2 to Grade 5 is warmly invited. Ask your class teacher how to sign up!</p></section>
+ <p class="lead2">Joining is optional, and every child from KG2 to Grade 5 is warmly invited. Ask your class teacher how to sign up — every speller gets their own bee code to practise here.</p></section>
  <section id="dates" class="sec2"><h2 class="h2">Key dates 📅</h2>
  <div class="countbox"><div class="n">${Math.max(0,Math.ceil((new Date(FINAL+'T00:00:00')-new Date())/864e5))}</div><div>days until the Grand Final · <b>Friday 22 January 2027</b></div></div>
  <div class="dates">${DATES.map((d,i)=>`<div class="date ${i===DATES.length-2?'final':''}"><div class="when">${d[0]}</div><div><b>${d[1]}</b><p>${d[2]}</p></div></div>`).join('')}</div></section>
  <section id="how" class="sec2"><h2 class="h2">How it works on stage 🎤</h2>
  <div class="rules">${RULES.map((r,i)=>`<div class="rule"><span>${i+1}</span>${r}</div>`).join('')}</div></section>
- <section id="practise" class="sec2"><h2 class="h2">Which bee are you? Let’s practise!</h2><div class="teams">${TEAMS.map(t=>`<div class="team ${t.id}" data-go="team" data-t="${t.id}" role="button" tabindex="0"><div class="e">${t.e}</div><h3>${t.name}</h3><div class="gr">${t.label}</div><div class="muted" style="margin-top:8px;font-size:15px">⭐ ${prog(t.id).stars} · ${mastered(t.id)}/${WORDS[t.id].length} words learnt</div></div>`).join('')}</div>
+ <section id="practise" class="sec2"><h2 class="h2">Let’s practise! 🐝</h2>${practiseBox()}
+ <h3 class="f" style="text-align:center;font-size:24px;margin:26px 0 12px">Our four bee teams</h3>
+ <div class="teams">${TEAMS.map(t=>`<div class="team ${t.id} still"><div class="e">${t.e}</div><h3>${t.name}</h3><div class="gr">${t.label} · ${t.yr}</div></div>`).join('')}</div>
  </section>
  <section id="parents" class="sec2"><h2 class="h2">For parents 💛</h2>
  <div class="about">${PARENTS.map(p=>`<div class="aboutcard" style="text-align:left"><div class="e">${p[0]}</div><b>${p[1]}</b><p>${p[2]}</p></div>`).join('')}</div>
- <div class="tipbox">Stars and progress on the Practise page are saved on the device your child uses. Turn the sound on so your child can hear each word.</div></section>
+ <div class="tipbox">Your child’s stars and progress are saved with their bee code, so they can practise on any device. Turn the sound on so your child can hear each word.</div></section>
  <footer class="foot"><div style="width:46px;height:46px;margin:0 auto 6px">${BEE}</div><b class="f" style="font-size:20px">Spelling Bee 2026–2027</b><div>Spell it! Say it! Shine!</div></footer>
  </main>`;
 }
+function practiseBox(){
+ if(ME){const t=T(ME.team);return `<div class="codecard ${t.id}"><div class="e" style="font-size:64px">${t.e}</div><h3 class="f" style="font-size:32px">Hi ${esc(ME.first_name)}! 👋</h3><div class="gr" style="font-size:18px">You’re a <b>${t.name.replace(/s$/,'')}</b> · ${gradeLabel(ME.grade)}</div>
+  <div class="muted" style="margin:8px 0 16px;font-size:17px">⭐ ${prog(t.id).stars} stars · ${mastered(t.id)}/${WORDS[t.id].length} words learnt</div>
+  <button class="y" style="font-size:22px;padding:16px 30px" data-go="team" data-t="${t.id}">Let’s practise! →</button>
+  <div style="margin-top:14px"><button class="back" data-logout="1">Not ${esc(ME.first_name)}? Use another code</button></div></div>`}
+ return `<div class="codecard"><div class="e" style="font-size:64px">🔑</div><h3 class="f" style="font-size:30px">Type your bee code</h3><p class="muted" style="margin:6px 0 14px">Your teacher gives every speller in the Spelling Bee their own secret code.</p>
+  <form id="codeform"><input id="codein" class="ans" style="max-width:360px;text-transform:uppercase" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="e.g. 7KQ-2MP" maxlength="12"></form>
+  <div id="codemsg" class="codemsg"></div>
+  <button class="y" style="font-size:22px;padding:14px 30px;margin-top:12px" data-code="1">Let’s go! 🐝</button>
+  <p class="muted" style="margin-top:14px;font-size:15px">Want to take part? Ask your class teacher how to join the Spelling Bee.</p></div>`}
 function teamView(){
  const t=T(V.team);const m=mastered(t.id),n=WORDS[t.id].length;
- return `<div class="row" style="justify-content:space-between;margin-bottom:14px"><button class="back" data-go="home">← All teams</button><div class="f" style="font-size:22px">${t.e} ${t.name} · ${t.label}</div></div>
+ return `<div class="row" style="justify-content:space-between;margin-bottom:14px"><button class="back" data-go="home">← Home</button><div class="f" style="font-size:22px">${t.e} ${t.name} · ${t.label}</div></div>
  <div class="panel" style="margin-bottom:18px"><div class="f" style="font-size:22px">I have learnt ${m} of ${n} words</div><div class="prog"><i style="width:${Math.round(m/n*100)}%"></i></div><div class="muted">Spell a word correctly twice to learn it. ⭐ ${prog(t.id).stars} stars</div></div>
  <div class="acts">
   <div class="act" data-go="learn"><div class="e">📖</div><h3>My word list</h3><p>See all my words and tap to hear them.</p></div>
@@ -332,6 +395,8 @@ function readAns(){const i=$('#ans');return i?i.value.trim():''}
 function same(a,b){return a.trim().toLowerCase()===b.toLowerCase()}
 
 document.addEventListener('click',e=>{
+ const cb=e.target.closest('[data-code],[data-logout]');
+ if(cb){if(cb.dataset.logout){logout();return}submitCode();return}
  const vb=e.target.closest('[data-voice],[data-vtry],[data-vpick],[data-vclose]');
  if(vb){const d=vb.dataset;
   if(d.voice){voicePanel();return}
@@ -359,7 +424,13 @@ document.addEventListener('keydown',e=>{
 });
 document.addEventListener('input',e=>{if(e.target.id==='ans'){if(V.screen==='lcwc'&&LC)LC.val=e.target.value;if(V.screen==='test'&&TS)TS.val=e.target.value}});
 
+async function submitCode(){const i=$('#codein'),m=$('#codemsg');if(!i)return;const btn=document.querySelector('[data-code]');
+ if(btn){btn.disabled=true;btn.textContent='Checking… 🐝'}const r=await loginCode(i.value);
+ if(r.ok){V={screen:'team',team:ME.team};render();window.scrollTo(0,0);happySound(false);setTimeout(()=>say('Hi '+ME.first_name+'! Let’s practise your spellings!'),300);flush()}
+ else{if(btn){btn.disabled=false;btn.textContent='Let’s go! 🐝'}if(m){m.textContent=r.err;m.classList.add('show')}gentleSound()}}
+document.addEventListener('submit',e=>{if(e.target.id==='codeform'){e.preventDefault();submitCode()}});
 render();
+if(ME){refreshMe();flush()}
 (async()=>{try{tts=await window.claude?.use?.('tts')}catch(e){}})();
 })();
 </script>
