@@ -59,6 +59,11 @@ main{max-width:980px;margin:0 auto;padding:20px 18px 50px}
 .wordgrid{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));margin-top:16px}
 .wc{background:#fff;border:3px solid var(--line);border-radius:18px;padding:12px;font-family:Fredoka;font-size:21px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
 .wc.m{border-color:#A7E3BF;background:var(--okL)}
+.wc{transition:transform .15s,background .15s,border-color .15s;user-select:none;-webkit-user-select:none}
+.wc:hover{border-color:var(--honey)}
+.talking{animation:talk .45s ease-in-out 3}
+.wc.talking{background:var(--honeyL);border-color:var(--honey)}
+@keyframes talk{50%{transform:scale(1.08)}}
 .back{background:#fff;color:var(--aa);border:2px solid var(--line);font-size:16px;padding:9px 16px;box-shadow:none}
 .steps{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:10px}
 .steps span{padding:6px 14px;border-radius:99px;background:#F1ECDD;font-weight:800;font-size:14px}.steps span.on{background:var(--honey)}
@@ -138,10 +143,23 @@ function totalStars(){return TEAMS.reduce((n,t)=>n+(PR[t.id]?.stars||0),0)}
 
 /* speech */
 let tts=null,voice=null;
-function pv(){try{const v=speechSynthesis.getVoices();voice=v.find(x=>/en-GB/i.test(x.lang))||v.find(x=>/^en/i.test(x.lang))||null}catch(e){}}
-try{pv();speechSynthesis.onvoiceschanged=pv}catch(e){}
-async function say(t){if(!t)return;if(tts){try{await tts.speak(t,{language:'en',rate:0.8});return}catch(e){if(e&&e.code==='not_granted')tts=null}}
- try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='en-GB';u.rate=0.75;if(voice)u.voice=voice;speechSynthesis.speak(u)}catch(e){}}
+const HAS_SPEECH=('speechSynthesis' in window)&&('SpeechSynthesisUtterance' in window);
+function pv(){try{const v=speechSynthesis.getVoices();if(!v.length)return;
+ const gb=v.filter(x=>/en[-_]GB/i.test(x.lang));
+ voice=['Daniel','Serena','Kate','Martha','Arthur','Stephanie'].map(n=>gb.find(x=>x.name.indexOf(n)===0)).find(Boolean)||gb.find(x=>x.localService)||gb[0]||v.find(x=>/^en/i.test(x.lang))||null}catch(e){}}
+if(HAS_SPEECH){try{pv();speechSynthesis.addEventListener?speechSynthesis.addEventListener('voiceschanged',pv):(speechSynthesis.onvoiceschanged=pv)}catch(e){}}
+let lastU=null; /* keep a reference so Safari/Chrome don't cut the word off */
+function say(t,el){if(!t)return;
+ if(el){el.classList.add('talking');setTimeout(()=>el.classList.remove('talking'),1400)}
+ if(tts){tts.speak(t,{language:'en',rate:0.8}).catch(e=>{if(e&&e.code==='not_granted'){tts=null;say(t)}});return}
+ if(!HAS_SPEECH){note('Sound isn’t available in this browser. Try Chrome or Safari.');return}
+ try{const s=window.speechSynthesis;
+  if(s.speaking||s.pending)s.cancel();
+  if(!voice)pv();
+  const u=new SpeechSynthesisUtterance(t);u.lang=voice?voice.lang:'en-GB';u.rate=0.8;u.pitch=1;u.volume=1;if(voice)u.voice=voice;
+  lastU=u;s.resume();s.speak(u);
+ }catch(e){note('Sound didn’t play — check the volume is turned up.')}}
+let noteT;function note(m){let n=document.getElementById('note');if(!n){n=document.createElement('div');n.id='note';n.style.cssText='position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1F2A44;color:#fff;padding:12px 18px;border-radius:14px;font-weight:800;z-index:20;max-width:90vw;text-align:center';document.body.appendChild(n)}n.textContent=m;n.style.display='block';clearTimeout(noteT);noteT=setTimeout(()=>n.style.display='none',3500)}
 function sayWord(w){say(w)}
 function sayWordSentence(w){say(SENT[w]?w+'. '+SENT[w]+' '+w+'.':w)}
 
@@ -249,8 +267,8 @@ document.addEventListener('click',e=>{
  const el=e.target.closest('[data-go],[data-say],[data-sayw],[data-lc],[data-ts],[data-ms],[data-tile],[data-k]');if(!el)return;const d=el.dataset;
  if(d.go){if(d.t)V.team=d.t;V.screen=d.go;if(d.go==='lcwc')LC=null;if(d.go==='test')TS=null;if(d.go==='miss')MS=null;render();if(d.go==='home'&&V.team)setTimeout(()=>document.getElementById('practise')?.scrollIntoView(),0);else window.scrollTo(0,0);
   if(d.go==='test')setTimeout(()=>sayWordSentence(TS.list[0]),250);if(d.go==='miss')setTimeout(()=>sayWord(MS.w),250);return}
- if(d.say!==undefined){say(d.say);return}
- if(d.sayw!==undefined){sayWordSentence(d.sayw);$('#ans')?.focus();return}
+ if(d.say!==undefined){say(d.say,el);return}
+ if(d.sayw!==undefined){say(SENT[d.sayw]?d.sayw+'. '+SENT[d.sayw]+' '+d.sayw+'.':d.sayw,el);$('#ans')?.focus();return}
  if(d.k){const i=$('#ans');if(!i||i.disabled)return;i.value=d.k==='back'?i.value.slice(0,-1):i.value+d.k;if(LC)LC.val=i.value;if(TS)TS.val=i.value;return}
  if(d.lc){if(d.lc==='cover'){LC.step=2;LC.val='';render()}else if(d.lc==='check'){LC.val=readAns();if(!LC.val)return;LC.ok=same(LC.val,LC.w);award(V.team,LC.w,LC.ok);LC.step=3;render();if(LC.ok)say(pick(PRAISE))}else if(d.lc==='next'){newLC();render();setTimeout(()=>say(LC.w),200)}return}
  if(d.ts){if(d.ts==='check'){const v=readAns();if(!v)return;TS.val=v;const w=TS.list[TS.i];const ok=same(v,w);TS.fb=ok?'ok':'bad';if(ok)TS.score++;else TS.missed.push(w);award(V.team,w,ok);render();if(ok)say(pick(PRAISE))}
