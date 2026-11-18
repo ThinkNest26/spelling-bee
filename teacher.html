@@ -162,17 +162,30 @@ function bind(){
 }
 function confirmBox(title,text,btn,fn,danger){$('#modal').innerHTML=`<div class="modal"><div class="card"><h2 style="font-size:21px">${esc(title)}</h2><p>${esc(text)}</p><div class="row"><div class="spacer"></div><button class="w" id="mc">Cancel</button><button class="${danger?'r':'y'}" id="mo">${esc(btn)}</button></div></div></div>`;
  $('#mc').onclick=()=>$('#modal').innerHTML='';$('#mo').onclick=async()=>{$('#modal').innerHTML='';await fn()}}
+/* understands: "Mariam, 1, 1A" · "dina 1A" · "mona KG2" · "Saeed Ahmed KG2B" · "Lina Grade 5 5C" */
+function parseLine(line){const toks=line.split(/[,\t;]+|\s+/).map(t=>t.trim()).filter(Boolean);if(!toks.length)return null;
+ let name=null,grade=null,cls='';
+ for(const t of toks){const u=t.toUpperCase().replace(/[.\-_/]/g,'');
+  if(/^(GRADE|GR|YEAR|CLASS)$/.test(u))continue;
+  let m;
+  if((m=u.match(/^KG2?([A-Z]{0,2})$/))){grade=0;if(m[1])cls='KG2'+m[1];continue}
+  if((m=u.match(/^(?:G|GR|GRADE)?([0-5])([A-Z]{0,2})$/))){const g=+m[1];if(m[2]){cls=m[1]+m[2];if(grade===null)grade=g}else if(grade===null)grade=g;continue}
+  if(name===null&&/^[\p{L}'’]+$/u.test(t)){name=t;continue}
+  if(name!==null&&/^[A-Z]$/.test(u)&&grade!==null&&!cls){cls=(grade===0?'KG2':grade)+u;continue}}
+ if(grade===null&&F.grade!=='all')grade=+F.grade;
+ if(!name||grade===null||grade<0||grade>5)return null;
+ name=name.charAt(0).toLocaleUpperCase()+name.slice(1);
+ return {first_name:name,grade,class_name:cls}}
 function addModal(){
  $('#modal').innerHTML=`<div class="modal"><div class="card"><h2 style="font-size:22px">Add children</h2>
- <p class="small muted">One child per line: <b>First name, Grade, Class</b>. Use <b>KG2</b> for KG2. You can paste straight from a class list.<br><code>Mariam, 1, 1A</code><br><code>Saeed, KG2, KG2B</code></p>
+ <p class="small muted">One child per line: their <b>first name</b> and <b>class</b> (or grade). Paste straight from a class list — commas are optional.<br><code>Mariam 1A</code> &nbsp; <code>Saeed KG2B</code> &nbsp; <code>Lina, 5, 5C</code> &nbsp; <code>Omar KG2</code>${F.grade!=='all'?`<br>Lines with no grade go into <b>${GL(F.grade)}</b> (the grade you’re viewing).`:''}</p>
  <textarea id="kids" rows="10" placeholder="Mariam, 1, 1A"></textarea>
  <div class="msg bad" id="amsg"></div>
  <div class="row" style="margin-top:10px"><div class="spacer"></div><button class="w" id="ac">Cancel</button><button class="y" id="ao">Add and make codes</button></div></div></div>`;
  $('#ac').onclick=()=>$('#modal').innerHTML='';
  $('#ao').onclick=async()=>{const rows=[],bad=[];
-  $('#kids').value.split('\n').map(l=>l.trim()).filter(Boolean).forEach((l,i)=>{const p=l.split(/[,\t;]/).map(x=>x.trim());const name=(p[0]||'').split(/\s+/)[0];const gr=String(p[1]||'');
-   const g=/kg/i.test(gr)?0:parseInt(gr.replace(/\D/g,''),10);if(!name||isNaN(g)||g<0||g>5){bad.push(i+1);return}rows.push({first_name:name,grade:g,class_name:p[2]||''})});
-  if(bad.length){const m=$('#amsg');m.textContent='Please check line'+(bad.length>1?'s ':' ')+bad.join(', ')+' — each line needs a name and a grade (KG2 or 1–5).';m.classList.add('show');return}
+  $('#kids').value.split('\n').map(l=>l.trim()).filter(Boolean).forEach((l,i)=>{const r=parseLine(l);if(!r){bad.push(i+1);return}rows.push(r)});
+  if(bad.length){const m=$('#amsg');m.innerHTML='Please check line'+(bad.length>1?'s ':' ')+bad.join(', ')+' — each line needs a first name and a class or grade, e.g. <b>Mariam 1A</b> or <b>Saeed KG2</b>.';m.classList.add('show');return}
   if(!rows.length)return;const b=$('#ao');b.disabled=true;b.textContent='Making codes…';
   const used=new Set(KIDS.map(k=>k.code));rows.forEach(r=>{let c;do{c=newCode()}while(used.has(c));used.add(c);r.code=c});
   let {data,error}=await sb.from('students').insert(rows).select();
