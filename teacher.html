@@ -126,7 +126,7 @@ function renderLogin(msg,mode){mode=mode||'in';
  <button class="y" style="margin-top:14px;width:100%;font-size:16px;padding:12px" ${READY?'':'disabled'}>${up?'Create password':'Sign in'}</button></form>
  <div class="msg ${msg&&msg.ok?'ok':'bad'} ${msg?'show':''}" id="lmsg">${esc(msg&&msg.t||msg||'')}</div>
  <div style="margin-top:14px;text-align:center;font-size:14px">${up?'<a href="#" id="toin">Already have a password? Sign in</a>':'<a href="#" id="toup">First time? Create your password</a> · <a href="#" id="forgot">Forgot password?</a>'}</div>
- <div style="margin-top:12px;text-align:center;font-size:14px;border-top:1px solid var(--line);padding-top:12px">New school? <a href="signup.html"><b>Start a free 30-day trial →</b></a></div></div>`;
+ <div style="margin-top:12px;text-align:center;font-size:14px;border-top:1px solid var(--line);padding-top:12px">New school? <a href="signup.html"><b>Start a free 7-day trial →</b></a></div></div>`;
  const ti=$('#toin');if(ti)ti.onclick=e=>{e.preventDefault();renderLogin('', 'in')};
  const tu=$('#toup');if(tu)tu.onclick=e=>{e.preventDefault();renderLogin('', 'up')};
  const fg=$('#forgot');if(fg)fg.onclick=async e=>{e.preventDefault();const em=$('#em').value.trim();if(!em){renderLogin('Type your email first, then click “Forgot password?”');return}
