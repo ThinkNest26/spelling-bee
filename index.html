@@ -121,6 +121,15 @@ button.mv{font-size:28px;padding:10px 34px}
 .wodc{background:linear-gradient(135deg,#FFF8D6,#FFEFA8);border-color:var(--honey);cursor:pointer}.wodc.done{cursor:default;background:var(--okL);border-color:#A7E3BF}
 .flamechip+.stars{margin-left:10px}
 .flamechip{margin-left:10px!important;background:rgba(255,160,60,.25)!important}
+.streakc{grid-column:1/-1;flex-direction:column;align-items:stretch;gap:12px}.streakc.lit{background:linear-gradient(135deg,#FFE9C7,#FFD39A);border-color:#F59E0B}
+.sk-top{display:flex;align-items:center;gap:16px}.sk-top .flame{filter:drop-shadow(0 0 10px rgba(255,140,0,.45))}.sk-top .flame.off{filter:grayscale(1)}
+.best{display:inline-block;background:#fff;border-radius:99px;padding:1px 10px;font-weight:800;color:#B45309;margin-left:4px}
+.ring{position:relative;width:78px;height:96px;text-align:center;flex:none}.ringt{position:absolute;top:24px;left:0;right:0;font-family:Fredoka;font-size:18px}.ringl{font-size:12px;font-weight:800;color:var(--ink2);margin-top:-4px}
+.sk-bottom{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.weekrow{display:flex;gap:6px;align-items:flex-start}.wd{width:40px;display:flex;flex-direction:column;align-items:center}.today .wodc{grid-column:1/-1}.wd span{display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:#fff;border:3px solid #F8DDBF;font-size:20px}
+.wd.on span{background:#FFF3C4;border-color:#F59E0B}.wd.tdy span{box-shadow:0 0 0 3px #1B3A6B}.wd.we span{background:#FFF8EF;border-style:dashed;font-size:16px}.wd.fut span{opacity:.5}
+.wd i{display:block;font-style:normal;font-weight:800;font-size:12px;color:var(--ink2);margin-top:2px}
+.nextg{flex:1;min-width:220px;font-size:16px}.nbar{height:12px;background:#fff;border-radius:99px;overflow:hidden;margin-top:6px;border:2px solid #F8DDBF}.nbar i{display:block;height:100%;background:linear-gradient(90deg,#FBBF24,#F59E0B);border-radius:99px}
 .acts{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
 .act{background:#fff;border-radius:26px;padding:22px;text-align:center;border:3px solid var(--line);cursor:pointer;transition:transform .12s}
 .act:hover{transform:translateY(-4px)}
@@ -278,12 +287,12 @@ async function loginCode(code){code=cleanCode(code);if(code.length<4)return {err
  const c=db();if(!c)return {err:'Practice will open very soon — please try again later.'};
  try{const {data,error}=await c.rpc('student_login',{p_code:code});if(error)throw error;if(!data)return {err:'Hmm, that code didn’t work. Check it and try again!'};
   ME={code,first_name:data.first_name,grade:data.grade,team:teamOfGrade(data.grade)};saveMe();
-  PR={};PR[ME.team]={stars:data.stars||0,ok:data.words||{},bad:data.tricky||{},spent:data.spent||0,owned:data.owned||[],avatar:data.avatar||{},streak:data.streak||0,bestStreak:data.best_streak||0,streakDay:data.streak_day||'',dailyDay:data.daily_done?dubaiDay():''};savePR();return {ok:true}}
+  PR={};PR[ME.team]={stars:data.stars||0,ok:data.words||{},bad:data.tricky||{},spent:data.spent||0,owned:data.owned||[],avatar:data.avatar||{},streak:data.streak||0,bestStreak:data.best_streak||0,streakDay:data.streak_day||'',dailyDay:data.daily_done?dubaiDay():'',dayCount:data.day_count||0,dayDay:data.day_count?dubaiDay():'',sDays:Array.isArray(data.streak_days)?data.streak_days:[]};savePR();return {ok:true}}
  catch(e){return {err:'We couldn’t connect. Check the internet and try again.'}}}
 async function refreshMe(){if(!ME||!db())return;try{const {data,error}=await db().rpc('student_login',{p_code:ME.code});if(error)return;
  if(!data){ME=null;saveMe();render();return}
  ME.first_name=data.first_name;ME.grade=data.grade;ME.team=teamOfGrade(data.grade);saveMe();
- const p=prog(ME.team);p.stars=Math.max(data.stars||0,p.stars);p.ok=mergeMax(p.ok,data.words);p.bad=mergeMax(p.bad,data.tricky);if(typeof data.spent==='number')p.spent=Math.max(data.spent,p.spent||0);if(Array.isArray(data.owned))p.owned=[...new Set([...(p.owned||[]),...data.owned])];if(data.avatar&&Object.keys(data.avatar).length&&!AVS.dirty)p.avatar=data.avatar;if(typeof data.streak==='number'&&(data.streak_day||'')>=(p.streakDay||'')){if(data.streak_day!==p.streakDay||data.streak>(p.streak||0)){p.streak=data.streak;p.streakDay=data.streak_day}}p.bestStreak=Math.max(p.bestStreak||0,data.best_streak||0);if(data.daily_done)p.dailyDay=dubaiDay();savePR();if(V.screen==='home'||V.screen==='team')render()}catch(e){}}
+ const p=prog(ME.team);p.stars=Math.max(data.stars||0,p.stars);p.ok=mergeMax(p.ok,data.words);p.bad=mergeMax(p.bad,data.tricky);if(typeof data.spent==='number')p.spent=Math.max(data.spent,p.spent||0);if(Array.isArray(data.owned))p.owned=[...new Set([...(p.owned||[]),...data.owned])];if(data.avatar&&Object.keys(data.avatar).length&&!AVS.dirty)p.avatar=data.avatar;if(typeof data.streak==='number'&&(data.streak_day||'')>=(p.streakDay||'')){if(data.streak_day!==p.streakDay||data.streak>(p.streak||0)){p.streak=data.streak;p.streakDay=data.streak_day}}p.bestStreak=Math.max(p.bestStreak||0,data.best_streak||0);if(typeof data.day_count==='number'&&data.day_count>((p.dayDay===dubaiDay()?p.dayCount:0)||0)){p.dayCount=data.day_count;p.dayDay=dubaiDay()}if(Array.isArray(data.streak_days))p.sDays=[...new Set([...(p.sDays||[]),...data.streak_days])].sort();if(data.daily_done)p.dailyDay=dubaiDay();savePR();if(V.screen==='home'||V.screen==='team')render()}catch(e){}}
 function logout(){ME=null;saveMe();PR={};savePR();try{localStorage.removeItem(Q_KEY)}catch(e){};V={screen:'home',team:null};render();setTimeout(()=>document.getElementById('practise')?.scrollIntoView(),0)}
 let flushing=false;
 let MEMQ=[];
@@ -298,7 +307,7 @@ async function flush(){if(flushing||!ME||!db())return;flushing=true;
 setInterval(()=>{if(ME&&readQ().length)flush()},20000);
 window.addEventListener('online',flush);
 let LASTSTAR=true;function dubaiDay(){return new Date(Date.now()+4*3600e3).toISOString().slice(0,10)}
-function award(team,w,ok){const p=prog(team);p.sday=p.sday||{};bumpStreak(p);if(ok){const sec=(p.ok[w]||0)>=2,td=dubaiDay();if(sec&&p.sday[w]===td)LASTSTAR=false;else{p.stars++;LASTSTAR=true;if(sec)p.sday[w]=td}p.ok[w]=(p.ok[w]||0)+1}else{p.bad[w]=(p.bad[w]||0)+1}p.last[w]=!!ok;savePR();
+function award(team,w,ok){const p=prog(team);p.sday=p.sday||{};bumpStreak(p,team);if(ok){const sec=(p.ok[w]||0)>=2,td=dubaiDay();if(sec&&p.sday[w]===td)LASTSTAR=false;else{p.stars++;LASTSTAR=true;if(sec)p.sday[w]=td}p.ok[w]=(p.ok[w]||0)+1}else{p.bad[w]=(p.bad[w]||0)+1}p.last[w]=!!ok;savePR();
  if(ME){const q=readQ();q.push({id:Date.now()+'-'+Math.random().toString(36).slice(2,7),w,ok,a:V.screen});writeQ(q.slice(-500));flush()}}
 function mastered(team){const p=prog(team);return WORDS[team].filter(w=>wordLevel(team,w)==='secure').length}
 function totalStars(){return Math.max(0,TEAMS.reduce((n,t)=>n+(PR[t.id]?.stars||0)-(PR[t.id]?.spent||0),0))}
@@ -1107,14 +1116,34 @@ function rbUndo(){if(!RB||RB.fb||RB.done||!RB.typed)return;RB.typed=RB.typed.sli
 function dayIndex(){return Math.round((Date.parse(dubaiDay())-Date.parse('2026-01-01'))/864e5)}
 function yesterday(){return new Date(Date.parse(dubaiDay())-864e5).toISOString().slice(0,10)}
 function wordOfDay(team){const ws=WORDS[team]||[];return ws.length?ws[(dayIndex()*37)%ws.length]:null}
-function streakNow(team){const p=prog(team);return (p.streakDay===dubaiDay()||p.streakDay===yesterday())?(p.streak||0):0}
-function bumpStreak(p){const td=dubaiDay();if(p.streakDay===td)return;p.streak=p.streakDay===yesterday()?(p.streak||0)+1:1;p.streakDay=td;p.bestStreak=Math.max(p.bestStreak||0,p.streak);
- if([3,7,14,30,50,100].includes(p.streak))setTimeout(()=>{note(`🔥 ${p.streak}-day streak! Amazing!`);praise(pick(CHEERS)[1])},2600)}
-function flameBadge(n){return n>=30?'👑':n>=14?'🏅':n>=7?'🌟':n>=3?'🔥':'🔥'}
-function todayPanel(t){const st=streakNow(t.id),p=prog(t.id),wod=wordOfDay(t.id),done=p.dailyDay===dubaiDay(),prac=p.streakDay===dubaiDay();
+function goalFor(team){return team==='buz'||team==='hon'?5:10}
+function prevSchoolDay(ds){const d=new Date(ds+'T12:00:00Z');const dow=d.getUTCDay();const back=dow===1?3:dow===0?2:1;return new Date(d.getTime()-back*864e5).toISOString().slice(0,10)}
+function streakNow(team){const p=prog(team);if(!p.streakDay)return 0;return p.streakDay>=prevSchoolDay(dubaiDay())?(p.streak||0):0}
+const MILESTONES=[[3,5],[7,15],[14,30],[30,60]];
+function bumpStreak(p,team){const td=dubaiDay();if(p.dayDay!==td){p.dayDay=td;p.dayCount=0}p.dayCount=(p.dayCount||0)+1;
+ if(p.dayCount<goalFor(team)||p.streakDay===td)return;
+ p.streak=(p.streakDay&&p.streakDay>=prevSchoolDay(td))?(p.streak||0)+1:1;p.streakDay=td;p.bestStreak=Math.max(p.bestStreak||0,p.streak);
+ p.sDays=[...new Set([...(p.sDays||[]),td])].filter(d=>d>new Date(Date.parse(td)-21*864e5).toISOString().slice(0,10)).sort();
+ const m=MILESTONES.find(x=>x[0]===p.streak);if(m)p.stars+=m[1];
+ setTimeout(()=>{burst();happySound(true);setTimeout(()=>clapSound(true),120);note(m?`🔥 ${p.streak}-day streak! You won ${m[1]} bonus stars! ⭐`:`🔥 Today’s flame is lit! ${p.streak}-day streak!`);praise(pick(CHEERS)[1],true)},2600)}
+function flameBadge(n){return n>=30?'👑':n>=14?'🏅':n>=7?'🌟':'🔥'}
+function todayPanel(t){const p=prog(t.id),td=dubaiDay(),st=streakNow(t.id),goal=goalFor(t.id),dc=p.dayDay===td?(p.dayCount||0):0,lit=p.streakDay===td;
+ const wod=wordOfDay(t.id),done=p.dailyDay===td;
+ const now=new Date(td+'T12:00:00Z');const dow=(now.getUTCDay()+6)%7;const mon=new Date(now.getTime()-dow*864e5);
+ const week=[...Array(7)].map((_,i)=>{const d=new Date(mon.getTime()+i*864e5).toISOString().slice(0,10);return {d,lab:['M','T','W','T','F','S','S'][i],we:i>=5,on:(p.sDays||[]).includes(d)||(d===p.streakDay&&lit),today:d===td,future:d>td}});
+ const next=MILESTONES.find(m=>m[0]>st);const left=next?next[0]-st:0;
+ const r=26,C=2*Math.PI*r,frac=Math.min(1,dc/goal);
+ const size=Math.min(96,48+st*2.2);
  return `<div class="today">
-  <div class="tcard streakc"><div class="flame ${st?'':'off'}">${st?flameBadge(st):'🔥'}</div><div><div class="f" style="font-size:24px">${st?`${st}-day streak!`:'Start a streak!'}</div>
-   <div class="muted">${prac?'You practised today. Come back tomorrow to grow your flame! 🔥':st?'Practise today to keep your flame alive!':'Practise every day to grow your flame.'}${(p.bestStreak||0)>1?` · Best: ${p.bestStreak} days`:''}</div></div></div>
+  <div class="tcard streakc ${lit?'lit':''}">
+   <div class="sk-top"><div class="flame ${st||lit?'':'off'}" style="font-size:${size}px">${st?flameBadge(st):'🔥'}</div>
+    <div style="flex:1"><div class="f" style="font-size:26px">${st?`${st}-day streak!`:'Light your flame!'}</div>
+     <div class="muted">${lit?'✅ Today’s flame is lit! Come back tomorrow to keep it growing.':`Practise <b>${goal} words</b> today to ${st?'keep your streak going':'start a streak'}.`}${(p.bestStreak||0)>1?` <span class="best">Best: ${p.bestStreak} days</span>`:''}</div></div>
+    <div class="ring" title="${dc} of ${goal} words today"><svg viewBox="0 0 64 64" width="78" height="78"><circle cx="32" cy="32" r="${r}" fill="none" stroke="#F8DDBF" stroke-width="7"/><circle cx="32" cy="32" r="${r}" fill="none" stroke="${lit?'#1E9E5A':'#F59E0B'}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${(C*frac).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 32 32)"/></svg><div class="ringt">${lit?'✅':`<b>${Math.min(dc,goal)}</b>/${goal}`}</div><div class="ringl">words today</div></div></div>
+   <div class="sk-bottom"><div class="weekrow">${week.map(x=>`<div class="wd ${x.on?'on':''} ${x.today?'tdy':''} ${x.we?'we':''} ${x.future?'fut':''}"><span>${x.on?'🔥':x.we?'🛋️':''}</span><i>${x.lab}</i></div>`).join('')}</div>
+    <div class="nextg">${next?`<div><b>${flameBadge(next[0])} ${left} more day${left===1?'':'s'}</b> to your ${next[0]}-day badge <b>(+${next[1]} ⭐)</b></div><div class="nbar"><i style="width:${Math.round(st/next[0]*100)}%"></i></div>`:`<div><b>👑 Streak legend!</b> You’ve reached every badge!</div>`}
+     <div class="small muted" style="margin-top:4px">🛋️ Weekends never break your streak.</div></div></div>
+  </div>
   ${wod?`<div class="tcard wodc ${done?'done':''}" ${done?'':'data-go="wod"'}><div class="flame">🌟</div><div><div class="f" style="font-size:24px">Word of the day</div>
    <div class="muted">${done?'✅ You spelt today’s word! New word tomorrow.':'Spell today’s special word for <b>+5 ⭐</b>!'}</div></div>${done?'':'<button class="y">Let’s go →</button>'}</div>`:''}
  </div>`}

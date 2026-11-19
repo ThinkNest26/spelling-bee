@@ -264,7 +264,8 @@ async function renderDash(){if(!DAILY){$('#app').innerHTML=tabs()+'<p class="mut
  const wa=Object.values(wk).reduce((n,w)=>n+w.a,0),wc=Object.values(wk).reduce((n,w)=>n+w.c,0);
  const secureAll=kids.reduce((n,k)=>n+learnt(k.id),0);
  const yday=dayStr(new Date(Date.now()-864e5));
- const streakers=kids.filter(k=>{const p=PROG[k.id]||{};return (p.streak||0)>=2&&(p.streak_day===today||p.streak_day===yday)});
+ const psd=(()=>{const d=new Date(today+'T12:00:00Z');const w=d.getUTCDay();return new Date(d.getTime()-(w===1?3:w===0?2:1)*864e5).toISOString().slice(0,10)})();
+ const streakers=kids.filter(k=>{const p=PROG[k.id]||{};return (p.streak||0)>=2&&(p.streak_day||'')>=psd});
  const pct=k=>{const t=TEAMS[teamOf(k.grade)][2]||1;return Math.round(learnt(k.id)/t*100)};
  /* trickiest words */
  const tw={};kids.forEach(k=>{const p=PROG[k.id]||{};const ok=p.words||{};Object.entries(p.tricky||{}).forEach(([w,n])=>{if((ok[w]||0)>=2)return;const t=tw[w]||(tw[w]={w,kids:0,miss:0});t.kids++;t.miss+=+n})});
