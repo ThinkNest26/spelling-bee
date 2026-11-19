@@ -261,7 +261,10 @@ function say(t,el,opts){if(!t)return;opts=opts||{};if(!CLIP[t]&&!Object.keys(CLI
  }catch(e){note('Sound didn’t play — check the volume is turned up.')}}
 let noteT;function note(m){let n=document.getElementById('note');if(!n){n=document.createElement('div');n.id='note';n.style.cssText='position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1F2A44;color:#fff;padding:12px 18px;border-radius:14px;font-weight:800;z-index:20;max-width:90vw;text-align:center';document.body.appendChild(n)}n.textContent=m;n.style.display='block';clearTimeout(noteT);noteT=setTimeout(()=>n.style.display='none',3500)}
 function sayWord(w){say(w)}
-function sayWordSentence(w){say(SENT[w]||w)}
+function sayWordSentence(w){const st=SENT[w];if(!st){say(w);return}
+ if(!Object.keys(CLIP).length)buildClips();const nw=CLIP[w],ns=CLIP[st];
+ if(nw&&ns&&HAVE.has(nw)&&HAVE.has(ns)&&playClip(w)){const a=curAudio;if(a)a.addEventListener('ended',()=>setTimeout(()=>{if(curAudio===a)playClip(st)},600));return}
+ say(w+'. '+st,null,{noclip:true})}
 
 /* ---------- celebrations ---------- */
 let AC=null,STREAK=0;
