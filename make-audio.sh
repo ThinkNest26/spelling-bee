@@ -425,6 +425,28 @@ ws-conscience	conscience. Her conscience told her to say sorry. conscience.
 s-conscious	He was conscious of everyone watching.
 ws-conscious	conscious. He was conscious of everyone watching. conscious.
 g-start	Hello! Let's practise your spellings!
+p-1	Well done! That's right!
+p-2	Fantastic spelling!
+p-3	Brilliant! You got it!
+p-4	Amazing! Keep going!
+p-5	Yes! Super spelling!
+p-6	Great job! You're a star!
+p-7	Wonderful! Give yourself a big clap!
+p-8	Excellent! You're a spelling superstar!
+p-9	Perfect! Keep buzzing!
+p-10	Hooray! You did it!
+p-11	Beautiful spelling! Well done!
+p-12	Spot on! I am so proud of you!
+e-1	Good try! Let's practise this one again.
+e-2	Nearly there! Have another look.
+e-3	That's OK! Mistakes help us learn.
+e-4	Keep going, you can do it!
+e-5	Good effort! This one is a tricky word.
+k-3	Three in a row! You're on fire!
+k-5	Five in a row! Amazing!
+k-8	Eight in a row! You're a spelling superstar!
+k-10	Ten in a row! You're a champion bee!
+perfect	Wow! A perfect score! Well done!
 WORDS
 rm -f "$TMP"
 {
