@@ -64,11 +64,12 @@ function render(){const S=D.schools||[],R=D.requests||[],P=D.plans||[];const new
   <div class="tablewrap" style="margin-top:8px"><table><thead><tr><th>School</th><th>Contact</th><th>Children</th><th>Last active</th><th>Plan</th><th>Until</th><th>Change plan</th></tr></thead><tbody>
   ${list.map(s=>{const ended=s.plan_until<today;return `<tr><td><b>${esc(s.name)}</b><div class="small"><a href="./?s=${esc(s.slug)}" target="_blank">?s=${esc(s.slug)}</a> · ${esc(s.city||'')}</div><div class="small muted">Joined ${fd(s.created_at)}</div></td>
    <td class="small">${esc(s.contact_name)}<br><a href="mailto:${esc(s.contact_email)}">${esc(s.contact_email)}</a><br>${esc(s.contact_phone)}</td>
-   <td>${s.children}<div class="small muted">${s.teachers} teacher${s.teachers==1?'':'s'}</div></td><td class="small">${s.last_active?fd(s.last_active):'—'}</td>
+   <td>${s.children}${(()=>{const m=(P.find(p=>p.id===s.plan)||{}).max_children;return m?`<span class="small ${s.children>=m?'':'muted'}" style="${s.children>=m?'color:#991B1B;font-weight:800':''}"> / ${m}</span>`:''})()}<div class="small muted">${s.teachers} teacher${s.teachers==1?'':'s'}</div></td><td class="small">${s.last_active?fd(s.last_active):'—'}</td>
    <td><span class="pill ${ended?'ended':s.plan}">${ended?'Ended':esc((P.find(p=>p.id===s.plan)||{}).name||s.plan)}</span></td><td>${fd(s.plan_until)}</td>
    <td style="white-space:nowrap"><select data-ps="${s.id}">${P.map(p=>`<option value="${p.id}" ${p.id===s.plan?'selected':''}>${esc(p.name)}</option>`).join('')}</select> <input type="date" data-pu="${s.id}" value="${s.plan_until}"> <button class="w sm" data-save="${s.id}">Save</button></td></tr>`}).join('')||'<tr><td colspan="7" class="muted">No schools.</td></tr>'}</tbody></table></div></div>
  <div class="card"><h2 style="font-size:20px">💰 Plans & prices</h2><p class="small muted">These show on the website’s Plans section and on every school’s settings page. One feature per line.</p>
   <div class="plansgrid">${P.map(p=>`<div class="card" style="margin:0"><div class="row"><b class="f" style="font-size:19px">${esc(p.name)}</b><div class="spacer"></div>${p.id==='trial'?'<span class="small muted">30 days free</span>':`AED <input type="number" min="0" step="50" data-price="${p.id}" value="${p.price}" style="width:100px">`}</div>
+   <label class="small muted" style="display:block;margin-top:8px">Most children allowed <span>(leave empty for unlimited)</span></label><input type="number" min="1" step="10" data-max="${p.id}" value="${p.max_children==null?'':p.max_children}" placeholder="Unlimited" style="width:140px">
    <label class="small muted" style="display:block;margin-top:8px">Short description</label><input data-blurb="${p.id}" value="${esc(p.blurb)}" style="width:100%">
    <label class="small muted" style="display:block;margin-top:8px">Features</label><textarea data-feat="${p.id}" rows="6" style="width:100%">${esc((p.features||[]).join('\n'))}</textarea>
    <button class="y sm" data-psave="${p.id}" style="margin-top:8px">Save ${esc(p.name)}</button></div>`).join('')}</div></div>`;
@@ -78,7 +79,8 @@ function render(){const S=D.schools||[],R=D.requests||[],P=D.plans||[];const new
  document.querySelectorAll('[data-save]').forEach(b=>b.onclick=()=>{const id=b.dataset.save;setPlan(id,document.querySelector(`[data-ps="${id}"]`).value,document.querySelector(`[data-pu="${id}"]`).value)});
  document.querySelectorAll('[data-psave]').forEach(b=>b.onclick=async()=>{const id=b.dataset.psave;const pr=document.querySelector(`[data-price="${id}"]`);
   const {data}=await sb.rpc('admin_set_price',{p_plan:id,p_price:pr?+pr.value:0,p_blurb:document.querySelector(`[data-blurb="${id}"]`).value,p_features:document.querySelector(`[data-feat="${id}"]`).value.split('\n').map(x=>x.trim()).filter(Boolean)});
-  if(data&&data.ok){await load();toast('Saved ✓')}else toast('Couldn’t save')});
+  const mv=document.querySelector(`[data-max="${id}"]`).value.trim();const {data:d2}=await sb.rpc('admin_set_limit',{p_plan:id,p_max:mv===''?null:+mv});
+  if(data&&data.ok&&d2&&d2.ok){await load();toast('Saved ✓')}else toast('Couldn’t save')});
 }
 async function setPlan(id,plan,until){if(!until){toast('Choose a date');return}const {data}=await sb.rpc('admin_set_plan',{p_school:id,p_plan:plan,p_until:until});if(data&&data.ok){await load();toast('Plan updated ✓')}else toast('Couldn’t update')}
 load();

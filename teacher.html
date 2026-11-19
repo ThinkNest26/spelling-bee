@@ -363,8 +363,9 @@ function renderSettings(){if(!SCHOOL){$('#app').innerHTML=tabs()+'<div class="ca
  </div>
  <div class="card" id="plancard"><h2 style="font-size:20px">⭐ Plan</h2>
   <p style="margin:8px 0">Current plan: <b>${esc(SCHOOL.plan_name)}</b> · ${SCHOOL.active?`until <b>${new Date(SCHOOL.plan_until+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</b> (${SCHOOL.days_left} days)`:'<b style="color:#991B1B">ended</b>'}</p>
+  <p style="margin:8px 0">Children: <b>${KIDS.length}</b>${SCHOOL.max_children?` of <b>${Number(SCHOOL.max_children).toLocaleString()}</b> allowed on your plan`:' · unlimited on your plan'}</p>
   ${reqs.length?`<div class="card okc">✅ You asked for ${reqs.map(r=>esc((PLANS.find(p=>p.id===r.plan)||{}).name||r.plan)).join(', ')} on ${new Date(reqs[0].at).toLocaleDateString('en-GB')}. We’ll email your invoice shortly.</div>`:''}
-  <div class="plans">${PLANS.filter(p=>p.id!=='trial').map(p=>`<div class="plan ${SCHOOL.plan===p.id?'cur':''}"><div class="f" style="font-size:20px">${esc(p.name)}</div><div class="price">${p.currency} ${Number(p.price).toLocaleString()}<span> / year</span></div><div class="small muted">${esc(p.blurb)}</div><ul>${(p.features||[]).map(f=>`<li>${esc(f)}</li>`).join('')}</ul>${SCHOOL.plan===p.id&&SCHOOL.active?'<span class="pill done">Your plan</span>':`<button class="y sm" data-req="${p.id}">Request ${esc(p.name)}</button>`}</div>`).join('')}</div>
+  <div class="plans">${PLANS.filter(p=>p.id!=='trial').map(p=>`<div class="plan ${SCHOOL.plan===p.id?'cur':''}"><div class="f" style="font-size:20px">${esc(p.name)}</div><div class="price">${p.currency} ${Number(p.price).toLocaleString()}<span> / year</span></div><div class="small muted">${esc(p.blurb)}</div><ul><li><b>${p.max_children?'Up to '+Number(p.max_children).toLocaleString()+' children':'Unlimited children'}</b></li>${(p.features||[]).map(f=>`<li>${esc(f)}</li>`).join('')}</ul>${SCHOOL.plan===p.id&&SCHOOL.active?'<span class="pill done">Your plan</span>':`<button class="y sm" data-req="${p.id}">Request ${esc(p.name)}</button>`}</div>`).join('')}</div>
   <p class="small muted">After you request a plan, we email an invoice to your school. Your plan starts as soon as it’s paid.</p>
  </div>
  <div class="card"><h2 style="font-size:20px">📇 Contact details</h2><p class="small muted">So we can send invoices and help. Not shown on your school page.</p>
@@ -419,7 +420,7 @@ function render(){
   <div class="card"><div class="stat">${stars}</div><div class="small muted">stars earned in total</div></div>
   <div class="card"><div class="stat">${KIDS.filter(c=>!PROG[c.id]?.last_seen).length}</div><div class="small muted">haven’t started yet</div></div></div>
  <div class="card"><div class="row"><h2 style="font-size:20px">Spellers</h2><div class="spacer"></div>
-  <button class="y" id="add">+ Add children</button><button class="w" id="print">🖨 Print code cards${SEL.size?' ('+SEL.size+')':''}</button><button class="w" id="csv">⬇ Download list</button><button class="w" id="refresh">↻ Refresh</button></div>
+  <button class="y" id="add">+ Add children</button>${kidCount()}<button class="w" id="print">🖨 Print code cards${SEL.size?' ('+SEL.size+')':''}</button><button class="w" id="csv">⬇ Download list</button><button class="w" id="refresh">↻ Refresh</button></div>
   <div class="row" style="margin-top:12px">
    <select id="fg" style="max-width:160px"><option value="all">All grades</option>${GRADES.map(g=>`<option value="${g}" ${F.grade==g?'selected':''}>${GL(g)}</option>`).join('')}</select>
    <select id="fc" style="max-width:160px"><option value="all">All classes</option>${classes.map(c=>`<option ${F.cls===c?'selected':''}>${esc(c)}</option>`).join('')}</select>
@@ -471,7 +472,10 @@ function parseLine(line){const toks=line.split(/[,\t;]+|\s+/).map(t=>t.trim()).f
  if(!name||grade===null||grade<0||grade>5)return null;
  name=name.charAt(0).toLocaleUpperCase()+name.slice(1);
  return {first_name:name,grade,class_name:cls}}
+function kidCount(){if(!SCHOOL||!SCHOOL.max_children)return '';const m=SCHOOL.max_children,n=KIDS.length;return `<span class="pill ${n>=m?'':'done'}" style="align-self:center${n>=m?';background:#FEE2E2;color:#991B1B':''}" title="Children allowed on your plan">${n} of ${m} children</span>`}
+function limitMsg(){return `Your ${esc(SCHOOL.plan_name)} plan allows up to <b>${SCHOOL.max_children}</b> children. <a href="#" data-golimit="1">Ask to upgrade</a> to add more.`}
 function addModal(){
+ if(SCHOOL&&SCHOOL.max_children&&KIDS.length>=SCHOOL.max_children){$('#modal').innerHTML=`<div class="modal"><div class="card"><h2 style="font-size:22px">Your plan is full 🐝</h2><p>${limitMsg()}</p><div class="row" style="margin-top:10px"><div class="spacer"></div><button class="w" id="ac">Close</button><button class="y" id="aup">See plans</button></div></div></div>`;$('#ac').onclick=()=>$('#modal').innerHTML='';$('#aup').onclick=goLimit;return}
  $('#modal').innerHTML=`<div class="modal"><div class="card"><h2 style="font-size:22px">Add children</h2>
  <p class="small muted">One child per line: their <b>first name</b> and <b>class</b> (or grade). Paste straight from a class list — commas are optional.<br><code>Mariam 1A</code> &nbsp; <code>Saeed KG2B</code> &nbsp; <code>Lina, 5, 5C</code> &nbsp; <code>Omar KG2</code>${F.grade!=='all'?`<br>Lines with no grade go into <b>${GL(F.grade)}</b> (the grade you’re viewing).`:''}</p>
  <textarea id="kids" rows="10" placeholder="Mariam, 1, 1A"></textarea>
@@ -481,13 +485,15 @@ function addModal(){
  $('#ao').onclick=async()=>{const rows=[],bad=[];
   $('#kids').value.split('\n').map(l=>l.trim()).filter(Boolean).forEach((l,i)=>{const r=parseLine(l);if(!r){bad.push(i+1);return}rows.push(r)});
   if(bad.length){const m=$('#amsg');m.innerHTML='Please check line'+(bad.length>1?'s ':' ')+bad.join(', ')+' — each line needs a first name and a class or grade, e.g. <b>Mariam 1A</b> or <b>Saeed KG2</b>.';m.classList.add('show');return}
-  if(!rows.length)return;const b=$('#ao');b.disabled=true;b.textContent='Making codes…';
+  if(!rows.length)return;if(SCHOOL&&SCHOOL.max_children&&KIDS.length+rows.length>SCHOOL.max_children){const m=$('#amsg');const left=Math.max(0,SCHOOL.max_children-KIDS.length);m.innerHTML=`You can add <b>${left}</b> more child${left===1?'':'ren'} (you pasted ${rows.length}). `+limitMsg();m.classList.add('show');bindLimit();return}const b=$('#ao');b.disabled=true;b.textContent='Making codes…';
   const used=new Set(KIDS.map(k=>k.code));rows.forEach(r=>{let c;do{c=newCode()}while(used.has(c));used.add(c);r.code=c});
   let {data,error}=await sb.from('students').insert(rows).select();
   if(error&&/duplicate|unique/i.test(error.message)){rows.forEach(r=>r.code=newCode());({data,error}=await sb.from('students').insert(rows).select())}
-  if(error){b.disabled=false;b.textContent='Add and make codes';const m=$('#amsg');m.textContent='Couldn’t add the children. Please try again.';m.classList.add('show');return}
+  if(error){b.disabled=false;b.textContent='Add and make codes';const m=$('#amsg');if(/PLAN_LIMIT/.test(error.message)){m.innerHTML=limitMsg();bindLimit()}else m.textContent='Couldn’t add the children. Please try again.';m.classList.add('show');return}
   $('#modal').innerHTML='';KIDS=KIDS.concat(data);data.forEach(d=>SEL.add(d.id));render();toast(data.length+' children added — their cards are ticked, ready to print')};
 }
+function goLimit(e){if(e&&e.preventDefault)e.preventDefault();$('#modal').innerHTML='';TAB='settings';render();setTimeout(()=>document.getElementById('plancard')?.scrollIntoView({behavior:'smooth'}),50)}
+function bindLimit(){document.querySelectorAll('[data-golimit]').forEach(a=>a.onclick=goLimit)}
 function printCards(){
  const list=SEL.size?KIDS.filter(c=>SEL.has(c.id)):visible();if(!list.length){toast('No children to print');return}
  $('#cards').innerHTML=`<div class="cards">${list.map(c=>{const t=TEAMS[teamOf(c.grade)];return `<div class="ccard"><div class="bee">🐝</div><div class="h">Spelling Bee</div><div class="n">${esc(c.first_name)}</div><div class="tm">${t[1]} ${t[0]} · ${GL(c.grade)}${c.class_name?' · '+esc(c.class_name):''}</div><div class="small" style="margin-top:8px">Your secret bee code</div><div class="cd">${fmtCode(c.code)}</div><div class="go">Go to <b>${SITE}</b>, click <b>Start practising</b> and type your code. Happy spelling! ✨</div></div>`}).join('')}</div>`;
