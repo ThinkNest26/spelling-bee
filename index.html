@@ -116,6 +116,7 @@ main{max-width:980px;margin:0 auto;padding:20px 18px 50px}
 .rules{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
 .rule{background:#fff;border-radius:18px;padding:14px 16px;border:3px solid var(--line);display:flex;gap:12px;align-items:center;font-size:16px}
 .rule span{flex:none;width:38px;height:38px;border-radius:12px;background:var(--honey);display:grid;place-items:center;font-family:Fredoka;font-size:19px}
+.powered{margin-top:14px;font-size:14px;font-weight:700;color:var(--ink2)}.powered a{color:var(--aa);text-decoration:none;border-bottom:2px solid var(--honey)}.powered a:hover{color:var(--aa2)}
 .foot{text-align:center;margin-top:36px;padding:22px;border-top:3px dashed var(--line);color:var(--ink2)}
 @media (max-width:600px){.date{grid-template-columns:1fr;gap:4px}}
 @media (prefers-reduced-motion:reduce){.flybee,.wing,.burst i{animation:none}}
@@ -341,7 +342,7 @@ function home(){
  <section id="parents" class="sec2"><h2 class="h2">For parents 💛</h2>
  <div class="about">${PARENTS.map(p=>`<div class="aboutcard" style="text-align:left"><div class="e">${p[0]}</div><b>${p[1]}</b><p>${p[2]}</p></div>`).join('')}</div>
  <div class="tipbox">Your child’s stars and progress are saved with their bee code, so they can practise on any device. Turn the sound on so your child can hear each word.</div></section>
- <footer class="foot"><div style="width:46px;height:46px;margin:0 auto 6px">${BEE}</div><b class="f" style="font-size:20px">Spelling Bee 2026–2027</b><div>Spell it! Say it! Shine!</div></footer>
+ <footer class="foot"><div style="width:46px;height:46px;margin:0 auto 6px">${BEE}</div><b class="f" style="font-size:20px">Spelling Bee 2026–2027</b><div>Spell it! Say it! Shine!</div><div class="powered">Powered by <a href="https://thinknestonline.com" target="_blank" rel="noopener">ThinkNest</a></div></footer>
  </main>`;
 }
 function practiseBox(){
