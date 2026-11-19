@@ -330,7 +330,7 @@ const STREAKS={3:'3 in a row! 🔥',5:'5 in a row! You’re on fire! 🔥🔥',8
 /* optional real human cheers: cheers/cheer1.m4a … cheer12.m4a (or .mp3) are played instead */
 let RECORDED=[];(function(){if(location.protocol.indexOf('http')!==0)return;for(let i=1;i<=12;i++)for(const ext of ['m4a','mp3']){const u='cheers/cheer'+i+'.'+ext;fetch(u,{method:'HEAD'}).then(r=>{if(r.ok)RECORDED.push(u)}).catch(()=>{})}})();
 /* praise is only ever a real recording (human cheer or Kate) — never the robot voice */
-function praise(text,human){if(human&&RECORDED.length){try{const au=new Audio(pick(RECORDED));au.play().catch(()=>{});return}catch(e){}}playClip(text)}
+function praise(text,human){if(human&&RECORDED.length){try{const au=new Audio(pick(RECORDED));curAudio=au;au.play().catch(()=>{});return}catch(e){}}playClip(text)}
 function celebrate(big){STREAK++;happySound(big);setTimeout(()=>clapSound(big||STREAK>=3),120);
  const old=document.getElementById('party');if(old)old.remove();
  const ch=pick(CHEERS),cheer=ch[0],emo=pick(PARTY_EMO),streak=STREAKS[STREAK]||'';
@@ -534,6 +534,8 @@ function gWords(n){const ws=WORDS[V.team];const t=shuffle(ws.filter(w=>wordLevel
 function gGood(){STREAK++;happySound(STREAK>=3);setTimeout(()=>clapSound(STREAK>=3),120);setTimeout(()=>praise(pick(CHEERS)[1],true),400);
  const st=document.querySelector('.top .stars');if(st){st.classList.remove('pop');void st.offsetWidth;st.classList.add('pop')}}
 function gBig(){burst();happySound(true);setTimeout(()=>clapSound(true),120);setTimeout(()=>praise(pick(CHEERS)[1]),500)}
+function gAfterTalk(fn0,minMs){const g0=G,fn=()=>{if(G===g0&&V.screen===g0.kind)fn0()};const t0=performance.now();const busy=()=>{try{if(curAudio&&!curAudio.paused&&!curAudio.ended)return true;if(window.speechSynthesis&&speechSynthesis.speaking)return true}catch(e){}return false};
+ let quiet=0;(function tick(){const el=performance.now()-t0;if(el<(minMs||1300)){setTimeout(tick,150);return}if(busy()){quiet=0}else quiet+=150;if(quiet>=450||el>9000)fn();else setTimeout(tick,150)})()}
 function gHead(title,extra){return `<div class="row" style="justify-content:space-between"><button class="back" data-g="menu">← Games</button><div class="f" style="font-size:22px">${title}</div></div>${extra||''}`}
 function gAsk(){const w=G.list[G.i];
  return `<div class="row"><button class="y hear" data-sayw="${esc(w)}">🔊 Hear the word</button>${SENT[w]?`<button class="w" data-say="${esc(SENT[w])}">💬 Sentence</button>`:''}</div>
@@ -619,7 +621,7 @@ function catchGot(c){const w=G.list[G.i];const need=w[G.got.length].toLowerCase(
   const sl=$('#slots');if(sl){const s=sl.children[G.got.length-1];s.textContent=w[G.got.length-1];s.className='in'}
   if(jar){jar.classList.remove('yum');void jar.offsetWidth;jar.classList.add('yum')}
   if(G.got.length===w.length){award(V.team,w,!G.wbad);if(!G.wbad)G.score++;gGood();G.next=performance.now()+99999;
-   setTimeout(()=>{if(!G||G.kind!=='gcatch')return;if(G.i+1<G.list.length){G.i++;G.got='';G.wbad=false;G.drops=[];G.next=performance.now()+900;render();setTimeout(()=>sayWord(G.list[G.i]),200)}else{G.done=true;render();gWin('gcatch');gBig()}},1900)}}
+   gAfterTalk(()=>{if(!G||G.kind!=='gcatch')return;if(G.i+1<G.list.length){G.i++;G.got='';G.wbad=false;G.drops=[];G.next=performance.now()+900;render();setTimeout(()=>sayWord(G.list[G.i]),200)}else{G.done=true;render();gWin('gcatch');gBig()}},1600)}}
  else{G.wbad=true;G.hearts--;gentleSound();G.next=performance.now()+700;if(jar){jar.classList.remove('buzz');void jar.offsetWidth;jar.classList.add('buzz')}
   const h=document.querySelector('main p.muted');if(h)h.innerHTML=`Oops, that was “${esc(c)}”. ${'❤️'.repeat(Math.max(G.hearts,0))}${'🤍'.repeat(3-Math.max(G.hearts,0))}`;
   if(G.hearts<=0){award(V.team,w,false);setTimeout(()=>{if(!G||G.kind!=='gcatch')return;G.done=true;render();setTimeout(()=>playClip(pick(ENCOURAGE)),200)},700)}}}
@@ -628,9 +630,9 @@ function catchMove(dx){if(!G||G.kind!=='gcatch')return;G.lane=Math.max(0,Math.mi
 /* shared check / next */
 function gCheck(){const v=readAns();if(!v||G.fb)return;const w=G.list[G.i];const ok=same(v,w);G.val=v;award(V.team,w,ok);
  if(ok){G.score++;G.fb='ok';if(G.kind==='ghive')G.pos++;if(G.kind==='grace')G.pos++;if(G.kind==='ggarden')G.grown=w;render();gGood();
-  if((G.kind==='ghive'&&G.pos>=G.goal)){setTimeout(()=>{G.done=true;render();window.scrollTo(0,0);gWin('ghive');gBig()},1500);return}
-  if(G.kind==='grace'&&G.pos>=G.goal){setTimeout(()=>raceEnd(true),900);return}
-  setTimeout(gNext,1500)}
+  if((G.kind==='ghive'&&G.pos>=G.goal)){gAfterTalk(()=>{G.done=true;render();window.scrollTo(0,0);gWin('ghive');gBig()});return}
+  if(G.kind==='grace'&&G.pos>=G.goal){gAfterTalk(()=>raceEnd(true));return}
+  gAfterTalk(gNext)}
  else{G.wrong++;G.fb='bad';if(G.kind==='ghive'&&G.tries<10){G.list.push(w);G.tries++}if(G.kind==='grace'&&!G.timed)G.opp+=12.5;render();oops();
   const f=$('#flyer');if(f){f.classList.remove('buzz');void f.offsetWidth;f.classList.add('buzz')}
   if(G.kind==='grace'&&G.opp>=100)setTimeout(()=>raceEnd(false),1200)}}
