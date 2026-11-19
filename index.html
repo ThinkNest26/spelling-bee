@@ -214,16 +214,29 @@ function vScore(x){if(!x||BADV.test(x.name))return -1;const l=x.lang||'';let s;
  const n=x.name;if(/Premium/i.test(n))s+=25;if(/Enhanced|Neural|Natural|Online/i.test(n))s+=20;
  if(/Google UK English Female/i.test(n))s+=22;else if(/Google UK English/i.test(n))s+=16;
  if(/Microsoft (Libby|Sonia|Maisie|Ryan|Thomas|Hazel)/i.test(n))s+=24;
- if(/^(Daniel|Kate|Serena|Stephanie|Martha|Arthur|Oliver|Jamie)\b/i.test(n))s+=12;
+ if(/^(Kate|Serena|Stephanie|Martha|Fiona|Moira)\b/i.test(n)||/Female|Libby|Sonia|Maisie|Hazel|Susan/i.test(n))s+=40; /* female first */
+ if(/^(Daniel|Arthur|Oliver|Jamie|George|Rishi)\b/i.test(n)||/Male|Ryan|Thomas/i.test(n))s-=12;
  if(/^(Samantha|Karen|Moira|Tessa|Ava|Allison|Susan|Zoe|Evan|Nathan|Joelle|Noelle)\b/i.test(n))s+=8;
  return s}
 function goodVoices(){try{return speechSynthesis.getVoices().filter(x=>vScore(x)>0).sort((a,b)=>vScore(b)-vScore(a))}catch(e){return []}}
 function pv(){try{const g=goodVoices();if(!g.length){voice=null;return}let saved=null;try{saved=localStorage.getItem(VKEY)}catch(e){}
  voice=(saved&&g.find(x=>x.name===saved))||g[0]}catch(e){}}
 if(HAS_SPEECH){try{pv();speechSynthesis.addEventListener?speechSynthesis.addEventListener('voiceschanged',pv):(speechSynthesis.onvoiceschanged=pv)}catch(e){}}
+/* ---------- recorded voice (made on a Mac with make-audio.sh) ---------- */
+function slugW(w){return String(w).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')}
+const CLIP={};
+function buildClips(){for(const t of TEAMS)for(const w of WORDS[t.id])CLIP[w]='w-'+slugW(w);
+ for(const w in SENT){CLIP[SENT[w]]='s-'+slugW(w);CLIP[w+'. '+SENT[w]+' '+w+'.']='ws-'+slugW(w)}
+ CLIP["Hello! Let's practise your spellings!"]='g-start'}
+let HAVE=new Set(),curAudio=null;
+(function(){if(location.protocol.indexOf('http')!==0)return;fetch('audio/manifest.json',{cache:'no-cache'}).then(r=>r.ok?r.json():[]).then(a=>{if(Array.isArray(a))HAVE=new Set(a)}).catch(()=>{})})();
+function playClip(t){const n=CLIP[t];if(!n||!HAVE.has(n))return false;
+ try{if(curAudio){curAudio.pause()}try{speechSynthesis.cancel()}catch(e){}
+  const a=new Audio('audio/'+n+'.m4a');curAudio=a;a.play().catch(()=>{curAudio=null;HAVE.delete(n);say(t)});return true}catch(e){return false}}
 let lastU=null; /* keep a reference so Safari/Chrome don't cut the word off */
-function say(t,el,opts){if(!t)return;opts=opts||{};
+function say(t,el,opts){if(!t)return;opts=opts||{};if(!CLIP[t]&&!Object.keys(CLIP).length)buildClips();
  if(el){el.classList.add('talking');setTimeout(()=>el.classList.remove('talking'),1400)}
+ if(!opts.noclip&&playClip(t))return;
  if(tts){tts.speak(t,{language:'en',rate:opts.rate||0.8}).catch(e=>{if(e&&e.code==='not_granted'){tts=null;say(t)}});return}
  if(!HAS_SPEECH){note('Sound isn’t available in this browser. Try Chrome or Safari.');return}
  try{const s=window.speechSynthesis;
@@ -261,10 +274,10 @@ function partyHorn(t0){const a=ac();if(!a)return;const n=a.currentTime+t0;const 
  f.type='lowpass';f.frequency.value=2000;g.gain.setValueAtTime(0.0001,n);g.gain.exponentialRampToValueAtTime(0.12,n+0.04);g.gain.setValueAtTime(0.12,n+0.45);g.gain.exponentialRampToValueAtTime(0.0001,n+0.65);
  o.connect(f);f.connect(g);g.connect(a.destination);o.start(n);lfo.start(n);o.stop(n+0.7);lfo.stop(n+0.7)}
 /* optional recorded cheers: put cheer1.mp3 … cheer12.mp3 in a "cheers" folder and they are used instead of the computer voice */
-let RECORDED=[];(function(){if(location.protocol.indexOf('http')!==0)return;for(let i=1;i<=12;i++){const u='cheers/cheer'+i+'.mp3';fetch(u,{method:'HEAD'}).then(r=>{if(r.ok)RECORDED.push(u)}).catch(()=>{})}})();
-function shout(text){if(RECORDED.length){try{const au=new Audio(pick(RECORDED));au.volume=1;au.play().catch(()=>say(text,null,{pitch:1.5,rate:1.12}));return}catch(e){}}say(text,null,{pitch:1.5,rate:1.12})}
+let RECORDED=[];(function(){if(location.protocol.indexOf('http')!==0)return;for(let i=1;i<=12;i++)for(const ext of ['m4a','mp3']){const u='cheers/cheer'+i+'.'+ext;fetch(u,{method:'HEAD'}).then(r=>{if(r.ok)RECORDED.push(u)}).catch(()=>{})}})();
+function shout(text){/* only real human cheers are spoken — no robot voice */if(RECORDED.length){try{const au=new Audio(pick(RECORDED));au.volume=1;au.play().catch(()=>{});}catch(e){}}}
 const STREAKS={3:'3 in a row! 🔥',5:'5 in a row! You’re on fire! 🔥🔥',8:'8 in a row! Spelling superstar! 🌟',10:'10 in a row! Champion bee! 🏆'};
-function celebrate(big){STREAK++;happySound(big);clapSound();
+function celebrate(big){STREAK++;happySound(big);clapSound();if(STREAK>=3)setTimeout(clapSound,900);
  const old=document.getElementById('party');if(old)old.remove();
  const ch=pick(CHEERS),cheer=ch[0],emo=pick(PARTY_EMO),streak=STREAKS[STREAK]||'';
  const d=document.createElement('div');d.id='party';d.className='party';
@@ -426,7 +439,7 @@ document.addEventListener('input',e=>{if(e.target.id==='ans'){if(V.screen==='lcw
 
 async function submitCode(){const i=$('#codein'),m=$('#codemsg');if(!i)return;const btn=document.querySelector('[data-code]');
  if(btn){btn.disabled=true;btn.textContent='Checking… 🐝'}const r=await loginCode(i.value);
- if(r.ok){V={screen:'team',team:ME.team};render();window.scrollTo(0,0);happySound(false);setTimeout(()=>say('Hi '+ME.first_name+'! Let’s practise your spellings!'),300);flush()}
+ if(r.ok){V={screen:'team',team:ME.team};render();window.scrollTo(0,0);happySound(false);setTimeout(()=>say("Hello! Let's practise your spellings!"),300);flush()}
  else{if(btn){btn.disabled=false;btn.textContent='Let’s go! 🐝'}if(m){m.textContent=r.err;m.classList.add('show')}gentleSound()}}
 document.addEventListener('submit',e=>{if(e.target.id==='codeform'){e.preventDefault();submitCode()}});
 render();
