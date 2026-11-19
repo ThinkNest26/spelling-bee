@@ -51,6 +51,19 @@ main{max-width:1200px;margin:0 auto;padding:22px}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:12px;font-weight:800;z-index:60;display:none}
 .modal{position:fixed;inset:0;background:rgba(20,26,43,.5);display:grid;place-items:center;z-index:50;padding:20px}.modal .card{max-width:520px;width:100%}
 .place{font-family:Fredoka;font-size:22px;width:44px;text-align:center}
+.nrgrid{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;align-items:start}@media(max-width:900px){.nrgrid{grid-template-columns:1fr}}
+.sticky{position:sticky;top:10px}
+.classes .cls{border:1.5px solid var(--line);border-radius:14px;padding:10px;margin-bottom:10px;background:#FFFDF6}
+.clshead{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.tog{padding:2px 8px}
+.kidcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-top:10px}
+.kc{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;background:#fff;color:var(--ink);border:2.5px solid var(--line);border-radius:14px;padding:8px 6px;font-size:14px}
+.kc svg{border-radius:50%}.kc.on{border-color:var(--honey);background:var(--honeyL)}.kc i{position:absolute;top:4px;right:6px;font-style:normal;color:var(--ok);font-weight:900}
+.fromrounds{background:#E8F0FF;border-radius:14px;padding:12px;margin-top:6px}
+.chosen{text-align:center;background:var(--honeyL);border-radius:14px;padding:12px;margin:10px 0}.chosen .big{font-family:Fredoka;font-size:40px;line-height:1}
+.chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:8px;max-height:150px;overflow:auto}
+.chip{display:inline-flex;align-items:center;gap:5px;background:#fff;border:1.5px solid var(--line);border-radius:99px;padding:3px 4px 3px 4px;font-weight:800;font-size:13px}.chip svg{border-radius:50%}
+.chip button{background:none;color:var(--muted);padding:0 4px;font-size:12px}
+.warnbox{background:#FFF7E0;border:1px solid #F5D58A;border-radius:10px;padding:8px 10px;font-size:13px;font-weight:700;margin-bottom:4px}
 @media print{header,.noprint,footer{display:none!important}main{padding:0}.card{border:0}}
 </style>
 </head>
@@ -122,46 +135,72 @@ function home(){R=null;history.replaceState(null,'','bee.html');sendScreen();
 }
 
 /* ---------- new round ---------- */
-let NF={kind:'class',team:'bum',grade:'all',cls:'all',sel:new Set(),extra:''};
+let NF={kind:'class',team:null,q:'',sel:new Set(),extra:'',open:{}};
+function selTeams(){return [...new Set(KIDS.filter(k=>NF.sel.has(k.id)).map(k=>teamOf(k.grade)))]}
 function newRound(){
- const kids=KIDS.filter(k=>teamOf(k.grade)===NF.team&&(NF.grade==='all'||k.grade==NF.grade)&&(NF.cls==='all'||k.class_name===NF.cls));
- const grades=[...new Set(KIDS.filter(k=>teamOf(k.grade)===NF.team).map(k=>k.grade))].sort();
- const classes=[...new Set(KIDS.filter(k=>teamOf(k.grade)===NF.team&&(NF.grade==='all'||k.grade==NF.grade)).map(k=>k.class_name).filter(Boolean))].sort();
- const nsel=[...NF.sel].filter(id=>KIDS.find(k=>k.id===id&&teamOf(k.grade)===NF.team)).length;
+ const q=NF.q.trim().toLowerCase();
+ const kids=KIDS.filter(k=>!q||k.first_name.toLowerCase().includes(q)||(k.class_name||'').toLowerCase().includes(q));
+ const groups={};kids.forEach(k=>{const g=(k.class_name||GL(k.grade));(groups[g]=groups[g]||{grade:k.grade,list:[]}).list.push(k)});
+ const gkeys=Object.keys(groups).sort((a,b)=>groups[a].grade-groups[b].grade||a.localeCompare(b,undefined,{numeric:true}));
+ const teams=selTeams();if(teams.length===1)NF.team=teams[0];
+ const team=NF.team||teams[0]||'bum';
+ const extras=NF.extra.split('\n').map(s=>s.trim()).filter(Boolean);
+ const done=ROUNDS.filter(r=>r.status==='done'&&r.state&&((r.state.through||[]).length||r.state.winner));
+ const nsel=NF.sel.size+extras.length;
  $('#app').innerHTML=`<div class="row" style="margin-bottom:14px"><button class="w" id="back">← Back</button><h2 style="font-size:24px">New round</h2></div>
- <div class="grid g2"><div class="card">
-  <label>Name of the round</label><input id="nm" placeholder="e.g. Class 3B round, or Grand Final – Grades 4–5" value="${esc(NF.name||'')}">
-  <div class="row" style="margin-top:12px"><div style="flex:1"><label>Type</label><select id="kind">${Object.entries(KINDS).map(([k,v])=>`<option value="${k}" ${NF.kind===k?'selected':''}>${v}</option>`).join('')}</select></div>
-   <div style="flex:1"><label>Word list</label><select id="team">${Object.entries(TEAMS).map(([k,v])=>`<option value="${k}" ${NF.team===k?'selected':''}>${v[1]} ${v[0]} (${v[2]})</option>`).join('')}</select></div></div>
-  <div class="row" style="margin-top:12px"><div style="flex:1"><label>Time to spell each word</label><select id="time">${[[0,'No timer'],[30,'30 seconds'],[45,'45 seconds'],[60,'1 minute'],[90,'1½ minutes']].map(([v,l])=>`<option value="${v}" ${(NF.time??60)==v?'selected':''}>${l}</option>`).join('')}</select></div>
-   <div style="flex:1"><label>How many go through?</label><select id="thr">${[[0,'Play until there is a winner'],[1,'1'],[2,'2'],[3,'3'],[4,'4'],[5,'5'],[6,'6']].map(([v,l])=>`<option value="${v}" ${(NF.through??(NF.kind==='final'?0:2))==v?'selected':''}>${l}</option>`).join('')}</select></div></div>
-  <p class="small muted">With “go through” set, you can stop the round when that many spellers are left.</p>
- </div><div class="card">
-  <div class="row"><h3 style="font-size:18px">Spellers</h3><div class="spacer"></div><span class="small"><b>${nsel}</b> chosen</span></div>
-  <div class="row" style="margin:8px 0"><select id="fg" style="flex:1"><option value="all">All grades</option>${grades.map(g=>`<option value="${g}" ${NF.grade==g?'selected':''}>${GL(g)}</option>`).join('')}</select>
-   <select id="fc" style="flex:1"><option value="all">All classes</option>${classes.map(c=>`<option ${NF.cls===c?'selected':''}>${esc(c)}</option>`).join('')}</select>
-   <button class="w sm" id="selall">Tick all shown</button><button class="w sm" id="selnone">Clear</button></div>
-  <div class="kidpick">${kids.map(k=>`<label><input type="checkbox" data-k="${k.id}" ${NF.sel.has(k.id)?'checked':''}>${av(PROG[k.id]?.avatar,28)}<span>${esc(k.first_name)} <span class="muted small">${esc(k.class_name||GL(k.grade))}</span></span></label>`).join('')||'<p class="muted">No children with bee codes in this list yet.</p>'}</div>
-  <label style="margin-top:10px">Other spellers without a bee code (one name per line)</label><textarea id="extra" rows="2" style="width:100%;font-family:inherit;border:1.5px solid var(--line);border-radius:9px;padding:8px">${esc(NF.extra)}</textarea>
+ <div class="nrgrid"><div>
+ <div class="card">
+  <h3 style="font-size:18px">1. Choose the spellers</h3>
+  <div class="row" style="margin:10px 0"><input id="q" placeholder="🔍 Search a name or class…" value="${esc(NF.q)}" style="flex:1"><button class="w sm" id="selnone" ${NF.sel.size?'':'disabled'}>Clear all</button></div>
+  ${KIDS.length?'':'<p class="muted">No children have bee codes yet. Add them on the teacher page, or type their names below.</p>'}
+  <div class="classes">${gkeys.map(g=>{const G=groups[g];const all=G.list.every(k=>NF.sel.has(k.id));const n=G.list.filter(k=>NF.sel.has(k.id)).length;const open=NF.open[g]!==undefined?NF.open[g]:(gkeys.length<=4||n>0||!!q);
+   return `<div class="cls"><div class="clshead"><button class="w sm tog" data-tog="${esc(g)}">${open?'▾':'▸'}</button><b>${esc(g)}</b><span class="pill ${teamOf(G.grade)}">${GL(G.grade)}</span><span class="small muted">${n?n+' of ':''}${G.list.length} ${n?'chosen':'children'}</span><div class="spacer"></div><button class="${all?'w':'y'} sm" data-cls="${esc(g)}">${all?'Unselect class':'Choose whole class'}</button></div>
+    ${open?`<div class="kidcards">${G.list.map(k=>`<button class="kc ${NF.sel.has(k.id)?'on':''}" data-k="${k.id}">${av(PROG[k.id]?.avatar,40)}<span>${esc(k.first_name)}</span>${NF.sel.has(k.id)?'<i>✓</i>':''}</button>`).join('')}</div>`:''}</div>`}).join('')||(KIDS.length?'<p class="muted">No names match your search.</p>':'')}</div>
+  ${done.length?`<div class="fromrounds"><b>⭐ From earlier rounds</b><div class="small muted" style="margin:2px 0 8px">Add the children who went through or won.</div>${done.map(r=>{const ids=[...(r.state.through||[]),...(r.state.winner?[r.state.winner]:[])];const names=(r.state.spellers||[]).filter(x=>ids.includes(x.id)).map(x=>x.name);return `<div class="row" style="margin-bottom:6px"><span style="flex:1"><b>${esc(r.name)}</b> <span class="small muted">→ ${esc(names.join(', '))}</span></span><button class="y sm" data-from="${r.id}">+ Add ${names.length}</button></div>`}).join('')}</div>`:''}
+  <label style="margin-top:14px">Or type or paste names (one per line)</label>
+  <textarea id="extra" rows="3" placeholder="Paste names from a list or spreadsheet…" style="width:100%;font-family:inherit;border:1.5px solid var(--line);border-radius:9px;padding:8px">${esc(NF.extra)}</textarea>
+  <div class="row" style="margin-top:6px"><button class="w sm" id="match">🔗 Match pasted names to children with bee codes</button><span class="small muted">Matched children get their avatar and the right word list.</span></div>
  </div></div>
- <div class="row" style="margin-top:16px"><div class="spacer"></div><button class="y big" id="create">Create round 🐝</button></div>`;
- const keep=()=>{NF.name=$('#nm').value;NF.kind=$('#kind').value;NF.time=+$('#time').value;NF.through=+$('#thr').value;NF.extra=$('#extra').value};
+ <div><div class="card sticky">
+  <h3 style="font-size:18px">2. Round details</h3>
+  <div class="chosen"><div class="big">${nsel}</div><div class="small muted">spellers chosen</div>
+   <div class="chips">${KIDS.filter(k=>NF.sel.has(k.id)).map(k=>`<span class="chip">${av(PROG[k.id]?.avatar,22)}${esc(k.first_name)}<button data-un="${k.id}" title="Remove">✕</button></span>`).join('')}${extras.map(n=>`<span class="chip">🐝 ${esc(n)}</span>`).join('')}</div></div>
+  ${teams.length>1?`<div class="warnbox">These children use different word lists. Choose which list to use:</div>`:''}
+  <label>Name of the round</label><input id="nm" placeholder="e.g. Class 3B round" value="${esc(NF.name||'')}">
+  <div class="row" style="margin-top:10px"><div style="flex:1"><label>Type</label><select id="kind">${Object.entries(KINDS).map(([k,v])=>`<option value="${k}" ${NF.kind===k?'selected':''}>${v}</option>`).join('')}</select></div>
+   <div style="flex:1"><label>Word list ${teams.length===1?'<span class="small muted">(from their grade)</span>':''}</label><select id="team">${Object.entries(TEAMS).map(([k,v])=>`<option value="${k}" ${team===k?'selected':''}>${v[1]} ${v[2]}</option>`).join('')}</select></div></div>
+  <div class="row" style="margin-top:10px"><div style="flex:1"><label>Time per word</label><select id="time">${[[0,'No timer'],[30,'30 seconds'],[45,'45 seconds'],[60,'1 minute'],[90,'1½ minutes']].map(([v,l])=>`<option value="${v}" ${(NF.time??60)==v?'selected':''}>${l}</option>`).join('')}</select></div>
+   <div style="flex:1"><label>How many go through?</label><select id="thr">${[[0,'Until one winner'],[1,'1'],[2,'2'],[3,'3'],[4,'4'],[5,'5'],[6,'6']].map(([v,l])=>`<option value="${v}" ${(NF.through??(NF.kind==='final'?0:2))==v?'selected':''}>${l}</option>`).join('')}</select></div></div>
+  <button class="y big" id="create" style="width:100%;margin-top:16px" ${nsel>=2?'':'disabled'}>Create round 🐝</button>
+  ${nsel<2?'<p class="small muted" style="text-align:center">Choose at least 2 spellers.</p>':''}
+ </div></div></div>`;
+ const keep=()=>{NF.name=$('#nm').value;NF.kind=$('#kind').value;NF.time=+$('#time').value;NF.through=+$('#thr').value;NF.extra=$('#extra').value;NF.team=$('#team').value};
+ const re=()=>{keep();const y=scrollY;newRound();scrollTo(0,y)};
  $('#back').onclick=home;
- $('#team').onchange=e=>{keep();NF.team=e.target.value;NF.grade='all';NF.cls='all';newRound()};
- $('#kind').onchange=e=>{keep();if(NF.kind==='final')NF.through=0;newRound()};
- $('#fg').onchange=e=>{keep();NF.grade=e.target.value;NF.cls='all';newRound()};
- $('#fc').onchange=e=>{keep();NF.cls=e.target.value;newRound()};
- $('#selall').onclick=()=>{keep();kids.forEach(k=>NF.sel.add(k.id));newRound()};
- $('#selnone').onclick=()=>{keep();NF.sel.clear();newRound()};
- document.querySelectorAll('[data-k]').forEach(c=>c.onchange=()=>{keep();c.checked?NF.sel.add(c.dataset.k):NF.sel.delete(c.dataset.k);newRound()});
- $('#create').onclick=async()=>{keep();const name=NF.name.trim()||`${KINDS[NF.kind]} – ${TEAMS[NF.team][2]}`;
-  const sp=KIDS.filter(k=>NF.sel.has(k.id)&&teamOf(k.grade)===NF.team).map(k=>({id:k.id,name:k.first_name,cls:k.class_name||GL(k.grade),avatar:PROG[k.id]?.avatar||{},out:null}));
-  NF.extra.split('\n').map(s=>s.trim()).filter(Boolean).forEach((n,i)=>sp.push({id:'x'+i+'-'+Date.now(),name:n.slice(0,30),cls:'',avatar:{},out:null}));
+ $('#q').oninput=e=>{keep();NF.q=e.target.value;const pos=e.target.selectionStart;newRound();const i=$('#q');i.focus();i.setSelectionRange(pos,pos)};
+ $('#kind').onchange=()=>{keep();if(NF.kind==='final')NF.through=0;re()};
+ $('#team').onchange=()=>keep();
+ $('#selnone').onclick=()=>{NF.sel.clear();NF.team=null;re()};
+ document.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{const id=b.dataset.k;NF.sel.has(id)?NF.sel.delete(id):NF.sel.add(id);if(!NF.sel.size)NF.team=null;re()});
+ document.querySelectorAll('[data-un]').forEach(b=>b.onclick=()=>{NF.sel.delete(b.dataset.un);re()});
+ document.querySelectorAll('[data-cls]').forEach(b=>b.onclick=()=>{const G=groups[b.dataset.cls];const all=G.list.every(k=>NF.sel.has(k.id));G.list.forEach(k=>all?NF.sel.delete(k.id):NF.sel.add(k.id));re()});
+ document.querySelectorAll('[data-tog]').forEach(b=>b.onclick=()=>{const g=b.dataset.tog;const cur=NF.open[g]!==undefined?NF.open[g]:!!document.querySelector(`[data-tog="${CSS.escape(g)}"]`).closest('.cls').querySelector('.kidcards');NF.open[g]=!cur;re()});
+ document.querySelectorAll('[data-from]').forEach(b=>b.onclick=()=>{const r=ROUNDS.find(x=>x.id==b.dataset.from);const ids=[...(r.state.through||[]),...(r.state.winner?[r.state.winner]:[])];let extra=[];
+  (r.state.spellers||[]).filter(x=>ids.includes(x.id)).forEach(x=>{if(KIDS.find(k=>k.id===x.id))NF.sel.add(x.id);else extra.push(x.name)});
+  keep();if(extra.length)NF.extra=(NF.extra?NF.extra.trim()+'\n':'')+extra.join('\n');if(!NF.name&&r.kind==='class')NF.kind='grade';newRound();toast('Added ✓')});
+ $('#match').onclick=()=>{keep();const left=[];let m=0,amb=[];
+  NF.extra.split('\n').map(s=>s.trim()).filter(Boolean).forEach(n=>{const first=n.split(/[\s,]+/)[0].toLowerCase();const hits=KIDS.filter(k=>k.first_name.toLowerCase()===n.toLowerCase()||k.first_name.toLowerCase()===first);
+   if(hits.length===1){NF.sel.add(hits[0].id);m++}else{left.push(n);if(hits.length>1)amb.push(n)}});
+  NF.extra=left.join('\n');newRound();toast(m?`Matched ${m} name${m>1?'s':''} ✓`+(amb.length?` · ${amb.length} need choosing (same name in more than one class)`:''):'No matches found — they’ll be added as typed')};
+ $('#create').onclick=async()=>{keep();const ex=NF.extra.split('\n').map(s=>s.trim()).filter(Boolean);
+  const team=NF.team||selTeams()[0]||'bum';const name=NF.name.trim()||`${KINDS[NF.kind]} – ${TEAMS[team][2]}`;
+  const sp=KIDS.filter(k=>NF.sel.has(k.id)).map(k=>({id:k.id,name:k.first_name,cls:k.class_name||GL(k.grade),avatar:PROG[k.id]?.avatar||{},out:null}));
+  ex.forEach((n,i)=>sp.push({id:'x'+i+'-'+Date.now(),name:n.slice(0,30),cls:'',avatar:{},out:null}));
   if(sp.length<2){toast('Choose at least 2 spellers');return}
   const state={spellers:sp.sort(()=>Math.random()-.5),round:0,order:[],idx:0,used:[],cur:null,phase:'ready',roundOut:[],log:[],winner:null,msg:null,through:[]};
-  const {data,error}=await sb.from('bee_rounds').insert({name,kind:NF.kind,team:NF.team,settings:{time:NF.time??60,through:NF.through||0},state,status:'ready',created_by:USER.email}).select().single();
+  const {data,error}=await sb.from('bee_rounds').insert({name,kind:NF.kind,team,settings:{time:NF.time??60,through:NF.through||0},state,status:'ready',created_by:USER.email}).select().single();
   if(error){toast('Couldn’t save the round');return}
-  ROUNDS.unshift(data);NF={kind:'class',team:NF.team,grade:'all',cls:'all',sel:new Set(),extra:''};openRound(data.id)};
+  ROUNDS.unshift(data);NF={kind:'class',team:null,q:'',sel:new Set(),extra:'',open:{}};openRound(data.id)};
 }
 
 /* ---------- running a round ---------- */
