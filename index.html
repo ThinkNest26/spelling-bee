@@ -78,6 +78,8 @@ button.mv{font-size:28px;padding:10px 34px}
 .fplayers{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:16px 0}.fplayers span{font-family:Fredoka;font-size:20px;background:var(--honeyL);border:3px solid var(--honey);padding:8px 16px;border-radius:99px}
 .fplayers .fwait{background:#fff;border-style:dashed;color:var(--ink2);animation:bob 1.6s infinite}
 .lane.me{box-shadow:0 0 0 3px var(--honey)}
+.speeds{display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap;margin:0 0 10px;font-family:Fredoka;font-size:18px;color:var(--ink2)}
+.speeds button{background:#fff;color:var(--ink);border:3px solid var(--line);padding:8px 16px;font-size:18px;box-shadow:none}.speeds button.on{background:var(--honey);border-color:var(--honey)}
 .acts{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
 .act{background:#fff;border-radius:26px;padding:22px;text-align:center;border:3px solid var(--line);cursor:pointer;transition:transform .12s}
 .act:hover{transform:translateY(-4px)}
@@ -568,7 +570,7 @@ function gStart(id){if(id==='gfriend'){fStopPoll();V.screen=id;G={kind:id,stage:
  if(id==='ggarden'){G.list=gWords(10);G.grown=null}
  if(id==='grace'){G.list=gWords(14);G.goal=Math.min(8,G.list.length);G.pos=0;G.shown=0;G.opp=0;G.timed=!T(V.team).kb;G.last=0}
  if(id==='gballoon'){G.list=gWords(5);G.used='';G.pop=0;G.saved=0;G.lost=false}
- if(id==='gcatch'){G.list=gWords(5);G.hearts=3;G.got='';G.drops=[];G.lane=1;G.wbad=false;G.next=0}
+ if(id==='gcatch'){let sp='mid';try{sp=localStorage.getItem('aa-sb-speed')||'mid'}catch(e){}G.speed=sp;G.list=gWords(5);G.hearts=3;G.got='';G.drops=[];G.lane=1;G.wbad=false;G.next=0}
  render();window.scrollTo(0,0);
  if(id==='gcatch')setTimeout(()=>{sayWord(G.list[0]);G.next=performance.now()+1300;catchLoop()},300);
  else setTimeout(()=>sayWordSentence(G.list[0]),300);
@@ -619,6 +621,7 @@ function catchView(){
  const w=G.list[G.i];
  return gHead(`🍯 Honey Catch · ${G.i+1} of ${G.list.length}`,`<p class="muted" style="text-align:center">Listen, then catch the letters in order. ${'❤️'.repeat(G.hearts)}${'🤍'.repeat(3-G.hearts)}</p>`)+
  `<div class="row" style="margin-bottom:10px"><button class="y hear" data-sayw="${esc(w)}">🔊 Hear the word</button>${SENT[w]?`<button class="w" data-say="${esc(SENT[w])}">💬 Sentence</button>`:''}</div>
+ <div class="speeds">Speed: ${[['slow','🐢 Slow'],['mid','🐝 Medium'],['fast','🚀 Fast']].map(([k,l])=>`<button data-gspeed="${k}" class="${G.speed===k?'on':''}">${l}</button>`).join('')}</div>
  <div class="slots" id="slots">${[...w].map((c,k)=>`<span class="${k<G.got.length?'in':''}">${k<G.got.length?esc(c):''}</span>`).join('')}</div>
  <div class="sky" id="sky">${[0,1,2,3].map(l=>`<div class="lanehit" data-glane="${l}"></div>`).join('')}<div class="jar" id="jar" style="left:${G.lane*25+12.5}%">🍯</div></div>
  <div class="row" style="margin-top:12px"><button class="w mv" data-gmove="-1">◀</button><button class="w mv" data-gmove="1">▶</button></div>
@@ -631,14 +634,14 @@ function catchWave(){const w=G.list[G.i],need=w[G.got.length].toLowerCase();cons
 function catchLoop(){if(!G||G.kind!=='gcatch'||V.screen!=='gcatch'||G.done)return;const now=performance.now();const dt=G.last?Math.min(now-G.last,100):0;G.last=now;
  const sky=$('#sky');if(!sky){requestAnimationFrame(catchLoop);return}
  if(!G.drops.length||!G.drops[0].el||!G.drops[0].el.isConnected){if(now>=G.next)catchWave()}
- else{const H=sky.clientHeight,jarY=H-70;const sp={buz:55,hon:65,bum:85,cha:105}[V.team]||70;
+ else{const H=sky.clientHeight,jarY=H-70;const sp=H/({slow:6.5,mid:3.6,fast:2.2}[G.speed]||3.6);
   for(const d of G.drops){d.y+=sp*dt/1000;d.el.style.top=d.y+'px'}
   const hit=G.drops.find(d=>d.l===G.lane&&d.y>=jarY-30&&d.y<=jarY+20);
   if(hit){G.drops.forEach(d=>d.el.remove());G.drops=[];catchGot(hit.c)}
-  else if(G.drops.every(d=>d.y>H)){G.drops.forEach(d=>d.el.remove());G.drops=[];G.next=now+300}}
+  else if(G.drops.every(d=>d.y>H)){G.drops.forEach(d=>d.el.remove());G.drops=[];G.next=now+({slow:400,mid:200,fast:80}[G.speed]||200)}}
  requestAnimationFrame(catchLoop)}
 function catchGot(c){const w=G.list[G.i];const need=w[G.got.length].toLowerCase();const jar=$('#jar');
- if(c===need){G.got+=w[G.got.length];happySound(false);G.next=performance.now()+350;
+ if(c===need){G.got+=w[G.got.length];happySound(false);G.next=performance.now()+({slow:450,mid:220,fast:100}[G.speed]||220);
   const sl=$('#slots');if(sl){const s=sl.children[G.got.length-1];s.textContent=w[G.got.length-1];s.className='in'}
   if(jar){jar.classList.remove('yum');void jar.offsetWidth;jar.classList.add('yum')}
   if(G.got.length===w.length){award(V.team,w,!G.wbad);if(!G.wbad)G.score++;gGood();G.next=performance.now()+99999;
@@ -662,7 +665,8 @@ function gNext(){if(!G||G.done)return;if(G.kind==='grace'&&!G.timed&&G.fb)G.opp+
  if(G.i+1>=G.list.length){if(G.kind==='grace'){raceEnd(G.pos>=G.goal);return}G.done=true;render();window.scrollTo(0,0);
   if(G.kind==='ggarden'){if(G.score>=G.list.length*0.7)gBig()}return}
  G.i++;G.val='';G.fb=null;G.grown=null;G.last=0;render();setTimeout(()=>sayWordSentence(G.list[G.i]),200)}
-document.addEventListener('click',e=>{const b=e.target.closest('[data-g],[data-gmove],[data-glane]');if(!b)return;const d=b.dataset;
+document.addEventListener('click',e=>{const b=e.target.closest('[data-g],[data-gmove],[data-glane],[data-gspeed]');if(!b)return;const d=b.dataset;
+ if(d.gspeed){if(G&&G.kind==='gcatch'){G.speed=d.gspeed;try{localStorage.setItem('aa-sb-speed',d.gspeed)}catch(err){}document.querySelectorAll('[data-gspeed]').forEach(x=>x.classList.toggle('on',x.dataset.gspeed===d.gspeed))}return}
  if(d.gmove){catchMove(+d.gmove);return}
  if(d.glane!==undefined){if(G&&G.kind==='gcatch'){G.lane=+d.glane;catchMove(0)}return}
  if(d.g==='menu'){G=null;V.screen='games';render();window.scrollTo(0,0);return}
