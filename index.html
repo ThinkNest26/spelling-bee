@@ -172,9 +172,9 @@ function T(id){return TEAMS.find(t=>t.id===id)}
 /* progress on this device only */
 const KEY='aa-sbee-practice-v1';let PR={};
 try{PR=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){PR={}}
-function prog(team){PR[team]=PR[team]||{stars:0,ok:{}};PR[team].bad=PR[team].bad||{};return PR[team]}
+function prog(team){PR[team]=PR[team]||{stars:0,ok:{}};PR[team].bad=PR[team].bad||{};PR[team].last=PR[team].last||{};return PR[team]}
 function mergeMax(a,b){const o=Object.assign({},a||{});for(const k in (b||{}))o[k]=Math.max(+o[k]||0,+b[k]||0);return o}
-function wordLevel(team,w){const p=prog(team),ok=+p.ok[w]||0,bad=+p.bad[w]||0;if(!ok&&!bad)return '';if(bad>=2&&ok<=bad)return 'tricky';if(ok>=2)return 'secure';return 'almost'}
+function wordLevel(team,w){const p=prog(team),ok=+p.ok[w]||0,bad=+p.bad[w]||0;if(!ok&&!bad)return '';if(p.last[w]===false||!ok)return 'tricky';if(ok>=2)return 'secure';return 'almost'}
 function savePR(){try{localStorage.setItem(KEY,JSON.stringify(PR))}catch(e){}}
 /* ---------- online accounts (bee codes) ---------- */
 const SUPABASE_URL='https://xpbkdnkfufkahaszfycd.supabase.co';
@@ -210,7 +210,7 @@ async function flush(){if(flushing||!ME||!db())return;flushing=true;
  finally{flushing=false}}
 setInterval(()=>{if(ME&&readQ().length)flush()},20000);
 window.addEventListener('online',flush);
-function award(team,w,ok){const p=prog(team);if(ok){p.stars++;p.ok[w]=(p.ok[w]||0)+1}else{p.bad[w]=(p.bad[w]||0)+1}savePR();
+function award(team,w,ok){const p=prog(team);if(ok){p.stars++;p.ok[w]=(p.ok[w]||0)+1}else{p.bad[w]=(p.bad[w]||0)+1}p.last[w]=!!ok;savePR();
  if(ME){const q=readQ();q.push({id:Date.now()+'-'+Math.random().toString(36).slice(2,7),w,ok,a:V.screen});writeQ(q.slice(-500));flush()}}
 function mastered(team){const p=prog(team);return WORDS[team].filter(w=>wordLevel(team,w)==='secure').length}
 function totalStars(){return TEAMS.reduce((n,t)=>n+(PR[t.id]?.stars||0),0)}
@@ -470,7 +470,7 @@ document.addEventListener('click',e=>{
  if(d.go){if(d.t)V.team=d.t;V.screen=d.go;if(d.go==='lcwc')LC=null;if(d.go==='test')TS=null;if(d.go==='miss')MS=null;if(d.go==='gap')GP=null;render();if(d.go==='home'&&V.team)setTimeout(()=>document.getElementById('practise')?.scrollIntoView(),0);else window.scrollTo(0,0);
   if(d.go==='test')setTimeout(()=>sayWordSentence(TS.list[0]),250);if(d.go==='miss')setTimeout(()=>sayWord(MS.w),250);if(d.go==='gap')setTimeout(()=>{if(GP&&GP.list.length)sayGap(GP.list[0])},250);return}
  if(d.say!==undefined){say(d.say,el);return}
- if(d.sayw!==undefined){say(SENT[d.sayw]?d.sayw+'. '+SENT[d.sayw]+' '+d.sayw+'.':d.sayw,el);$('#ans')?.focus();return}
+ if(d.sayw!==undefined){say(d.sayw,el);$('#ans')?.focus();return}
  if(d.k){const i=$('#ans');if(!i||i.disabled)return;i.value=d.k==='back'?i.value.slice(0,-1):i.value+d.k;if(LC)LC.val=i.value;if(TS)TS.val=i.value;if(GP)GP.val=i.value;return}
  if(d.lc){if(d.lc==='cover'){LC.step=2;LC.val='';render()}else if(d.lc==='check'){LC.val=readAns();if(!LC.val)return;LC.ok=same(LC.val,LC.w);award(V.team,LC.w,LC.ok);LC.step=3;render();if(LC.ok)celebrate();else oops()}else if(d.lc==='next'){newLC();render();setTimeout(()=>say(LC.w),200)}return}
  if(d.ts){if(d.ts==='check'){const v=readAns();if(!v)return;TS.val=v;const w=TS.list[TS.i];const ok=same(v,w);TS.fb=ok?'ok':'bad';if(ok)TS.score++;else TS.missed.push(w);award(V.team,w,ok);render();if(ok)celebrate();else oops()}
