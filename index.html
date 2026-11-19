@@ -130,6 +130,8 @@ button.mv{font-size:28px;padding:10px 34px}
 .wd.on span{background:#FFF3C4;border-color:#F59E0B}.wd.tdy span{box-shadow:0 0 0 3px #1B3A6B}.wd.we span{background:#FFF8EF;border-style:dashed;font-size:16px}.wd.fut span{opacity:.5}
 .wd i{display:block;font-style:normal;font-weight:800;font-size:12px;color:var(--ink2);margin-top:2px}
 .nextg{flex:1;min-width:220px;font-size:16px}.nbar{height:12px;background:#fff;border-radius:99px;overflow:hidden;margin-top:6px;border:2px solid #F8DDBF}.nbar i{display:block;height:100%;background:linear-gradient(90deg,#FBBF24,#F59E0B);border-radius:99px}
+.avparade{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin:6px 0 18px}.avparade span{animation:bob 2.4s ease-in-out infinite;line-height:0}.avparade svg{border-radius:50%;border:4px solid #fff;box-shadow:0 6px 16px rgba(31,42,68,.12)}
+.funs{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}@media(max-width:900px){.funs{grid-template-columns:1fr 1fr}}@media(max-width:520px){.funs{grid-template-columns:1fr}}.fun{background:#fff;border:3px solid var(--line);border-radius:24px;padding:16px 18px}.fun .e{font-size:40px}.fun b{font-family:Fredoka;font-size:21px;display:block;margin:4px 0}.fun p{margin:0;color:var(--ink2);font-size:15.5px}
 .acts{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
 .act{background:#fff;border-radius:26px;padding:22px;text-align:center;border:3px solid var(--line);cursor:pointer;transition:transform .12s}
 .act:hover{transform:translateY(-4px)}
@@ -224,6 +226,17 @@ button.mv{font-size:28px;padding:10px 34px}
 .foot{text-align:center;margin-top:36px;padding:22px;border-top:3px dashed var(--line);color:var(--ink2)}
 @media (max-width:600px){.date{grid-template-columns:1fr;gap:4px}}
 @media (prefers-reduced-motion:reduce){.flybee,.wing,.burst i{animation:none}}
+@media(max-width:640px){
+ .acts{grid-template-columns:1fr 1fr;gap:10px}.act{padding:14px 10px;border-radius:20px}.act .e{font-size:38px}.act h3{font-size:17px}.act p{font-size:13px}.avact svg{width:52px;height:52px}
+ .top{padding:10px 12px;gap:8px}.top .t{display:none}.top .s{font-size:15px;opacity:1;font-family:Fredoka}.top>div:first-child{width:32px!important;height:32px!important}
+ .top .stars{padding:5px 10px;font-size:15px;white-space:nowrap}.top button[data-voice]{padding:6px 8px;font-size:13px}.topav svg{width:36px;height:36px}
+ .tcard{flex-wrap:wrap;padding:12px 14px}.wodc>div:nth-child(2){flex:1 1 60%;min-width:0}.wodc button{width:100%}.wodc .flame{font-size:36px}
+ .sk-top .f{font-size:21px!important}.weekrow{gap:4px}.wd,.wd span{width:34px}.wd span{height:34px;font-size:17px}
+ .avwrap{grid-template-columns:1fr}.avstage{position:sticky;top:0;z-index:6;display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:center;text-align:left;padding:10px 12px;border-radius:0 0 22px 22px;box-shadow:0 6px 14px rgba(31,42,68,.12)}
+ .avstage .avbig{grid-row:span 3}.avstage .avbig svg{width:96px;height:96px;border-width:3px}.avstage>.f{font-size:20px!important;margin:0!important}.avstage .avbal{font-size:16px;margin:0;justify-self:start}
+ .avstage .row{margin:0!important;gap:6px;justify-content:flex-start}.avstage .row button{padding:6px 10px;font-size:13px}.avstage>p{display:none}
+ .avgrid{grid-template-columns:repeat(3,1fr)}
+}
 </style>
 </head>
 <body>
@@ -253,8 +266,9 @@ const DATES=[
  ['Week of 11 Jan','Grade semi-finals','Spell out loud in front of your grade. The best spellers go to the final.'],
  ['22 Jan','Grand Final 🏆','Spellers meet on stage with families watching. Champions are crowned!'],
  ['Week of 25 Jan','Celebration','Certificates for everyone who took part and trophies for our champions.']];
-const RULES=['The pronouncer says your word, uses it in a sentence, then says it again.','You can ask to hear the word again, its meaning, or the sentence.','Say the word, spell it letter by letter, then say the word again.','You have 30 seconds to finish spelling.','Once you say a letter you can’t change it — so take your time!','If you miss a word, you are out at the end of that round. Well done for trying!','The last speller standing spells one more word to become champion.'];
-const PARENTS=[['⏱️','Little and often','Five to ten minutes a day works better than a long session once a week.'],['🗣️','Say, spell, say','Ask your child to say the word, spell it out loud, then say it again — just like on stage.'],['👀','Look, cover, write, check','Look at the word, cover it, write it from memory, then check. Repeat the tricky ones.'],['🎉','Celebrate effort','Taking part is brave! Praise practice and courage, not just correct answers.']];
+const RULES=['The pronouncer says your word, uses it in a sentence, then says it again.','You can ask to hear the word again, its meaning, or the sentence.','Say the word, spell it letter by letter, then say the word again.','You have up to 1 minute to finish spelling — watch the timer on the big screen.','Once you say a letter you can’t change it — so take your time!','If you miss a word, you are out at the end of that round. Well done for trying!','The last speller standing spells one more word to become champion.'];
+const FUN=[['🎧','Practise your words','Hear Kate say each word, then try the spelling test, Look-Cover-Write, missing letters and fill the gap.'],['🎮','Play spelling games','Bee to the Hive, Honey Catch, Grow a Garden, Bee Race, Balloon Rescue — and race your friends!'],['🎨','Create your avatar','Pick a cute character and spend your stars on outfits, hats, pets and more in the Bee Shop.'],['🔥','Grow your streak','Practise every school day to grow your flame and win bonus stars.'],['🌟','Word of the day','Spell the special word each day for 5 bonus stars.'],['🏆','Real Bee practice','Get ready for the big day: ask for the meaning, beat the timer, spell like a champion!']];
+const PARENTS=[['🎯','A daily goal','Practising 5 words a day (KG2 and Grade 1) or 10 words a day (Grades 2–5) lights your child’s 🔥 flame. Weekends never break their streak!'],['📄','Progress reports','Your child’s teacher can send home a one-page report showing the words they know and the words to practise together.'],['⏱️','Little and often','Five to ten minutes a day works better than a long session once a week.'],['🗣️','Say, spell, say','Ask your child to say the word, spell it out loud, then say it again — just like on stage.'],['👀','Look, cover, write, check','Look at the word, cover it, write it from memory, then check. Repeat the tricky ones.'],['🎉','Celebrate effort','Taking part is brave! Praise practice and courage, not just correct answers.']];
 const WORDS={};for(const t of TEAMS)WORDS[t.id]=STUDY[t.id].split(/\s+/).filter(Boolean);
 const BEE=`<svg viewBox="0 0 100 100"><ellipse class="wing" cx="40" cy="30" rx="16" ry="20" fill="#fff" opacity=".85"/><ellipse class="wing" cx="60" cy="28" rx="14" ry="18" fill="#E8F4FF" opacity=".85"/><ellipse cx="50" cy="58" rx="30" ry="22" fill="#FFC72C"/><path d="M36 39 Q32 58 36 78" stroke="#1F2A44" stroke-width="7" fill="none"/><path d="M52 36 Q48 58 52 80" stroke="#1F2A44" stroke-width="7" fill="none"/><circle cx="78" cy="54" r="13" fill="#1F2A44"/><circle cx="82" cy="51" r="3.4" fill="#fff"/><path d="M76 62 Q81 66 86 61" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M76 42 Q74 30 68 28 M84 42 Q88 31 94 31" stroke="#1F2A44" stroke-width="2.5" fill="none"/><circle cx="68" cy="28" r="3" fill="#1F2A44"/><circle cx="94" cy="31" r="3" fill="#1F2A44"/></svg>`;
 const PRAISE=['Brilliant!','Bee-autiful spelling!','Buzzing brilliant!','Super speller!','Amazing!','You did it!','Fantastic!'];
@@ -446,13 +460,16 @@ function render(){
 function home(){
  const combs=`<svg class="combs" viewBox="0 0 100 60" preserveAspectRatio="xMidYMid slice"><defs><pattern id="hc" width="12" height="20.78" patternUnits="userSpaceOnUse"><polygon points="6,0 12,3.46 12,10.39 6,13.86 0,10.39 0,3.46" fill="none" stroke="#FFD54A" stroke-width=".7"/><polygon points="12,10.39 18,13.86 18,20.78 12,24.25 6,20.78 6,13.86" fill="none" stroke="#FFD54A" stroke-width=".7"/></pattern></defs><rect width="100" height="60" fill="url(#hc)"/></svg>`;
  return `<section class="hero">${combs}<div class="flybee">${BEE}</div><div style="position:relative"><h1><small>The Big</small>Spelling Bee</h1><p>Spell it! Say it! Shine! ✨</p><p style="font-size:18px;opacity:.85;margin-top:4px">KG2 – Grade 5 · Grand Final Friday 22 January 2027</p>${totalStars()?`<p style="font-size:20px">You have ⭐ ${totalStars()} stars!</p>`:''}<div class="row" style="margin-top:20px"><button class="y" data-jump="practise">🐝 Start practising</button><button class="w" data-jump="dates">📅 Key dates</button></div></div></section>
- <nav class="sitenav">${[['about','About'],['dates','Key dates'],['how','How it works'],['practise','Practise'],['parents','Parents']].map(([k,l])=>`<button data-jump="${k}">${l}</button>`).join('')}${HAVE.size?'':'<button data-voice="1">🔊 Voice</button>'}</nav>
+ <nav class="sitenav">${[['about','About'],['fun','Fun stuff'],['dates','Key dates'],['how','How it works'],['practise','Practise'],['parents','Parents']].map(([k,l])=>`<button data-jump="${k}">${l}</button>`).join('')}${HAVE.size?'':'<button data-voice="1">🔊 Voice</button>'}</nav>
  <main>
  <section id="about" class="sec2"><h2 class="h2">What is the Spelling Bee? 🐝</h2>
  <div class="about"><div class="aboutcard"><div class="e">✏️</div><b>Learn</b><p>Every child learns the spelling words for their year group from the National Curriculum.</p></div>
  <div class="aboutcard"><div class="e">🎤</div><b>Be brave</b><p>Spellers stand up, listen to a word and spell it out loud, letter by letter.</p></div>
  <div class="aboutcard"><div class="e">🏆</div><b>Shine</b><p>The best spellers from KG2 to Grade 5 meet in the Grand Final. Every child who takes part gets a certificate!</p></div></div>
  <p class="lead2">Joining is optional, and every child from KG2 to Grade 5 is warmly invited. Ask your class teacher how to sign up — every speller gets their own bee code to practise here.</p></section>
+ <section id="fun" class="sec2"><h2 class="h2">What you can do here ✨</h2>
+ <div class="avparade">${[{char:'princess',hat:'hat-tiara',bg:'pink'},{char:'zib',acc:'acc-glasses',bg:'mint'},{char:'knight',hat:'hat-helmet',bg:'sky'},{char:'panda',hat:'hat-party',bg:'honey'},{char:'mermaid',acc:'acc-necklace',bg:'bg-beach'},{char:'astro',back:'back-jetpack',bg:'bg-space'},{char:'unicorn',bg:'lilac'}].map((a,i)=>`<span style="animation-delay:${i*.15}s">${avatarSVG(a,78)}</span>`).join('')}</div>
+ <div class="funs">${FUN.map(f=>`<div class="fun"><div class="e">${f[0]}</div><b>${f[1]}</b><p>${f[2]}</p></div>`).join('')}</div></section>
  <section id="dates" class="sec2"><h2 class="h2">Key dates 📅</h2>
  <div class="countbox"><div class="n">${Math.max(0,Math.ceil((new Date(FINAL+'T00:00:00')-new Date())/864e5))}</div><div>days until the Grand Final · <b>Friday 22 January 2027</b></div></div>
  <div class="dates">${DATES.map((d,i)=>`<div class="date ${i===DATES.length-2?'final':''}"><div class="when">${d[0]}</div><div><b>${d[1]}</b><p>${d[2]}</p></div></div>`).join('')}</div></section>
@@ -464,7 +481,7 @@ function home(){
  </section>
  <section id="parents" class="sec2"><h2 class="h2">For parents 💛</h2>
  <div class="about">${PARENTS.map(p=>`<div class="aboutcard" style="text-align:left"><div class="e">${p[0]}</div><b>${p[1]}</b><p>${p[2]}</p></div>`).join('')}</div>
- <div class="tipbox">Your child’s stars and progress are saved with their bee code, so they can practise on any device. Turn the sound on so your child can hear each word.</div></section>
+ <div class="tipbox">Your child’s stars, avatar and progress are saved with their bee code, so they can practise on any device. Turn the sound on so your child can hear Kate read each word. Try <b>🏆 Real Bee practice</b> together — it’s just like the real competition!</div></section>
  <footer class="foot"><div style="width:46px;height:46px;margin:0 auto 6px">${BEE}</div><b class="f" style="font-size:20px">Spelling Bee 2026–2027</b><div>Spell it! Say it! Shine!</div><div class="powered">Powered by <a href="https://thinknestonline.com" target="_blank" rel="noopener">ThinkNest</a></div></footer>
  </main>`;
 }
@@ -485,14 +502,14 @@ function teamView(){
  ${ME&&t.id===ME.team?todayPanel(t):''}
  ${ME&&t.id===ME.team&&!hasAvatar()?`<div class="avbanner" data-go="avatar">${avatarSVG({},70)}<div><b class="f" style="font-size:24px">Create your own avatar! 🎨</b><div>Choose a cute character, then dress it up with your stars in the Bee Shop!</div></div><button class="y">Let’s go →</button></div>`:''}
  <div class="acts">
+  <div class="act" data-go="test"><div class="e">🎧</div><h3>Spelling test</h3><p>Listen to 10 words and spell them.</p></div>
+  <div class="act realbee" data-go="realbee"><div class="e">🏆</div><h3>Real Bee practice</h3><p>Practise like the real competition: ask for the meaning and beat the timer!</p></div>
+  <div class="act games" data-go="games"><div class="e">🎮</div><h3>Spelling games</h3><p>6 games: Bee to the Hive, Honey Catch, Grow a Garden, Bee Race, Balloon Rescue and Race a friend!</p></div>
+  <div class="act shop" data-go="avatar"><div class="avact">${avatarSVG(prog(t.id).avatar,72)}</div><h3>My avatar & Bee Shop</h3><p>Spend your stars on clothes, hats, pets and more!</p></div>
   <div class="act" data-go="learn"><div class="e">📖</div><h3>My word list</h3><p>See all my words and tap to hear them.</p></div>
   <div class="act" data-go="lcwc"><div class="e">👀</div><h3>Look, Cover, Write</h3><p>Look at the word, cover it, write it, check it!</p></div>
-  <div class="act" data-go="test"><div class="e">🎧</div><h3>Spelling test</h3><p>Listen to 10 words and spell them.</p></div>
   <div class="act" data-go="miss"><div class="e">🧩</div><h3>Missing letters</h3><p>Find the letters that fell out of the word!</p></div>
   <div class="act" data-go="gap"><div class="e">📝</div><h3>Fill the gap</h3><p>Listen to the sentence and spell the missing word.</p></div>
-  <div class="act realbee" data-go="realbee"><div class="e">🏆</div><h3>Real Bee practice</h3><p>Practise like the real competition: ask for the meaning and beat the timer!</p></div>
-  <div class="act shop" data-go="avatar"><div class="avact">${avatarSVG(prog(t.id).avatar,72)}</div><h3>My avatar & Bee Shop</h3><p>Spend your stars on clothes, hats, pets and more!</p></div>
-  <div class="act games" data-go="games"><div class="e">🎮</div><h3>Spelling games</h3><p>Bee to the Hive, Honey Catch, Grow a Garden and Bee Race!</p></div>
  </div>`;
 }
 function learnView(){
