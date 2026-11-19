@@ -63,7 +63,8 @@ if curl -s -f -m 30 -X POST "$SUPABASE_URL/rest/v1/rpc/public_words" \
       const s=$.NSString.stringWithContentsOfFileEncodingError(argv[0],4,null).js;
       const rows=JSON.parse(s), out=[], c=x=>String(x||"").replace(/[\t\r\n]+/g," ").trim();
       rows.forEach(r=>{ out.push(r.w_clip+"\t"+c(r.word));
-        if(c(r.sentence)){ out.push(r.s_clip+"\t"+c(r.sentence)); out.push(r.ws_clip+"\t"+c(r.word)+". "+c(r.sentence)+" "+c(r.word)+"."); } });
+        if(c(r.sentence)){ out.push(r.s_clip+"\t"+c(r.sentence)); out.push(r.ws_clip+"\t"+c(r.word)+". "+c(r.sentence)+" "+c(r.word)+"."); }
+        if(c(r.meaning)&&r.m_clip){ out.push(r.m_clip+"\t"+c(r.meaning)); } });
       return out.join("\n");
     }' "$JSON" >> "$LIST" && echo "  Found $(grep -c '^w-' "$LIST") words."
 else
