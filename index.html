@@ -252,8 +252,8 @@ button.mv{font-size:28px;padding:10px 34px}
 .signbtn:hover{background:#FFF8E1}
 .signme{font-weight:800;font-size:15px;color:var(--aa);white-space:nowrap}
 .smodal{position:fixed;inset:0;background:rgba(20,26,43,.55);display:grid;place-items:center;z-index:80;padding:18px}
-.smodal .sbox{background:#FFFDF6;border-radius:28px;padding:26px;max-width:680px;width:100%;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.25)}
-.schoices{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:18px}
+.smodal .sbox{background:#FFFDF6;border-radius:28px;padding:26px;max-width:540px;width:100%;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.schoices{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:18px}
 .schoice{background:#fff;border:3px solid #F1E3B3;border-radius:22px;padding:18px 12px;cursor:pointer;text-decoration:none;color:inherit;display:block;font:inherit}
 .schoice:hover{border-color:var(--y,#F5B800);transform:translateY(-2px)}
 .schoice .e{font-size:46px}.schoice b{display:block;font-size:20px;margin-top:6px;color:var(--aa)}.schoice span{display:block;font-size:14px;color:#6B7280;margin-top:4px}
@@ -493,7 +493,7 @@ function signModal(){let m=document.getElementById('smodal');if(!m){m=document.c
  m.innerHTML=`<div class="smodal" data-sclose="1"><div class="sbox"><div class="f" style="font-size:30px">Sign in 🐝</div><p class="muted" style="margin-top:4px">Who are you?</p>
  <div class="schoices"><button class="schoice" data-sstudent="1"><div class="e">🧒</div><div><b>Student</b><span>${ME?'Carry on as '+esc(ME.first_name):'Type your bee code'}</span></div></button>
  <a class="schoice" href="teacher.html"><div class="e">👩‍🏫</div><div><b>Teacher</b><span>Your class, word lists and Bee rounds</span></div></a>
- <a class="schoice" href="teacher.html?next=admin"><div class="e">🛠</div><div><b>Admin</b><span>Schools, plans and prices</span></div></a></div>
+</div>
  <button class="back" style="margin-top:18px" data-sclose="1">Close</button></div></div>`}
 function studentSignIn(){const m=document.getElementById('smodal');if(m)m.innerHTML='';if(ME){V.screen='team';V.team=ME.team;render();window.scrollTo(0,0);return}
  const i=document.getElementById('codein');if(i){i.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>i.focus(),400)}}
