@@ -415,7 +415,7 @@ function gapWords(){return WORDS[V.team].filter(w=>SENT[w]&&new RegExp('\\b'+w.r
 function newGap(){const p=prog(V.team);const ws=shuffle(gapWords());const fresh=ws.filter(w=>(p.ok[w]||0)<2);const list=(fresh.length>=10?fresh:fresh.concat(ws.filter(w=>!fresh.includes(w)))).slice(0,10);GP={list,i:0,val:'',fb:null,score:0,missed:[],done:false}}
 function gapSentence(w,reveal){const s=SENT[w]||'';const re=new RegExp('\\b('+w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')\\b','i');const m=s.match(re);if(!m)return esc(s);
  const i=m.index;return esc(s.slice(0,i))+(reveal?`<span class="gapw ${GP&&GP.fb==='ok'?'ok':'bad'}">${esc(m[1])}</span>`:'<span class="gapb">?</span>')+esc(s.slice(i+m[1].length))}
-function sayGap(w){say(SENT[w]?w+'. '+SENT[w]+' '+w+'.':w)}
+function sayGap(w){say(SENT[w]||w)}
 function gapView(){
  if(!GP)newGap();
  if(!GP.list.length)return `<div class="row" style="justify-content:space-between"><button class="back" data-go="team">← Back</button></div><div class="panel"><div class="big">📝</div><p>Sentences for this list are coming soon!</p></div>`;
