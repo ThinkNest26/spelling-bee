@@ -73,6 +73,11 @@ button.mv{font-size:28px;padding:10px 34px}
 .kb.hm button.good{background:var(--okL);border-color:#A7E3BF;color:#166534}.kb.hm button.bad{background:#EEE;color:#AAA;text-decoration:line-through}
 .kb.hm button:disabled{cursor:default}
 .slots span.miss{background:var(--badL);border-color:var(--bad);color:var(--bad)}
+.fgrid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-top:14px}.fgrid .panel{text-align:center}
+.fcode{font-family:Fredoka;font-size:clamp(54px,12vw,92px);letter-spacing:.08em;color:var(--aa);margin:4px 0 10px}
+.fplayers{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:16px 0}.fplayers span{font-family:Fredoka;font-size:20px;background:var(--honeyL);border:3px solid var(--honey);padding:8px 16px;border-radius:99px}
+.fplayers .fwait{background:#fff;border-style:dashed;color:var(--ink2);animation:bob 1.6s infinite}
+.lane.me{box-shadow:0 0 0 3px var(--honey)}
 .acts{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
 .act{background:#fff;border-radius:26px;padding:22px;text-align:center;border:3px solid var(--line);cursor:pointer;transition:transform .12s}
 .act:hover{transform:translateY(-4px)}
@@ -370,7 +375,7 @@ function render(){
  const a=$('#app');
  if(V.screen==='home')a.innerHTML=home();
  else if(!ME){V={screen:'home',team:null};a.innerHTML=home()}
- else a.innerHTML=top()+`<main>${({team:teamView,learn:learnView,lcwc:lcwcView,test:testView,miss:missView,done:doneView,gap:gapView,games:gamesView,gballoon:balloonView,ghive:hiveView,gcatch:catchView,ggarden:gardenView,grace:raceView})[V.screen]()}</main>`;
+ else a.innerHTML=top()+`<main>${({team:teamView,learn:learnView,lcwc:lcwcView,test:testView,miss:missView,done:doneView,gap:gapView,games:gamesView,gballoon:balloonView,gfriend:friendView,ghive:hiveView,gcatch:catchView,ggarden:gardenView,grace:raceView})[V.screen]()}</main>`;
  after();if(V.screen==='ghive')hiveAfter();if(V.screen==='grace')raceAfter();
 }
 function home(){
@@ -538,6 +543,7 @@ const GAMES=[
  {id:'gcatch',e:'🍯',name:'Honey Catch',p:'Move the honey jar and catch the letters in the right order!'},
  {id:'ggarden',e:'🌻',name:'Grow a Garden',p:'Every word you spell grows a flower. Can you fill your garden?'},
  {id:'grace',e:'🏁',name:'Bee Race',p:'Race the speedy bee! Spell words to zoom to the finish line!'},
+ {id:'gfriend',e:'🌐',name:'Race a friend',p:'Get a race code and race your friends on their own devices!'},
  {id:'gballoon',e:'🎈',name:'Balloon Rescue',p:'Guess the letters to keep the bee flying! Wrong letters pop a balloon.'}];
 const FLOWERS=['🌻','🌷','🌹','🌺','🌸','🌼','💐','🪻'];
 function gWins(){const p=prog(V.team);p.gw=p.gw||{};return p.gw}
@@ -556,7 +562,8 @@ function gAsk(){const w=G.list[G.i];
  ${G.fb==='bad'?`<div class="fb bad">${pick(TRY)} It’s spelt <u>${esc(w)}</u></div><div class="row" style="margin-top:12px"><button class="w" data-say="${esc(w)}">🔊 Hear it</button><button class="y" data-g="next">Keep going →</button></div>`
  :G.fb==='ok'?`<div class="fb ok">${pick(PRAISE)} ⭐</div>`
  :`${kb()}<div class="row" style="margin-top:14px"><button class="y" data-g="check">Check ✔</button></div>`}`}
-function gStart(id){V.screen=id;G={kind:id,i:0,val:'',fb:null,score:0,wrong:0,done:false};
+function gStart(id){if(id==='gfriend'){fStopPoll();V.screen=id;G={kind:id,stage:'menu',err:'',join:''};render();window.scrollTo(0,0);return}
+ V.screen=id;G={kind:id,i:0,val:'',fb:null,score:0,wrong:0,done:false};
  if(id==='ghive'){G.list=gWords(10);G.goal=G.list.length;G.pos=0;G.shown=0;G.tries=0}
  if(id==='ggarden'){G.list=gWords(10);G.grown=null}
  if(id==='grace'){G.list=gWords(14);G.goal=Math.min(8,G.list.length);G.pos=0;G.shown=0;G.opp=0;G.timed=!T(V.team).kb;G.last=0}
@@ -642,7 +649,7 @@ function catchGot(c){const w=G.list[G.i];const need=w[G.got.length].toLowerCase(
 function catchMove(dx){if(!G||G.kind!=='gcatch')return;G.lane=Math.max(0,Math.min(3,G.lane+dx));const j=$('#jar');if(j)j.style.left=(G.lane*25+12.5)+'%'}
 
 /* shared check / next */
-function gCheck(){const v=readAns();if(!v||G.fb)return;const w=G.list[G.i];const ok=same(v,w);G.val=v;award(V.team,w,ok);
+function gCheck(){if(G&&G.kind==='gfriend'){fCheck();return}const v=readAns();if(!v||G.fb)return;const w=G.list[G.i];const ok=same(v,w);G.val=v;award(V.team,w,ok);
  if(ok){G.score++;G.fb='ok';if(G.kind==='ghive')G.pos++;if(G.kind==='grace')G.pos++;if(G.kind==='ggarden')G.grown=w;render();gGood();
   if((G.kind==='ghive'&&G.pos>=G.goal)){gAfterTalk(()=>{G.done=true;render();window.scrollTo(0,0);gWin('ghive');gBig()});return}
   if(G.kind==='grace'&&G.pos>=G.goal){gAfterTalk(()=>raceEnd(true));return}
@@ -660,7 +667,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-g],[data-g
  if(d.glane!==undefined){if(G&&G.kind==='gcatch'){G.lane=+d.glane;catchMove(0)}return}
  if(d.g==='menu'){G=null;V.screen='games';render();window.scrollTo(0,0);return}
  if(d.g==='check'){gCheck();return}
- if(d.g==='next'){gNext();return}
+ if(d.g==='next'){if(G&&G.kind==='gfriend')fNext();else gNext();return}
  if(GAMES.some(x=>x.id===d.g))gStart(d.g)});
 document.addEventListener('keydown',e=>{if(!G||G.kind!==V.screen)return;
  if(G.kind==='gcatch'&&(e.key==='ArrowLeft'||e.key==='ArrowRight')){e.preventDefault();catchMove(e.key==='ArrowLeft'?-1:1);return}
@@ -692,6 +699,58 @@ function bNext(){if(!G||G.kind!=='gballoon')return;if(G.i+1<G.list.length){G.i++
  else{G.done=true;render();window.scrollTo(0,0);if(G.saved>=Math.ceil(G.list.length*0.6)){gWin('gballoon');gBig()}else setTimeout(()=>playClip(pick(ENCOURAGE)),300)}}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-hl]');if(b){bGuess(b.dataset.hl);return}const n=e.target.closest('[data-g=bnext]');if(n)bNext()});
 document.addEventListener('keydown',e=>{if(G&&G.kind==='gballoon'&&V.screen==='gballoon'&&/^[a-z]$/i.test(e.key)&&!e.metaKey&&!e.ctrlKey){bGuess(e.key)}});
+
+/* 6. Race a friend (online, with a race code) */
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function fWords(team,seed,n){const r=mulberry(seed);const a=WORDS[team].slice().sort();for(let i=a.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]]}const out=[];while(out.length<n&&a.length)out.push(a[out.length%a.length]);return out}
+let FPOLL=null,FBUSY=false;
+function fErr(e){return ({code:'Your bee code didn’t work. Ask your teacher.',notfound:'We couldn’t find that race code. Check it and try again!',started:'That race has already started. Ask your friend for a new code.',full:'That race is full (4 bees max).',notin:'You are not in this race.',net:'We couldn’t connect. Check the internet and try again.'})[e]||(e==='team'?'':'Something went wrong. Try again.')}
+async function fCall(fn,args){const c=db();if(!c)return {error:'net'};try{const {data,error}=await c.rpc(fn,Object.assign({p_code:ME.code},args||{}));if(error||!data)return {error:'net'};return data}catch(e){return {error:'net'}}}
+function fApply(d){if(!G||G.kind!=='gfriend')return;if(d.error){if(G.stage==='menu'||G.stage==='busy'){G.stage='menu';G.err=d.error==='team'?`That race is for the ${T(d.team)?.name||'other team'}. You can only race bees in your own team (${T(ME.team).name}).`:fErr(d.error);render()}return}
+ const was=G.stage;G.data=d;G.code=d.code;{const m=d.players.find(p=>p.me);if(m&&(G.myPos||0)>m.pos)m.pos=G.myPos}
+ if(!G.list)G.list=fWords(d.team,d.seed,d.goal+40);
+ if(d.status==='wait'){G.stage='wait';if(was!=='wait'||G.nPl!==d.players.length){G.nPl=d.players.length;render();if(was==='wait')happySound(false)}fStartPoll();return}
+ if(d.status==='go'&&d.starts_in>0&&was!=='race'){G.stage='count';G.startAt=performance.now()+d.starts_in*1000;if(was!=='count')render();fStartPoll();return}
+ if(d.status==='go'){if(was!=='race'){G.stage='race';G.i=0;G.val='';G.fb=null;render();setTimeout(()=>sayWordSentence(G.list[0]),150)}else fLanes();fStartPoll();return}
+ if(d.status==='done'&&was!=='end'){G.stage='end';fStopPoll();render();window.scrollTo(0,0);const me=d.players.find(p=>p.me);
+  if(me&&me.done&&d.winner===ME.first_name){gWin('gfriend');gBig()}else{gentleSound();setTimeout(()=>playClip(pick(ENCOURAGE)),400)}}}
+function fStartPoll(){if(FPOLL)return;FPOLL=setInterval(async()=>{if(!G||G.kind!=='gfriend'||V.screen!=='gfriend'){fStopPoll();return}
+ if(G.stage==='count'){const s=Math.ceil((G.startAt-performance.now())/1000);const el=$('#fcount');if(el)el.textContent=s>0?s:'GO!';if(s<=0){G.stage='go-wait'}}
+ if(FBUSY)return;FBUSY=true;try{fApply(await fCall('race_state',{p_race:G.code}))}finally{FBUSY=false}},700)}
+function fStopPoll(){if(FPOLL){clearInterval(FPOLL);FPOLL=null}}
+function fLanes(){const d=G.data;if(!d)return;d.players.forEach((p,k)=>{const b=document.getElementById('fb'+k);if(b)b.style.left=(Math.min(p.pos,d.goal)/d.goal*88)+'%'})}
+function fLanesHTML(){const d=G.data;return `<div class="race">${d.players.map((p,k)=>`<div class="lane ${p.me?'me':'them'}"><span class="who">${esc(p.name)}${p.me?' (you)':''}</span><div class="runner ${p.me?'':'opp'}" id="fb${k}" style="left:${Math.min(p.pos,d.goal)/d.goal*88}%">🐝</div><div class="flag">🏁</div></div>`).join('')}</div>`}
+function friendView(){const head=gHead('🌐 Race a friend');
+ if(!db())return head+`<div class="panel gend"><p style="font-size:20px">Racing a friend needs the internet. Please try again later.</p></div>`;
+ if(G.stage==='menu'||G.stage==='busy')return head+`<div class="fgrid">
+  <div class="panel"><div style="font-size:60px">🏁</div><h3 class="f" style="font-size:26px;margin:6px 0">Start a race</h3><p class="muted">Get a race code and tell it to your friend.</p><button class="y" data-f="create" ${G.stage==='busy'?'disabled':''}>Get a race code</button></div>
+  <div class="panel"><div style="font-size:60px">🤝</div><h3 class="f" style="font-size:26px;margin:6px 0">Join a race</h3><p class="muted">Type the race code your friend gives you.</p><input id="fjoin" class="ans" style="max-width:260px;text-transform:uppercase;font-size:30px" maxlength="8" placeholder="BEE-42" autocomplete="off" autocapitalize="characters" spellcheck="false" value="${esc(G.join||'')}"><div style="margin-top:12px"><button class="y" data-f="join" ${G.stage==='busy'?'disabled':''}>Join 🐝</button></div></div></div>
+  ${G.err?`<div class="fb bad" style="margin-top:14px">${esc(G.err)}</div>`:''}
+  <p class="muted" style="text-align:center;margin-top:14px">You can race up to 3 friends from your team (${T(ME.team).name}). Everyone gets the same words!</p>`;
+ const d=G.data;
+ if(G.stage==='wait'){const n=d.players.length;return head+`<div class="panel gend"><p class="muted" style="font-size:18px">Your race code is</p><div class="fcode">${esc(d.code)}</div><p style="font-size:18px">Tell your friend to tap <b>🌐 Race a friend → Join a race</b> and type this code.</p>
+  <div class="fplayers">${d.players.map(p=>`<span>🐝 ${esc(p.name)}${p.me?' (you)':''}</span>`).join('')}${n<4?'<span class="fwait">waiting…</span>':''}</div>
+  ${d.host?(n>=2?`<button class="y" style="font-size:24px;padding:14px 34px" data-f="start">Start the race! 🏁</button>`:`<p class="muted">The Start button appears when your friend joins.</p>`):`<p class="muted" style="font-size:18px">Waiting for ${esc(d.players[0].name)} to start the race…</p>`}</div>`}
+ if(G.stage==='count'||G.stage==='go-wait')return head+fLanesHTML()+`<div class="panel gend"><p style="font-size:22px">Get ready…</p><div class="fcode" id="fcount">${Math.max(1,Math.ceil((G.startAt-performance.now())/1000))}</div></div>`;
+ if(G.stage==='race'){const me=d.players.find(p=>p.me)||{pos:0};const w=G.list[G.i];
+  return head+`<p class="muted" style="text-align:center">${d.goal-me.pos} words to the finish!</p>`+fLanesHTML()+
+  (me.pos>=d.goal?`<div class="panel gend"><p style="font-size:22px">You crossed the finish line! 🏁 Checking who was first…</p></div>`:`<div class="panel">${gAsk()}</div>`)}
+ const me=d.players.find(p=>p.me);const won=me&&me.done&&d.winner===ME.first_name;
+ return head+fLanesHTML()+(won?`<div class="panel gend"><div style="font-size:90px">🏆</div><h2 class="f" style="font-size:34px">You won the race!</h2><p style="font-size:20px">Super fast spelling, ${esc(ME.first_name)}!</p>`
+  :`<div class="panel gend"><div style="font-size:80px">🐝💨</div><h2 class="f" style="font-size:32px">${esc(d.winner||'Your friend')} won this time!</h2><p style="font-size:20px">You spelt ${me?me.pos:0} words. Great racing! Practise and race again!</p>`)+
+  `<div class="row" style="margin-top:14px"><button class="y" data-g="gfriend">New race 🔁</button><button class="w" data-g="menu">More games</button></div></div>`}
+async function fCreate(){G.stage='busy';G.err='';render();fApply(await fCall('race_create'))}
+async function fJoin(){const v=($('#fjoin')?.value||'').trim();G.join=v;if(!v){G.err='Type the race code first.';render();return}G.stage='busy';G.err='';render();fApply(await fCall('race_join',{p_race:v}))}
+async function fStart(){const d=await fCall('race_start',{p_race:G.code});fApply(d)}
+function fCheck(){const v=readAns();if(!v||G.fb||G.stage!=='race')return;const w=G.list[G.i];const ok=same(v,w);G.val=v;award(V.team,w,ok);const me=G.data.players.find(p=>p.me);
+ if(ok){G.myPos=(G.myPos||0)+1;me.pos=G.myPos;G.fb='ok';const pos=me.pos;render();gGood();fCall('race_move',{p_race:G.code,p_pos:pos}).then(fApply);
+  if(pos>=G.data.goal)return;gAfterTalk(()=>{G.i++;G.val='';G.fb=null;render();setTimeout(()=>sayWordSentence(G.list[G.i]),150)},900)}
+ else{G.fb='bad';render();oops()}}
+function fNext(){if(G.stage!=='race')return;G.i++;G.val='';G.fb=null;render();setTimeout(()=>sayWordSentence(G.list[G.i]),150)}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-f]');if(!b||!G||G.kind!=='gfriend')return;const f=b.dataset.f;
+ if(f==='create')fCreate();if(f==='join')fJoin();if(f==='start'){b.disabled=true;fStart()}});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='fjoin'){e.preventDefault();fJoin()}});
+document.addEventListener('input',e=>{if(e.target.id==='fjoin'&&G)G.join=e.target.value});
 
 async function submitCode(){const i=$('#codein'),m=$('#codemsg');if(!i)return;const btn=document.querySelector('[data-code]');
  if(btn){btn.disabled=true;btn.textContent='Checking… 🐝'}const r=await loginCode(i.value);
