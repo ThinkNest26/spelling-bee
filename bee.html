@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Spelling Bee – Bee rounds</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="avatar.js"></script>
+<style>
+:root{--aa:#1B3A6B;--aa2:#D62839;--honey:#F5B700;--honey2:#FFD54A;--honeyL:#FFF3C4;--ink:#1F2A44;--ink2:#46506B;--muted:#6B7280;--bg:#FFFBEF;--line:#EFE6CC;--ok:#1E9E5A;--okL:#E3F6EA;--bad:#D64545;--badL:#FDE8E8}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Nunito,system-ui,sans-serif;font-size:15px}
+h1,h2,h3,.f{font-family:Fredoka,Nunito,sans-serif;font-weight:600;margin:0}
+button{font-family:inherit;font-weight:800;font-size:14px;border:0;border-radius:10px;padding:9px 14px;cursor:pointer;background:var(--aa);color:#fff}
+button.y{background:var(--honey);color:var(--ink)}button.w{background:#fff;color:var(--ink);border:1.5px solid var(--line)}button.r{background:var(--bad)}button.g{background:var(--ok)}
+button.sm{padding:5px 9px;font-size:12.5px;border-radius:8px}button:disabled{opacity:.45;cursor:not-allowed}
+button.big{font-size:20px;padding:14px 22px;border-radius:14px}
+input,select{font-family:inherit;font-size:14px;border:1.5px solid var(--line);border-radius:9px;padding:8px 10px;background:#fff;color:var(--ink);width:100%}
+label{font-size:12.5px;font-weight:800;color:var(--ink2);display:block;margin-bottom:4px}
+header{background:var(--aa);color:#fff;padding:12px 22px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+header .t{font-family:Fredoka;font-size:21px}header .s{font-size:12.5px;opacity:.75}header .right{margin-left:auto;display:flex;gap:10px;align-items:center;font-size:13px}
+header a{color:#fff;font-weight:800}
+main{max-width:1200px;margin:0 auto;padding:22px}
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.spacer{flex:1}
+.grid{display:grid;gap:14px}.g2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.muted{color:var(--muted)}.small{font-size:12.5px}
+.pill{display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:800}
+.buz{background:#FCE7F3;color:#9D174D}.hon{background:#FEF3C7;color:#92400E}.bum{background:#DBEAFE;color:#1E40AF}.cha{background:#EDE9FE;color:#5B21B6}
+.pill.live{background:#FDE8E8;color:#991B1B}.pill.done{background:var(--okL);color:#166534}.pill.ready{background:#EEF2F7;color:#46506B}
+.rlist .ri{display:flex;align-items:center;gap:12px;padding:12px;border:1.5px solid var(--line);border-radius:14px;margin-bottom:8px;background:#fff}
+.kidpick{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:6px;max-height:340px;overflow:auto;border:1.5px solid var(--line);border-radius:12px;padding:8px}
+.kidpick label{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink);margin:0;padding:6px 8px;border-radius:10px;cursor:pointer;font-weight:700}
+.kidpick label:hover{background:var(--honeyL)}.kidpick input{width:auto}
+.kidpick svg,.sp svg,.who svg{border-radius:50%;flex:none}
+.stage{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;align-items:start}@media(max-width:900px){.stage{grid-template-columns:1fr}}
+.turn{text-align:center}.turn .name{font-family:Fredoka;font-size:30px;margin-top:6px}
+.wordbox{background:var(--honeyL);border:3px dashed var(--honey);border-radius:18px;padding:16px;margin:14px 0}
+.wordbox .w{font-family:Fredoka;font-size:52px;letter-spacing:.04em;word-break:break-word}
+.wordbox .snt{font-size:17px;color:var(--ink2);margin-top:6px}
+.timer{font-family:Fredoka;font-size:46px}.timer.low{color:var(--bad)}
+.acts{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+.sp{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:12px;margin-bottom:5px;font-weight:800}
+.sp.now{background:var(--honeyL);box-shadow:inset 0 0 0 2px var(--honey)}.sp.out{opacity:.45;text-decoration:line-through}.sp.done{color:var(--ok)}
+.banner{border-radius:16px;padding:16px;text-align:center;font-family:Fredoka;font-size:24px;margin-bottom:14px}
+.banner.ok{background:var(--okL);color:#166534}.banner.bad{background:var(--badL);color:#991B1B}.banner.info{background:#E8F0FF;color:#1E3A8A}.banner.win{background:linear-gradient(135deg,#FFF3C4,#FFE08A);color:#7A4E00;font-size:30px}
+.log{max-height:220px;overflow:auto;font-size:13.5px}.log div{padding:4px 0;border-bottom:1px solid #F4EEDC}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:12px;font-weight:800;z-index:60;display:none}
+.modal{position:fixed;inset:0;background:rgba(20,26,43,.5);display:grid;place-items:center;z-index:50;padding:20px}.modal .card{max-width:520px;width:100%}
+.place{font-family:Fredoka;font-size:22px;width:44px;text-align:center}
+@media print{header,.noprint,footer{display:none!important}main{padding:0}.card{border:0}}
+</style>
+</head>
+<body>
+<header><div style="font-size:30px">🎤</div><div><div class="t">Spelling Bee — Bee rounds</div><div class="s">Class rounds, grade rounds and the Grand Final</div></div><div class="right" id="who"><a href="teacher.html">← Teacher page</a></div></header>
+<main id="app"><p class="muted">Loading…</p></main>
+<footer style="text-align:center;padding:24px;font-size:13px;color:#6B7280;font-weight:700">Powered by <a href="https://thinknestonline.com" target="_blank" rel="noopener" style="color:#1B3A6B">ThinkNest</a></footer>
+<div id="modal"></div>
+<div class="toast" id="toast"></div>
+<script>
+(function(){
+"use strict";
+const SUPABASE_URL='https://xpbkdnkfufkahaszfycd.supabase.co';
+const SUPABASE_KEY='sb_publishable_QIAV_9tLUBbDCu7FHqaTEw_zYQ0teEG';
+const TEAMS={buz:['Buzzy Bees','🌼','KG2'],hon:['Honey Bees','🍯','Grade 1'],bum:['Bumble Bees','🐝','Grades 2–3'],cha:['Champion Bees','🏆','Grades 4–5']};
+const KINDS={class:'Class round',grade:'Grade round',final:'Grand Final'};
+function teamOf(g){g=+g;return g===0?'buz':g===1?'hon':g<=3?'bum':'cha'}
+function GL(g){return +g===0?'KG2':'Grade '+g}
+const $=s=>document.querySelector(s);
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+let tT;function toast(m){const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(tT);tT=setTimeout(()=>t.style.display='none',2600)}
+function av(a,s){try{return window.SBAvatar.svg(a||{},s)}catch(e){return ''}}
+let sb=null;try{sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY)}catch(e){}
+let USER=null,KIDS=[],PROG={},WROWS=[],HAVE=new Set(),ROUNDS=[],R=null,HIST=[];
+const CH=('BroadcastChannel' in window)?new BroadcastChannel('sb-bee-screen'):null;
+
+/* ---------- Kate's voice ---------- */
+const KATE=new Audio();let ttsU=null;
+function speak(text,clip){try{KATE.pause()}catch(e){}try{speechSynthesis.cancel()}catch(e){}
+ if(clip&&HAVE.has(clip)){KATE.src='audio/'+clip+'.m4a';KATE.play().catch(()=>tts(text));return}tts(text)}
+function tts(t){try{const u=new SpeechSynthesisUtterance(t);u.lang='en-GB';u.rate=.85;const v=speechSynthesis.getVoices().find(v=>/en-GB/i.test(v.lang)&&/female|kate|serena|stephanie|martha/i.test(v.name))||speechSynthesis.getVoices().find(v=>/en-GB/i.test(v.lang));if(v)u.voice=v;ttsU=u;speechSynthesis.speak(u)}catch(e){}}
+function sfx(ok){try{const c=new (window.AudioContext||window.webkitAudioContext)();const notes=ok?[523,659,784,1047]:[392,330];notes.forEach((f,i)=>{const o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(.0001,c.currentTime+i*.12);g.gain.exponentialRampToValueAtTime(.25,c.currentTime+i*.12+.02);g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+i*.12+.35);o.connect(g).connect(c.destination);o.start(c.currentTime+i*.12);o.stop(c.currentTime+i*.12+.4)})}catch(e){}}
+
+/* ---------- start ---------- */
+async function start(){
+ if(!sb){$('#app').innerHTML='<div class="card">Can’t connect to the database.</div>';return}
+ const {data:{session}}=await sb.auth.getSession();
+ if(!session){$('#app').innerHTML=`<div class="card" style="max-width:520px;margin:40px auto;text-align:center"><h2>Please sign in first</h2><p class="muted">Sign in on the teacher page, then come back here.</p><a href="teacher.html"><button class="y big">Go to the teacher page</button></a></div>`;return}
+ USER=session.user;
+ const {data:t}=await sb.from('teachers').select('email');
+ if(!t||!t.length){$('#app').innerHTML='<div class="card">This account isn’t on the teacher list.</div>';return}
+ const [{data:k},{data:p},{data:w},{data:r,error:re}]=await Promise.all([
+  sb.from('students').select('*').eq('active',true).order('grade').order('class_name').order('first_name'),
+  sb.from('progress').select('student_id,avatar,words'),sb.rpc('public_words'),
+  sb.from('bee_rounds').select('*').order('created_at',{ascending:false})]);
+ KIDS=k||[];(p||[]).forEach(x=>PROG[x.student_id]=x);WROWS=Array.isArray(w)?w:[];
+ if(re){$('#app').innerHTML=`<div class="card"><b>One more step:</b> run <code>spelling-bee-bee-rounds.sql</code> in Supabase (SQL Editor → New query → paste → Run), then refresh this page.</div>`;return}
+ ROUNDS=r||[];
+ try{const m=await fetch('audio/manifest.json',{cache:'no-cache'});if(m.ok){const a=await m.json();if(Array.isArray(a))HAVE=new Set(a)}}catch(e){}
+ const id=new URLSearchParams(location.search).get('r');
+ if(id&&ROUNDS.find(x=>String(x.id)===id)){openRound(+id)}else home();
+}
+
+/* ---------- list of rounds ---------- */
+function home(){R=null;history.replaceState(null,'','bee.html');sendScreen();
+ $('#app').innerHTML=`<div class="row" style="margin-bottom:14px"><h2 style="font-size:24px">Bee rounds</h2><div class="spacer"></div><button class="y big" id="new">+ New round</button></div>
+ <div class="grid g2">
+  <div class="card"><h3 style="font-size:19px;margin-bottom:10px">Your rounds</h3><div class="rlist">${ROUNDS.length?ROUNDS.map(r=>{const s=r.state||{};const win=s.winner&&(s.spellers||[]).find(x=>x.id===s.winner);return `<div class="ri"><div style="flex:1"><b style="font-size:16px">${esc(r.name)}</b><div class="small muted">${KINDS[r.kind]||''} · <span class="pill ${r.team}">${TEAMS[r.team][1]} ${TEAMS[r.team][2]}</span> · ${(s.spellers||[]).length} spellers</div>${win?`<div class="small">🏆 Winner: <b>${esc(win.name)}</b></div>`:''}</div><span class="pill ${r.status}">${{ready:'Ready',live:'In progress',done:'Finished'}[r.status]||r.status}</span><button class="w sm" data-open="${r.id}">${r.status==='done'?'Results':'Open'}</button><button class="w sm" data-delr="${r.id}" title="Delete">✕</button></div>`}).join(''):'<p class="muted">No rounds yet. Click <b>+ New round</b> to set one up.</p>'}</div></div>
+  <div class="card"><h3 style="font-size:19px">How it works</h3><ol style="line-height:1.7;padding-left:20px;margin:10px 0 0">
+   <li><b>Class rounds:</b> pick the children in a class and choose how many go through.</li>
+   <li><b>Grade rounds:</b> run the same way with the children who went through.</li>
+   <li><b>Grand Final:</b> on 22 January, run it with the finalists.</li>
+   <li>Kate says each word. You press <b>✓ Correct</b> or <b>✗ Out</b>.</li>
+   <li>Open the <b>projector screen</b> on a second screen or the big board. It shows the speller, the timer and the results, but never the word before it’s spelt.</li></ol>
+   <p class="small muted" style="margin-top:10px">Official rules built in: if <b>everyone</b> in a round misses, they all come back. When only one speller is left, they must spell one more word (the championship word) to win.</p></div></div>`;
+ $('#new').onclick=newRound;
+ document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openRound(+b.dataset.open));
+ document.querySelectorAll('[data-delr]').forEach(b=>b.onclick=async()=>{const r=ROUNDS.find(x=>x.id==b.dataset.delr);if(!confirm('Delete “'+r.name+'”?'))return;const {error}=await sb.from('bee_rounds').delete().eq('id',r.id);if(error){toast('Couldn’t delete');return}ROUNDS=ROUNDS.filter(x=>x!==r);home()});
+}
+
+/* ---------- new round ---------- */
+let NF={kind:'class',team:'bum',grade:'all',cls:'all',sel:new Set(),extra:''};
+function newRound(){
+ const kids=KIDS.filter(k=>teamOf(k.grade)===NF.team&&(NF.grade==='all'||k.grade==NF.grade)&&(NF.cls==='all'||k.class_name===NF.cls));
+ const grades=[...new Set(KIDS.filter(k=>teamOf(k.grade)===NF.team).map(k=>k.grade))].sort();
+ const classes=[...new Set(KIDS.filter(k=>teamOf(k.grade)===NF.team&&(NF.grade==='all'||k.grade==NF.grade)).map(k=>k.class_name).filter(Boolean))].sort();
+ const nsel=[...NF.sel].filter(id=>KIDS.find(k=>k.id===id&&teamOf(k.grade)===NF.team)).length;
+ $('#app').innerHTML=`<div class="row" style="margin-bottom:14px"><button class="w" id="back">← Back</button><h2 style="font-size:24px">New round</h2></div>
+ <div class="grid g2"><div class="card">
+  <label>Name of the round</label><input id="nm" placeholder="e.g. Class 3B round, or Grand Final – Grades 4–5" value="${esc(NF.name||'')}">
+  <div class="row" style="margin-top:12px"><div style="flex:1"><label>Type</label><select id="kind">${Object.entries(KINDS).map(([k,v])=>`<option value="${k}" ${NF.kind===k?'selected':''}>${v}</option>`).join('')}</select></div>
+   <div style="flex:1"><label>Word list</label><select id="team">${Object.entries(TEAMS).map(([k,v])=>`<option value="${k}" ${NF.team===k?'selected':''}>${v[1]} ${v[0]} (${v[2]})</option>`).join('')}</select></div></div>
+  <div class="row" style="margin-top:12px"><div style="flex:1"><label>Time to spell each word</label><select id="time">${[[0,'No timer'],[30,'30 seconds'],[45,'45 seconds'],[60,'1 minute'],[90,'1½ minutes']].map(([v,l])=>`<option value="${v}" ${(NF.time??60)==v?'selected':''}>${l}</option>`).join('')}</select></div>
+   <div style="flex:1"><label>How many go through?</label><select id="thr">${[[0,'Play until there is a winner'],[1,'1'],[2,'2'],[3,'3'],[4,'4'],[5,'5'],[6,'6']].map(([v,l])=>`<option value="${v}" ${(NF.through??(NF.kind==='final'?0:2))==v?'selected':''}>${l}</option>`).join('')}</select></div></div>
+  <p class="small muted">With “go through” set, you can stop the round when that many spellers are left.</p>
+ </div><div class="card">
+  <div class="row"><h3 style="font-size:18px">Spellers</h3><div class="spacer"></div><span class="small"><b>${nsel}</b> chosen</span></div>
+  <div class="row" style="margin:8px 0"><select id="fg" style="flex:1"><option value="all">All grades</option>${grades.map(g=>`<option value="${g}" ${NF.grade==g?'selected':''}>${GL(g)}</option>`).join('')}</select>
+   <select id="fc" style="flex:1"><option value="all">All classes</option>${classes.map(c=>`<option ${NF.cls===c?'selected':''}>${esc(c)}</option>`).join('')}</select>
+   <button class="w sm" id="selall">Tick all shown</button><button class="w sm" id="selnone">Clear</button></div>
+  <div class="kidpick">${kids.map(k=>`<label><input type="checkbox" data-k="${k.id}" ${NF.sel.has(k.id)?'checked':''}>${av(PROG[k.id]?.avatar,28)}<span>${esc(k.first_name)} <span class="muted small">${esc(k.class_name||GL(k.grade))}</span></span></label>`).join('')||'<p class="muted">No children with bee codes in this list yet.</p>'}</div>
+  <label style="margin-top:10px">Other spellers without a bee code (one name per line)</label><textarea id="extra" rows="2" style="width:100%;font-family:inherit;border:1.5px solid var(--line);border-radius:9px;padding:8px">${esc(NF.extra)}</textarea>
+ </div></div>
+ <div class="row" style="margin-top:16px"><div class="spacer"></div><button class="y big" id="create">Create round 🐝</button></div>`;
+ const keep=()=>{NF.name=$('#nm').value;NF.kind=$('#kind').value;NF.time=+$('#time').value;NF.through=+$('#thr').value;NF.extra=$('#extra').value};
+ $('#back').onclick=home;
+ $('#team').onchange=e=>{keep();NF.team=e.target.value;NF.grade='all';NF.cls='all';newRound()};
+ $('#kind').onchange=e=>{keep();if(NF.kind==='final')NF.through=0;newRound()};
+ $('#fg').onchange=e=>{keep();NF.grade=e.target.value;NF.cls='all';newRound()};
+ $('#fc').onchange=e=>{keep();NF.cls=e.target.value;newRound()};
+ $('#selall').onclick=()=>{keep();kids.forEach(k=>NF.sel.add(k.id));newRound()};
+ $('#selnone').onclick=()=>{keep();NF.sel.clear();newRound()};
+ document.querySelectorAll('[data-k]').forEach(c=>c.onchange=()=>{keep();c.checked?NF.sel.add(c.dataset.k):NF.sel.delete(c.dataset.k);newRound()});
+ $('#create').onclick=async()=>{keep();const name=NF.name.trim()||`${KINDS[NF.kind]} – ${TEAMS[NF.team][2]}`;
+  const sp=KIDS.filter(k=>NF.sel.has(k.id)&&teamOf(k.grade)===NF.team).map(k=>({id:k.id,name:k.first_name,cls:k.class_name||GL(k.grade),avatar:PROG[k.id]?.avatar||{},out:null}));
+  NF.extra.split('\n').map(s=>s.trim()).filter(Boolean).forEach((n,i)=>sp.push({id:'x'+i+'-'+Date.now(),name:n.slice(0,30),cls:'',avatar:{},out:null}));
+  if(sp.length<2){toast('Choose at least 2 spellers');return}
+  const state={spellers:sp.sort(()=>Math.random()-.5),round:0,order:[],idx:0,used:[],cur:null,phase:'ready',roundOut:[],log:[],winner:null,msg:null,through:[]};
+  const {data,error}=await sb.from('bee_rounds').insert({name,kind:NF.kind,team:NF.team,settings:{time:NF.time??60,through:NF.through||0},state,status:'ready',created_by:USER.email}).select().single();
+  if(error){toast('Couldn’t save the round');return}
+  ROUNDS.unshift(data);NF={kind:'class',team:NF.team,grade:'all',cls:'all',sel:new Set(),extra:''};openRound(data.id)};
+}
+
+/* ---------- running a round ---------- */
+let TIMER={left:0,run:false,h:null},SAVE_T=null;
+function S(){return R.state}
+function sp(id){return S().spellers.find(x=>x.id===id)}
+function alive(){return S().spellers.filter(x=>!x.out)}
+function words(){return WROWS.filter(w=>w.team===R.team)}
+function pickWord(){const st=S();const ws=words();if(!ws.length)return null;let pool=ws.filter(w=>!st.used.includes(w.id));if(!pool.length){st.used=[];pool=ws}const w=pool[Math.floor(Math.random()*pool.length)];st.used.push(w.id);return {id:w.id,word:w.word,sentence:w.sentence||'',w_clip:w.w_clip,s_clip:w.s_clip,meaning:w.meaning||'',m_clip:w.m_clip||''}}
+function snapshot(){HIST.push(JSON.stringify(R.state));if(HIST.length>40)HIST.shift()}
+function save(){clearTimeout(SAVE_T);SAVE_T=setTimeout(async()=>{const {error}=await sb.from('bee_rounds').update({state:R.state,status:R.status,updated_at:new Date().toISOString()}).eq('id',R.id);if(error)toast('⚠ Couldn’t save — check the internet')},400)}
+function openRound(id){R=ROUNDS.find(x=>x.id===id);if(!R)return home();HIST=[];history.replaceState(null,'','bee.html?r='+id);stopTimer();runView()}
+function startRound(){const st=S();st.round++;st.order=alive().map(x=>x.id);st.idx=0;st.roundOut=[];st.phase='turn';st.cur=pickWord();st.said=false;R.status='live';resetTimer()}
+function nextTurn(){const st=S();st.idx++;st.said=false;resetTimer();
+ if(st.idx<st.order.length){st.cur=pickWord();return}
+ endRound()}
+function endRound(){const st=S();const a=alive();
+ if(a.length===0){st.roundOut.forEach(id=>sp(id).out=null);st.msg={k:'info',t:'Everyone missed this round, so everyone comes back! 🐝'};startRound();return}
+ if(a.length===1&&st.roundOut.length>0&&!(R.settings.through>1)){st.phase='champ';st.order=[a[0].id];st.idx=0;st.cur=pickWord();st.said=false;st.msg={k:'info',t:`🏆 ${a[0].name} is the last speller! Spell one more word to win.`};resetTimer();return}
+ if(a.length===1){finish(a[0].id);return}
+ startRound()}
+function finish(winnerId){const st=S();st.phase='done';st.cur=null;st.winner=winnerId||null;R.status='done';stopTimer();
+ if(winnerId)st.msg={k:'win',t:`🏆 ${sp(winnerId).name} is the champion!`}}
+function finishThrough(){const st=S();const a=alive();st.through=a.map(x=>x.id);st.phase='done';st.cur=null;R.status='done';stopTimer();st.msg={k:'win',t:`🎉 ${a.map(x=>x.name).join(', ')} ${a.length===1?'goes':'go'} through!`}}
+function placings(){const st=S();const list=st.spellers.slice();const rank=x=>x.id===st.winner?1e6:st.through.includes(x.id)?1e5:(x.out==null?5e4:x.out*100+(st.log.filter(l=>l.id===x.id&&l.ok).length));return list.sort((a,b)=>rank(b)-rank(a))}
+function act(kind){const st=S();if(!st.cur&&kind!=='begin')return;snapshot();st.msg=null;
+ if(kind==='begin'){startRound()}
+ else if(kind==='ok'){const id=st.order[st.idx];st.log.push({r:st.round,id,w:st.cur.word,ok:true,champ:st.phase==='champ'});sfx(true);
+  sendScreen({flash:'ok',word:st.cur.word,name:sp(id).name});
+  if(st.phase==='champ'){finish(id)}else nextTurn()}
+ else if(kind==='out'){const id=st.order[st.idx];st.log.push({r:st.round,id,w:st.cur.word,ok:false,champ:st.phase==='champ'});sfx(false);
+  sendScreen({flash:'out',word:st.cur.word,name:sp(id).name});
+  if(st.phase==='champ'){st.roundOut.forEach(o=>sp(o).out=null);st.msg={k:'info',t:'The championship word was missed, so the last round’s spellers come back! 🐝'};startRound()}
+  else{sp(id).out=st.round;st.roundOut.push(id);st.msg={k:'bad',t:`${sp(id).name} is out. Well done for trying! 💛`};nextTurn()}}
+ else if(kind==='skip'){st.cur=pickWord();st.said=false;resetTimer()}
+ save();runView(true)}
+function undo(){if(!HIST.length)return;R.state=JSON.parse(HIST.pop());R.status=R.state.phase==='done'?'done':R.state.round?'live':'ready';stopTimer();resetTimer();save();runView()}
+/* timer */
+function resetTimer(){stopTimer();TIMER.left=+(R.settings.time||0);TIMER.run=false}
+function stopTimer(){clearInterval(TIMER.h);TIMER.h=null;TIMER.run=false}
+function startTimer(){if(!R.settings.time||TIMER.run)return;TIMER.run=true;TIMER.h=setInterval(()=>{TIMER.left=Math.max(0,TIMER.left-1);const el=$('#tm');if(el){el.textContent=fmt(TIMER.left);el.classList.toggle('low',TIMER.left<=10)}sendScreen();if(TIMER.left===0){stopTimer();sfx(false);toast('⏰ Time is up!');runView(true)}},1000)}
+function fmt(s){return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')}
+function say(what){const c=S().cur;if(!c)return;if(what==='word'){speak(c.word,c.w_clip);if(!S().said){S().said=true;startTimer()}}
+ if(what==='sentence')speak(c.sentence,c.s_clip);if(what==='meaning')speak(c.meaning,c.m_clip);if(what==='spell')tts(c.word.split('').join(', '))}
+function runView(keepScroll){const st=S();const y=window.scrollY;const t=TEAMS[R.team];const nowId=st.cur?st.order[st.idx]:null;const now=nowId?sp(nowId):null;
+ const thr=R.settings.through||0;const a=alive();
+ let main='';
+ if(st.phase==='ready')main=`<div class="card turn"><h2 style="font-size:28px">Ready to start?</h2><p class="muted">${st.spellers.length} spellers · ${t[1]} ${t[0]} word list · ${R.settings.time?fmt(R.settings.time)+' per word':'no timer'}</p><p>Open the <b>projector screen</b> first if you’re using one.</p><button class="y big" data-act="begin">Start round 1 🐝</button></div>`;
+ else if(st.phase==='done'){const pl=placings();main=`<div class="banner win">${esc(st.msg?.t||'Finished!')}</div><div class="card"><div class="row"><h3 style="font-size:20px">Results</h3><div class="spacer"></div><button class="w sm noprint" onclick="window.print()">🖨 Print results</button></div>
+  <table style="width:100%;margin-top:8px;border-collapse:collapse">${pl.map((x,i)=>`<tr style="border-bottom:1px solid #F4EEDC"><td class="place">${i===0&&st.winner?'🥇':st.through.includes(x.id)?'✅':i+1}</td><td style="padding:6px">${av(x.avatar,34)}</td><td style="padding:6px"><b>${esc(x.name)}</b> <span class="muted small">${esc(x.cls)}</span></td><td class="small muted">${x.id===st.winner?'Champion':st.through.includes(x.id)?'Goes through':x.out?'Out in round '+x.out:''}</td><td class="small">${st.log.filter(l=>l.id===x.id&&l.ok).length} correct</td></tr>`).join('')}</table></div>`}
+ else{const c=st.cur;main=`${st.msg?`<div class="banner ${st.msg.k}">${esc(st.msg.t)}</div>`:''}
+  <div class="card turn"><div class="small muted">${st.phase==='champ'?'🏆 CHAMPIONSHIP WORD':'Round '+st.round+' · speller '+(st.idx+1)+' of '+st.order.length}</div>
+   ${av(now.avatar,110)}<div class="name">${esc(now.name)}</div><div class="muted">${esc(now.cls)}</div>
+   <div class="wordbox"><div class="small muted">The word (only you can see this)</div><div class="w">${esc(c.word)}</div>${c.sentence?`<div class="snt">“${esc(c.sentence)}”</div>`:''}${c.meaning?`<div class="snt"><b>Meaning:</b> ${esc(c.meaning)}</div>`:''}</div>
+   <div class="acts"><button class="y big" data-say="word">🔊 Say the word</button>${c.sentence?'<button class="w big" data-say="sentence">💬 Sentence</button>':''}${c.meaning?'<button class="w big" data-say="meaning">📖 Meaning</button>':''}</div>
+   ${R.settings.time?`<div class="row" style="justify-content:center;margin-top:12px"><span class="timer ${TIMER.left<=10?'low':''}" id="tm">${fmt(TIMER.left)}</span><button class="w sm" data-tmr="go">${TIMER.run?'⏸ Pause':'▶ Start'}</button><button class="w sm" data-tmr="reset">↺ Reset</button></div>`:''}
+   <div class="acts" style="margin-top:16px"><button class="g big" data-act="ok">✓ Correct</button><button class="r big" data-act="out">✗ Out</button></div>
+   <div class="acts"><button class="w sm" data-act="skip">⏭ Different word</button><button class="w sm" id="undo" ${HIST.length?'':'disabled'}>↶ Undo</button>${thr&&a.length<=thr&&st.phase!=='champ'?`<button class="y sm" id="thru">🎉 Stop here: ${a.length} go through</button>`:''}<button class="w sm" id="endnow">Finish round</button></div></div>`}
+ const side=`<div class="card"><div class="row"><h3 style="font-size:18px">Spellers</h3><div class="spacer"></div><span class="small muted">${a.length} still in</span></div><div style="margin-top:8px">${st.spellers.map(x=>`<div class="sp ${x.id===nowId?'now':''} ${x.out?'out':''} ${x.id===st.winner||st.through.includes(x.id)?'done':''}">${av(x.avatar,30)}<span style="flex:1">${esc(x.name)}</span><span class="small muted">${x.id===st.winner?'🏆':x.out?'out R'+x.out:''}</span></div>`).join('')}</div></div>
+  <div class="card" style="margin-top:14px"><h3 style="font-size:18px">Words so far</h3><div class="log">${st.log.slice().reverse().map(l=>`<div>${l.ok?'✅':'❌'} <b>${esc(sp(l.id)?.name||'')}</b> — ${esc(l.w)} <span class="muted small">R${l.r}${l.champ?' 🏆':''}</span></div>`).join('')||'<span class="muted small">None yet.</span>'}</div></div>`;
+ $('#app').innerHTML=`<div class="row noprint" style="margin-bottom:14px"><button class="w" id="back">← All rounds</button><h2 style="font-size:22px">${esc(R.name)}</h2><span class="pill ${R.team}">${t[1]} ${t[2]}</span><div class="spacer"></div><button class="y" id="screen">📺 Open projector screen</button></div>
+ <div class="stage"><div>${main}</div><div>${side}</div></div>`;
+ $('#back').onclick=()=>{stopTimer();home()};
+ $('#screen').onclick=()=>{window.open('screen.html','sbscreen','width=1200,height=800');setTimeout(()=>sendScreen(),800)};
+ document.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>act(b.dataset.act));
+ document.querySelectorAll('[data-say]').forEach(b=>b.onclick=()=>say(b.dataset.say));
+ document.querySelectorAll('[data-tmr]').forEach(b=>b.onclick=()=>{if(b.dataset.tmr==='reset'){resetTimer()}else if(TIMER.run)stopTimer();else startTimer();runView(true)});
+ const u=$('#undo');if(u)u.onclick=undo;
+ const th=$('#thru');if(th)th.onclick=()=>{if(!confirm('Stop the round now? The '+alive().length+' spellers left go through.'))return;snapshot();finishThrough();save();runView()};
+ const en=$('#endnow');if(en)en.onclick=()=>{const a=alive();if(!confirm('Finish the round now?'+(a.length===1?' '+a[0].name+' will be the winner.':' There will be no single winner.')))return;snapshot();finish(a.length===1?a[0].id:null);if(a.length!==1)S().msg={k:'info',t:'Round finished'};save();runView()};
+ if(keepScroll)window.scrollTo(0,y);
+ sendScreen();
+}
+document.addEventListener('keydown',e=>{if(!R||!S().cur||e.target.tagName==='INPUT')return;if(e.key===' '){e.preventDefault();say('word')}});
+
+/* ---------- projector screen ---------- */
+function sendScreen(extra){if(!CH)return;let view={type:'idle'};
+ if(R){const st=S();const nowId=st.cur?st.order[st.idx]:null;const now=nowId?sp(nowId):null;
+  view={type:'round',title:R.name,team:TEAMS[R.team][0],teamE:TEAMS[R.team][1],phase:st.phase,round:st.round,timer:R.settings.time?TIMER.left:null,timerRun:TIMER.run,
+   speller:now?{name:now.name,cls:now.cls,avatar:now.avatar}:null,left:st.spellers.filter(x=>!x.out).map(x=>({name:x.name,avatar:x.avatar})),
+   msg:st.msg,winner:st.winner?{name:sp(st.winner).name,avatar:sp(st.winner).avatar}:null,through:st.through.map(id=>({name:sp(id).name,avatar:sp(id).avatar}))}}
+ if(extra)view.flash=extra;CH.postMessage(view)}
+if(CH)CH.onmessage=e=>{if(e.data&&e.data.hello)sendScreen()};
+start();
+})();
+</script>
+</body>
+</html>

@@ -131,7 +131,7 @@ async function loadWords(){
  try{const {data,error}=await sb.rpc('public_words');if(!error&&Array.isArray(data)){WROWS=data;for(const t in TEAMS)TEAMS[t][2]=WROWS.filter(w=>w.team===t).length}}catch(e){}
  try{const r=await fetch('audio/manifest.json',{cache:'no-cache'});if(r.ok){const a=await r.json();if(Array.isArray(a))HAVE=new Set(a)}}catch(e){}
 }
-function tabs(){return `<div class="tabs">${[['spellers','👧 Spellers & progress'],['words','📚 Word lists'],['invites','✉️ Invitations']].map(([k,l])=>`<button class="${TAB===k?'on':''}" data-tab="${k}">${l}</button>`).join('')}</div>`}
+function tabs(){return `<div class="tabs">${[['spellers','👧 Spellers & progress'],['words','📚 Word lists'],['invites','✉️ Invitations'],['rounds','🎤 Bee rounds & Grand Final']].map(([k,l])=>`<button class="${TAB===k?'on':''}" data-tab="${k}">${l}</button>`).join('')}</div>`}
 function needs(w){const n=[];if(!HAVE.has(w.w_clip))n.push('word');if(w.sentence&&(!HAVE.has(w.s_clip)||!HAVE.has(w.ws_clip)))n.push('sentence');return n}
 /* ---------- invitations ---------- */
 let INVS=null,INVSEL=null,DRAFT=null,DIRTY=false;
@@ -241,6 +241,7 @@ function tricky(id){const p=PROG[id];if(!p)return [];return Object.entries(p.tri
 function visible(){const q=F.q.toLowerCase();return KIDS.filter(c=>(F.grade==='all'||c.grade==F.grade)&&(F.cls==='all'||c.class_name===F.cls)&&(!q||c.first_name.toLowerCase().includes(q)||c.code.toLowerCase().includes(q.replace(/-/g,''))))
  .sort((a,b)=>{const k=SORT.k,d=SORT.d;const v=c=>k==='stars'?(PROG[c.id]?.stars||0):k==='learnt'?learnt(c.id):k==='seen'?(PROG[c.id]?.last_seen||''):k==='grade'?c.grade*1000+(c.class_name||'').charCodeAt(0):String(c[k]||'').toLowerCase();const x=v(a),y=v(b);return (x>y?1:x<y?-1:0)*d||a.first_name.localeCompare(b.first_name)})}
 function render(){
+ if(TAB==='rounds'){TAB='spellers';location.href='bee.html';return}
  if(TAB==='words'){renderWords();return}
  if(TAB==='invites'){renderInvites();return}
  const list=visible();const classes=[...new Set(KIDS.filter(c=>F.grade==='all'||c.grade==F.grade).map(c=>c.class_name).filter(Boolean))].sort();

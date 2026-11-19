@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Spelling Bee – Big screen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@700;800&display=swap" rel="stylesheet">
+<script src="avatar.js"></script>
+<style>
+:root{--aa:#1B3A6B;--honey:#F5B700;--honeyL:#FFF3C4;--ink:#1F2A44;--ok:#1E9E5A;--bad:#D64545}
+*{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;font-family:Nunito,sans-serif;color:var(--ink)}
+body{background:radial-gradient(circle at 50% 30%,#FFF7D6,#FFE08A 70%,#F5B700);display:flex;flex-direction:column}
+.top{display:flex;align-items:center;gap:14px;padding:2vh 3vw;background:var(--aa);color:#fff}
+.top .t{font-family:Fredoka;font-size:3.2vh}.top .s{font-size:2vh;opacity:.8}.top .r{margin-left:auto;font-family:Fredoka;font-size:3vh}
+#fs{position:fixed;right:12px;bottom:12px;background:rgba(0,0,0,.25);color:#fff;border:0;border-radius:10px;padding:8px 12px;font-weight:800;cursor:pointer;z-index:9}
+.stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2vh 4vw;position:relative}
+.stage svg{border-radius:50%;box-shadow:0 1.5vh 4vh rgba(0,0,0,.15);border:1vh solid #fff;background:#fff}
+.big{font-family:Fredoka;font-size:9vh;line-height:1.05;margin:2vh 0 0}.mid{font-family:Fredoka;font-size:5vh}.sm{font-size:3vh;font-weight:800;opacity:.75}
+.timer{font-family:Fredoka;font-size:9vh;background:#fff;border-radius:3vh;padding:.5vh 4vh;margin-top:2vh;box-shadow:0 1vh 3vh rgba(0,0,0,.1)}.timer.low{color:var(--bad);animation:pulse 1s infinite}
+@keyframes pulse{50%{transform:scale(1.08)}}
+.left{display:flex;gap:1.2vw;justify-content:center;flex-wrap:wrap;padding:1.5vh 3vw 2.5vh}.left div{text-align:center;font-weight:800;font-size:1.8vh}.left svg{border:.4vh solid #fff;border-radius:50%;display:block;margin:0 auto .5vh}
+.label{display:inline-block;background:var(--aa);color:#fff;font-family:Fredoka;font-size:3.4vh;padding:1vh 3vh;border-radius:99px}
+.tiles{display:flex;gap:1vw;justify-content:center;flex-wrap:wrap;margin-top:3vh}.tiles span{font-family:Fredoka;font-size:8vh;width:9vh;height:11vh;display:flex;align-items:center;justify-content:center;background:#fff;border-radius:2vh;box-shadow:0 1vh 0 rgba(0,0,0,.12);animation:pop .4s backwards}
+@keyframes pop{0%{transform:scale(0) rotate(-20deg)}100%{transform:scale(1)}}
+.flash{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:5}
+.flash.ok{background:rgba(227,246,234,.97)}.flash.out{background:rgba(255,247,224,.97)}
+.flash .head{font-family:Fredoka;font-size:12vh}.flash.ok .head{color:var(--ok)}.flash.out .head{color:#B7791F;font-size:9vh}
+.cf{position:fixed;top:-5vh;width:1.4vh;height:2vh;border-radius:3px;animation:fall 3s linear forwards;z-index:6}
+@keyframes fall{to{transform:translateY(115vh) rotate(720deg)}}
+.msg{font-family:Fredoka;font-size:4vh;background:#fff;border-radius:2vh;padding:1.5vh 3vh;margin-bottom:2vh;box-shadow:0 1vh 3vh rgba(0,0,0,.08)}
+.crown{font-size:10vh;line-height:1;margin-bottom:-2vh}
+.grid{display:flex;gap:2.5vw;flex-wrap:wrap;justify-content:center;margin-top:3vh}.grid div{font-family:Fredoka;font-size:3vh}
+</style>
+</head>
+<body>
+<div class="top"><div style="font-size:5vh">🐝</div><div><div class="t" id="tt">The Big Spelling Bee</div><div class="s" id="ts">Spell it! Say it! Shine!</div></div><div class="r" id="tr"></div></div>
+<div class="stage" id="stage"></div>
+<div class="left" id="left"></div>
+<button id="fs">⛶ Full screen</button>
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function av(a,px){try{return window.SBAvatar.svg(a||{},px)}catch(e){return ''}}
+const vh=n=>Math.round(innerHeight*n/100);
+let V={type:'idle'},FL=null,FLT=null;
+function confetti(n){const cols=['#F5B700','#FFD54A','#F472B6','#60A5FA','#34D399','#A78BFA','#FB923C'];for(let i=0;i<n;i++){const e=document.createElement('i');e.className='cf';e.style.left=Math.random()*100+'vw';e.style.background=cols[i%cols.length];e.style.animationDelay=Math.random()*.8+'s';e.style.animationDuration=(2.2+Math.random()*1.5)+'s';document.body.appendChild(e);setTimeout(()=>e.remove(),4500)}}
+function render(){const s=$('#stage');
+ if(V.type!=='round'){$('#tt').textContent='The Big Spelling Bee';$('#ts').textContent='Spell it! Say it! Shine!';$('#tr').textContent='';$('#left').innerHTML='';
+  s.innerHTML=`<div style="font-size:18vh">🐝</div><div class="big">The Big Spelling Bee</div><div class="mid" style="margin-top:2vh">Get ready to spell! ✨</div>`;return}
+ $('#tt').textContent=V.title;$('#ts').textContent=V.teamE+' '+V.team;$('#tr').textContent=V.phase==='champ'?'🏆 Championship word':V.round?'Round '+V.round:'';
+ const left=V.phase==='done'?[]:V.left;$('#left').innerHTML=left.length>1?left.map(x=>`<div>${av(x.avatar,vh(7))}${esc(x.name)}</div>`).join(''):'';
+ let h='';
+ if(FL){h=FL.flash==='ok'?`<div class="flash ok"><div class="head">✓ Correct!</div><div class="tiles">${[...FL.word].map((c,i)=>`<span style="animation-delay:${i*.08}s">${esc(c)}</span>`).join('')}</div><div class="mid" style="margin-top:3vh">Well done, ${esc(FL.name)}! 👏</div></div>`
+  :`<div class="flash out"><div class="head">Good try, ${esc(FL.name)}! 💛</div><div class="mid" style="margin-top:2vh">The word was</div><div class="tiles">${[...FL.word].map((c,i)=>`<span style="animation-delay:${i*.08}s">${esc(c)}</span>`).join('')}</div></div>`}
+ if(V.phase==='ready')h+=`<div class="label">Get ready!</div><div class="big">${esc(V.title)}</div><div class="grid">${V.left.map(x=>`<div>${av(x.avatar,vh(14))}<br>${esc(x.name)}</div>`).join('')}</div>`;
+ else if(V.phase==='done'){if(V.winner)h+=`<div class="crown">👑</div>${av(V.winner.avatar,vh(34))}<div class="big">${esc(V.winner.name)}</div><div class="mid">is the Spelling Bee champion! 🏆</div>`;
+  else if(V.through&&V.through.length)h+=`<div class="label">Going through! 🎉</div><div class="grid">${V.through.map(x=>`<div>${av(x.avatar,vh(22))}<br>${esc(x.name)}</div>`).join('')}</div><div class="mid" style="margin-top:3vh">Well done, everyone! 🐝</div>`;
+  else h+=`<div class="big">Well done, everyone! 🐝</div>`}
+ else if(V.speller){h+=`${V.msg&&V.msg.k!=='bad'?`<div class="msg">${esc(V.msg.t)}</div>`:''}${V.phase==='champ'?'<div class="label">🏆 Championship word</div>':'<div class="label">Now spelling</div>'}<div style="margin-top:2vh">${av(V.speller.avatar,vh(30))}</div><div class="big">${esc(V.speller.name)}</div><div class="sm">${esc(V.speller.cls||'')}</div>${V.timer!=null?`<div class="timer ${V.timer<=10?'low':''}">${Math.floor(V.timer/60)}:${String(V.timer%60).padStart(2,'0')}</div>`:''}`}
+ s.innerHTML=h}
+let lastPhase=null;
+const CH=('BroadcastChannel' in window)?new BroadcastChannel('sb-bee-screen'):null;
+if(CH){CH.onmessage=e=>{const d=e.data||{};if(d.hello)return;
+ if(d.flash){FL=d.flash;clearTimeout(FLT);if(FL.flash==='ok')confetti(70);FLT=setTimeout(()=>{FL=null;render()},3800)}
+ const wasDone=V.phase==='done';V=d;if(V.phase==='done'&&!wasDone&&V.type==='round'){setTimeout(()=>confetti(160),FL?3800:0)}
+ render()};CH.postMessage({hello:1})}
+else $('#stage').innerHTML='<div class="mid">Please open this screen in Chrome, Edge, Safari or Firefox.</div>';
+$('#fs').onclick=()=>{const d=document.documentElement;(d.requestFullscreen||d.webkitRequestFullscreen||function(){}).call(d)};
+document.addEventListener('fullscreenchange',()=>{$('#fs').style.display=document.fullscreenElement?'none':''});
+addEventListener('resize',render);render();
+})();
+</script>
+</body>
+</html>
