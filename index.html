@@ -114,6 +114,13 @@ button.mv{font-size:28px;padding:10px 34px}
 .rbtiles span{width:clamp(36px,7vw,52px);height:clamp(48px,9vw,62px);display:flex;align-items:center;justify-content:center;font-family:Fredoka;font-size:clamp(26px,5vw,36px);background:#fff;border:3px solid var(--honey);border-radius:12px;animation:pop .25s}
 .rbtiles span.cur{border-style:dashed;border-color:var(--line);animation:bob 1.2s infinite}
 @keyframes pop{0%{transform:scale(.4)}100%{transform:scale(1)}}
+.today{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:18px}
+.tcard{display:flex;align-items:center;gap:14px;background:#fff;border:3px solid var(--line);border-radius:24px;padding:14px 18px}
+.tcard>div:nth-child(2){flex:1}.flame{font-size:46px;line-height:1;animation:bob 2s infinite}.flame.off{filter:grayscale(1);opacity:.5;animation:none}
+.streakc{background:linear-gradient(135deg,#FFF1E0,#FFE3C2);border-color:#FBC38A}
+.wodc{background:linear-gradient(135deg,#FFF8D6,#FFEFA8);border-color:var(--honey);cursor:pointer}.wodc.done{cursor:default;background:var(--okL);border-color:#A7E3BF}
+.flamechip+.stars{margin-left:10px}
+.flamechip{margin-left:10px!important;background:rgba(255,160,60,.25)!important}
 .acts{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
 .act{background:#fff;border-radius:26px;padding:22px;text-align:center;border:3px solid var(--line);cursor:pointer;transition:transform .12s}
 .act:hover{transform:translateY(-4px)}
@@ -271,12 +278,12 @@ async function loginCode(code){code=cleanCode(code);if(code.length<4)return {err
  const c=db();if(!c)return {err:'Practice will open very soon — please try again later.'};
  try{const {data,error}=await c.rpc('student_login',{p_code:code});if(error)throw error;if(!data)return {err:'Hmm, that code didn’t work. Check it and try again!'};
   ME={code,first_name:data.first_name,grade:data.grade,team:teamOfGrade(data.grade)};saveMe();
-  PR={};PR[ME.team]={stars:data.stars||0,ok:data.words||{},bad:data.tricky||{},spent:data.spent||0,owned:data.owned||[],avatar:data.avatar||{}};savePR();return {ok:true}}
+  PR={};PR[ME.team]={stars:data.stars||0,ok:data.words||{},bad:data.tricky||{},spent:data.spent||0,owned:data.owned||[],avatar:data.avatar||{},streak:data.streak||0,bestStreak:data.best_streak||0,streakDay:data.streak_day||'',dailyDay:data.daily_done?dubaiDay():''};savePR();return {ok:true}}
  catch(e){return {err:'We couldn’t connect. Check the internet and try again.'}}}
 async function refreshMe(){if(!ME||!db())return;try{const {data,error}=await db().rpc('student_login',{p_code:ME.code});if(error)return;
  if(!data){ME=null;saveMe();render();return}
  ME.first_name=data.first_name;ME.grade=data.grade;ME.team=teamOfGrade(data.grade);saveMe();
- const p=prog(ME.team);p.stars=Math.max(data.stars||0,p.stars);p.ok=mergeMax(p.ok,data.words);p.bad=mergeMax(p.bad,data.tricky);if(typeof data.spent==='number')p.spent=Math.max(data.spent,p.spent||0);if(Array.isArray(data.owned))p.owned=[...new Set([...(p.owned||[]),...data.owned])];if(data.avatar&&Object.keys(data.avatar).length&&!AVS.dirty)p.avatar=data.avatar;savePR();if(V.screen==='home'||V.screen==='team')render()}catch(e){}}
+ const p=prog(ME.team);p.stars=Math.max(data.stars||0,p.stars);p.ok=mergeMax(p.ok,data.words);p.bad=mergeMax(p.bad,data.tricky);if(typeof data.spent==='number')p.spent=Math.max(data.spent,p.spent||0);if(Array.isArray(data.owned))p.owned=[...new Set([...(p.owned||[]),...data.owned])];if(data.avatar&&Object.keys(data.avatar).length&&!AVS.dirty)p.avatar=data.avatar;if(typeof data.streak==='number'&&(data.streak_day||'')>=(p.streakDay||'')){if(data.streak_day!==p.streakDay||data.streak>(p.streak||0)){p.streak=data.streak;p.streakDay=data.streak_day}}p.bestStreak=Math.max(p.bestStreak||0,data.best_streak||0);if(data.daily_done)p.dailyDay=dubaiDay();savePR();if(V.screen==='home'||V.screen==='team')render()}catch(e){}}
 function logout(){ME=null;saveMe();PR={};savePR();try{localStorage.removeItem(Q_KEY)}catch(e){};V={screen:'home',team:null};render();setTimeout(()=>document.getElementById('practise')?.scrollIntoView(),0)}
 let flushing=false;
 let MEMQ=[];
@@ -291,7 +298,7 @@ async function flush(){if(flushing||!ME||!db())return;flushing=true;
 setInterval(()=>{if(ME&&readQ().length)flush()},20000);
 window.addEventListener('online',flush);
 let LASTSTAR=true;function dubaiDay(){return new Date(Date.now()+4*3600e3).toISOString().slice(0,10)}
-function award(team,w,ok){const p=prog(team);p.sday=p.sday||{};if(ok){const sec=(p.ok[w]||0)>=2,td=dubaiDay();if(sec&&p.sday[w]===td)LASTSTAR=false;else{p.stars++;LASTSTAR=true;if(sec)p.sday[w]=td}p.ok[w]=(p.ok[w]||0)+1}else{p.bad[w]=(p.bad[w]||0)+1}p.last[w]=!!ok;savePR();
+function award(team,w,ok){const p=prog(team);p.sday=p.sday||{};bumpStreak(p);if(ok){const sec=(p.ok[w]||0)>=2,td=dubaiDay();if(sec&&p.sday[w]===td)LASTSTAR=false;else{p.stars++;LASTSTAR=true;if(sec)p.sday[w]=td}p.ok[w]=(p.ok[w]||0)+1}else{p.bad[w]=(p.bad[w]||0)+1}p.last[w]=!!ok;savePR();
  if(ME){const q=readQ();q.push({id:Date.now()+'-'+Math.random().toString(36).slice(2,7),w,ok,a:V.screen});writeQ(q.slice(-500));flush()}}
 function mastered(team){const p=prog(team);return WORDS[team].filter(w=>wordLevel(team,w)==='secure').length}
 function totalStars(){return Math.max(0,TEAMS.reduce((n,t)=>n+(PR[t.id]?.stars||0)-(PR[t.id]?.spent||0),0))}
@@ -413,7 +420,7 @@ function burst(){const b=document.createElement('div');b.className='burst';for(l
 
 /* ---------- views ---------- */
 let V={screen:'home',team:null};
-function top(){return `<div class="top"><div style="width:40px;height:40px">${BEE}</div><div><div class="t">Spelling Bee</div><div class="s">${ME?'Hi '+esc(ME.first_name)+'! 🐝':'Practice Zone'}</div></div>${ME?`<button class="topav" data-go="avatar" title="My avatar">${avatarSVG(myP().avatar,44)}</button>`:''}<div class="stars">⭐ ${totalStars()}</div>${HAVE.size?'':'<button data-voice="1">🔊 Voice</button>'}</div>`}
+function top(){return `<div class="top"><div style="width:40px;height:40px">${BEE}</div><div><div class="t">Spelling Bee</div><div class="s">${ME?'Hi '+esc(ME.first_name)+'! 🐝':'Practice Zone'}</div></div>${ME?`<button class="topav" data-go="avatar" title="My avatar">${avatarSVG(myP().avatar,44)}</button>`:''}${ME&&streakNow(ME.team)?`<div class="stars flamechip">${flameBadge(streakNow(ME.team))} ${streakNow(ME.team)}</div>`:''}<div class="stars">⭐ ${totalStars()}</div>${HAVE.size?'':'<button data-voice="1">🔊 Voice</button>'}</div>`}
 function voicePanel(){pv();const g=goodVoices();const cur=voice&&voice.name;
  let m=document.getElementById('vmodal');if(!m){m=document.createElement('div');m.id='vmodal';document.body.appendChild(m)}
  m.innerHTML=`<div class="vback" data-vclose="1"><div class="vcard"><h2 style="font-size:26px">🔊 Choose a voice</h2><p class="muted" style="margin:6px 0 14px">All voices here speak <b>UK English</b>. Tap <b>Try</b> to listen, then pick the one that sounds nicest. It’s remembered on this device.</p>
@@ -424,7 +431,7 @@ function render(){
  const a=$('#app');
  if(V.screen==='home')a.innerHTML=home();
  else if(!ME){V={screen:'home',team:null};a.innerHTML=home()}
- else a.innerHTML=top()+`<main>${({team:teamView,learn:learnView,lcwc:lcwcView,test:testView,miss:missView,done:doneView,gap:gapView,games:gamesView,avatar:avatarView,realbee:rbView,gballoon:balloonView,gfriend:friendView,ghive:hiveView,gcatch:catchView,ggarden:gardenView,grace:raceView})[V.screen]()}</main>`;
+ else a.innerHTML=top()+`<main>${({team:teamView,learn:learnView,lcwc:lcwcView,test:testView,miss:missView,done:doneView,gap:gapView,games:gamesView,avatar:avatarView,realbee:rbView,wod:wodView,gballoon:balloonView,gfriend:friendView,ghive:hiveView,gcatch:catchView,ggarden:gardenView,grace:raceView})[V.screen]()}</main>`;
  after();if(V.screen==='ghive')hiveAfter();if(V.screen==='grace')raceAfter();
 }
 function home(){
@@ -466,7 +473,8 @@ function teamView(){
  const t=T(V.team);const m=mastered(t.id),n=WORDS[t.id].length;
  return `<div class="row" style="justify-content:space-between;margin-bottom:14px"><button class="back" data-go="home">← Home</button><div class="f" style="font-size:22px">${t.e} ${t.name} · ${t.label}</div></div>
  <div class="panel" style="margin-bottom:18px"><div class="f" style="font-size:22px">I have learnt ${m} of ${n} words</div><div class="prog"><i style="width:${Math.round(m/n*100)}%"></i></div><div class="muted">Spell a word correctly twice to make it secure 🔵. ⭐ ${totalStars()} stars to spend</div></div>
- ${ME&&t.id===ME.team&&!hasAvatar()?`<div class="avbanner" data-go="avatar">${avatarSVG({},70)}<div><b class="f" style="font-size:24px">Create your own avatar! 🎨</b><div>Choose your face, hair and clothes. Then spend your stars in the Bee Shop!</div></div><button class="y">Let’s go →</button></div>`:''}
+ ${ME&&t.id===ME.team?todayPanel(t):''}
+ ${ME&&t.id===ME.team&&!hasAvatar()?`<div class="avbanner" data-go="avatar">${avatarSVG({},70)}<div><b class="f" style="font-size:24px">Create your own avatar! 🎨</b><div>Choose a cute character, then dress it up with your stars in the Bee Shop!</div></div><button class="y">Let’s go →</button></div>`:''}
  <div class="acts">
   <div class="act" data-go="learn"><div class="e">📖</div><h3>My word list</h3><p>See all my words and tap to hear them.</p></div>
   <div class="act" data-go="lcwc"><div class="e">👀</div><h3>Look, Cover, Write</h3><p>Look at the word, cover it, write it, check it!</p></div>
@@ -566,11 +574,11 @@ document.addEventListener('click',e=>{
   return}
  const j=e.target.closest('[data-jump]');if(j){document.getElementById(j.dataset.jump)?.scrollIntoView({behavior:'smooth'});return}
  const el=e.target.closest('[data-go],[data-say],[data-sayw],[data-lc],[data-ts],[data-ms],[data-tile],[data-k],[data-gp]');if(!el)return;const d=el.dataset;
- if(d.go){if(d.t)V.team=d.t;V.screen=d.go;if(d.go==='lcwc')LC=null;if(d.go==='test')TS=null;if(d.go==='miss')MS=null;if(d.go==='gap')GP=null;if(d.go!=='games')G=null;if(d.go==='realbee'){rbStop();RB=null}else if(RB)rbStop();render();if(d.go==='home'&&V.team)setTimeout(()=>document.getElementById('practise')?.scrollIntoView(),0);else window.scrollTo(0,0);
-  if(d.go==='test')setTimeout(()=>sayWordSentence(TS.list[0]),250);if(d.go==='miss')setTimeout(()=>sayWord(MS.w),250);if(d.go==='gap')setTimeout(()=>{if(GP&&GP.list.length)sayGap(GP.list[0])},250);if(d.go==='realbee')setTimeout(()=>{if(RB){rbSay();setTimeout(rbStart,900)}},300);return}
+ if(d.go){if(d.t)V.team=d.t;V.screen=d.go;if(d.go==='lcwc')LC=null;if(d.go==='test')TS=null;if(d.go==='miss')MS=null;if(d.go==='gap')GP=null;if(d.go!=='games')G=null;if(d.go==='realbee'){rbStop();RB=null}if(d.go==='wod')WD=null;else if(RB)rbStop();render();if(d.go==='home'&&V.team)setTimeout(()=>document.getElementById('practise')?.scrollIntoView(),0);else window.scrollTo(0,0);
+  if(d.go==='test')setTimeout(()=>sayWordSentence(TS.list[0]),250);if(d.go==='miss')setTimeout(()=>sayWord(MS.w),250);if(d.go==='gap')setTimeout(()=>{if(GP&&GP.list.length)sayGap(GP.list[0])},250);if(d.go==='realbee')setTimeout(()=>{if(RB){rbSay();setTimeout(rbStart,900)}},300);if(d.go==='wod'&&prog(V.team).dailyDay!==dubaiDay())setTimeout(()=>{const w=wordOfDay(V.team);if(w)sayWordSentence(w)},300);return}
  if(d.say!==undefined){say(d.say,el);return}
  if(d.sayw!==undefined){say(d.sayw,el);$('#ans')?.focus();return}
- if(d.k){const i=$('#ans');if(!i||i.disabled)return;i.value=d.k==='back'?i.value.slice(0,-1):i.value+d.k;if(LC)LC.val=i.value;if(TS)TS.val=i.value;if(GP)GP.val=i.value;if(G)G.val=i.value;return}
+ if(d.k){const i=$('#ans');if(!i||i.disabled)return;i.value=d.k==='back'?i.value.slice(0,-1):i.value+d.k;if(WD&&V.screen==='wod')WD.val=i.value;if(LC)LC.val=i.value;if(TS)TS.val=i.value;if(GP)GP.val=i.value;if(G)G.val=i.value;return}
  if(d.lc){if(d.lc==='cover'){LC.step=2;LC.val='';render()}else if(d.lc==='check'){LC.val=readAns();if(!LC.val)return;LC.ok=same(LC.val,LC.w);award(V.team,LC.w,LC.ok);LC.step=3;render();if(LC.ok)celebrate();else oops()}else if(d.lc==='next'){newLC();render();setTimeout(()=>say(LC.w),200)}return}
  if(d.ts){if(d.ts==='check'){const v=readAns();if(!v)return;TS.val=v;const w=TS.list[TS.i];const ok=same(v,w);TS.fb=ok?'ok':'bad';if(ok)TS.score++;else TS.missed.push(w);award(V.team,w,ok);render();if(ok)celebrate();else oops()}
   else if(d.ts==='next'){if(TS.i+1<TS.list.length){TS.i++;TS.val='';TS.fb=null;render();setTimeout(()=>sayWordSentence(TS.list[TS.i]),200)}else{V.screen='done';render();if(TS.score>=TS.list.length*0.7){burst();happySound(true);setTimeout(()=>clapSound(true),120);if(TS.score===TS.list.length)setTimeout(()=>praise(PERFECT_SAY),500)}}}
@@ -1092,6 +1100,38 @@ document.addEventListener('keydown',e=>{if(V.screen!=='realbee'||!RB||RB.fb||RB.
  if(/^[a-z]$/i.test(e.key)){e.preventDefault();rbKey(e.key.toLowerCase())}
  else if(e.key==='Enter'&&RB.typed){e.preventDefault();rbCheck(false)}
  else if(e.key==='Backspace'){e.preventDefault();note('In a real Spelling Bee you can’t change a letter once it’s said! 🐝')}});
+
+/* ---------- 🔥 streak + 🌟 word of the day ---------- */
+function dayIndex(){return Math.round((Date.parse(dubaiDay())-Date.parse('2026-01-01'))/864e5)}
+function yesterday(){return new Date(Date.parse(dubaiDay())-864e5).toISOString().slice(0,10)}
+function wordOfDay(team){const ws=WORDS[team]||[];return ws.length?ws[(dayIndex()*37)%ws.length]:null}
+function streakNow(team){const p=prog(team);return (p.streakDay===dubaiDay()||p.streakDay===yesterday())?(p.streak||0):0}
+function bumpStreak(p){const td=dubaiDay();if(p.streakDay===td)return;p.streak=p.streakDay===yesterday()?(p.streak||0)+1:1;p.streakDay=td;p.bestStreak=Math.max(p.bestStreak||0,p.streak);
+ if([3,7,14,30,50,100].includes(p.streak))setTimeout(()=>{note(`🔥 ${p.streak}-day streak! Amazing!`);praise(pick(CHEERS)[1])},2600)}
+function flameBadge(n){return n>=30?'👑':n>=14?'🏅':n>=7?'🌟':n>=3?'🔥':'🔥'}
+function todayPanel(t){const st=streakNow(t.id),p=prog(t.id),wod=wordOfDay(t.id),done=p.dailyDay===dubaiDay(),prac=p.streakDay===dubaiDay();
+ return `<div class="today">
+  <div class="tcard streakc"><div class="flame ${st?'':'off'}">${st?flameBadge(st):'🔥'}</div><div><div class="f" style="font-size:24px">${st?`${st}-day streak!`:'Start a streak!'}</div>
+   <div class="muted">${prac?'You practised today. Come back tomorrow to grow your flame! 🔥':st?'Practise today to keep your flame alive!':'Practise every day to grow your flame.'}${(p.bestStreak||0)>1?` · Best: ${p.bestStreak} days`:''}</div></div></div>
+  ${wod?`<div class="tcard wodc ${done?'done':''}" ${done?'':'data-go="wod"'}><div class="flame">🌟</div><div><div class="f" style="font-size:24px">Word of the day</div>
+   <div class="muted">${done?'✅ You spelt today’s word! New word tomorrow.':'Spell today’s special word for <b>+5 ⭐</b>!'}</div></div>${done?'':'<button class="y">Let’s go →</button>'}</div>`:''}
+ </div>`}
+let WD=null;
+function wodView(){const t=T(V.team);const w=wordOfDay(t.id);if(!WD||WD.w!==w)WD={w,val:'',tries:0,fb:null};const p=prog(t.id);const done=p.dailyDay===dubaiDay();
+ return `<div class="row" style="justify-content:space-between"><button class="back" data-go="team">← Back</button><div class="f" style="font-size:22px">🌟 Word of the day</div></div>
+ <div class="panel">${done&&WD.fb!=='ok'?`<p style="font-size:20px">✅ You already spelt today’s word. Come back tomorrow for a new one!</p>`:`
+  <div style="font-size:60px">🌟</div><p class="muted" style="font-size:17px">Listen carefully, then spell it for <b>+5 ⭐</b>. You have 3 tries.</p>
+  <div class="row"><button class="y hear" data-sayw="${esc(w)}">🔊 Hear the word</button>${SENT[w]?`<button class="w" data-say="${esc(SENT[w])}">💬 Sentence</button>`:''}${MEAN[w]?`<button class="w" data-say="${esc(MEAN[w])}">📖 Meaning</button>`:''}</div>
+  <div style="margin-top:16px"><input class="ans" id="ans" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="spell it here" value="${esc(WD.val)}" ${WD.fb==='ok'||WD.fb==='gone'?'disabled':''}></div>
+  ${WD.fb==='ok'?`<div class="fb ok">Brilliant! You won 5 bonus stars! ⭐⭐⭐⭐⭐</div><div class="row" style="margin-top:12px"><button class="y" data-go="team">Back to my practice →</button></div>`
+  :WD.fb==='gone'?`<div class="fb bad">Good try! It’s spelt <u>${esc(w)}</u>. Practise it and try a new word tomorrow! 💛</div><div class="row" style="margin-top:12px"><button class="y" data-go="team">Back →</button></div>`
+  :`${WD.fb==='bad'?`<div class="fb bad">Not quite! ${3-WD.tries} ${3-WD.tries===1?'try':'tries'} left. Listen again. 👂</div>`:''}${kb()}<div class="row" style="margin-top:14px"><button class="y" data-wd="check">Check ✔</button></div>`}`}</div>`}
+async function wodCheck(){const v=readAns();if(!v||!WD||WD.fb==='ok'||WD.fb==='gone')return;WD.val=v;const w=WD.w;const ok=same(v,w);award(V.team,w,ok);
+ if(ok){WD.fb='ok';const p=prog(V.team);p.dailyDay=dubaiDay();p.stars+=5;savePR();render();burst();happySound(true);setTimeout(()=>clapSound(true),120);setTimeout(()=>praise(pick(CHEERS)[1],true),400);
+  const c=db();if(c&&ME){try{const {data}=await c.rpc('daily_bonus',{p_code:ME.code,p_word:w});if(data&&typeof data.stars==='number'){p.stars=Math.max(p.stars,data.stars);savePR();const s=document.querySelector('.top .stars');if(s)s.textContent='⭐ '+totalStars()}}catch(e){}}}
+ else{WD.tries++;WD.val='';WD.fb=WD.tries>=3?'gone':'bad';render();oops();if(WD.fb==='bad')setTimeout(()=>say(w),2400)}}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-wd]');if(b&&V.screen==='wod')wodCheck()});
+document.addEventListener('keydown',e=>{if(V.screen==='wod'&&e.key==='Enter'&&e.target.id==='ans'){e.preventDefault();wodCheck()}});
 
 async function submitCode(){const i=$('#codein'),m=$('#codemsg');if(!i)return;const btn=document.querySelector('[data-code]');
  if(btn){btn.disabled=true;btn.textContent='Checking… 🐝'}const r=await loginCode(i.value);
