@@ -50,6 +50,8 @@ td input,td select{padding:5px 7px}
 .invitem{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;background:#fff;color:var(--ink);border:1.5px solid var(--line);margin-bottom:6px}
 .invitem.on{border-color:var(--honey);background:var(--honeyL)}
 .invform textarea{resize:vertical}
+.logobox{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border:1.5px dashed var(--line);border-radius:12px;padding:10px}.logobox img{max-height:56px;max-width:160px;object-fit:contain;background:#fff;border-radius:8px;padding:4px;border:1px solid var(--line)}
+.filebtn{display:inline-flex;align-items:center;cursor:pointer;margin:0;font-weight:800;color:var(--ink);background:#fff;border:1.5px solid var(--line);border-radius:8px;padding:5px 10px;font-size:12.5px}
 .swatch{width:42px;height:42px;border-radius:50%;border:5px solid;padding:0}.swatch.on{outline:3px solid var(--ink);outline-offset:2px}
 .btnlink{display:inline-block;padding:9px 14px;border-radius:10px;font-weight:800;text-decoration:none;font-size:14px;background:#fff;color:var(--ink);border:1.5px solid var(--line)}
 .tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}.tabs button{background:#fff;color:var(--ink);border:1.5px solid var(--line);font-size:15px;padding:10px 16px}.tabs button.on{background:var(--aa);color:#fff;border-color:var(--aa)}
@@ -148,6 +150,9 @@ async function renderInvites(){
   ${DRAFT?`<div class="card invform">
    <div class="row"><h2 style="font-size:18px">Edit</h2><div class="spacer"></div><span class="small muted" id="dirty">${DIRTY?'Unsaved changes':'All saved ✓'}</span></div>
    <label style="margin-top:10px">Invitation name (only teachers see this)</label><input id="iname" value="${esc(DRAFT.name)}">
+   <label style="margin-top:12px">School logo (optional)</label>
+   <div class="logobox">${DRAFT.data.logo?`<img src="${esc(DRAFT.data.logo)}" alt="Logo"><button class="w sm" id="ilogorm">Remove logo</button>`:'<span class="small muted">PNG or JPG. A logo with a transparent background looks best.</span>'}
+    <label class="w sm filebtn">${DRAFT.data.logo?'Change':'⬆ Upload logo'}<input type="file" id="ilogo" accept="image/png,image/jpeg,image/webp" hidden></label></div>
    ${F2.map(([k,l])=>`<label style="margin-top:10px">${l}</label>${['message','details','rsvp'].includes(k)?`<textarea data-if="${k}" rows="${k==='message'?4:2}">${esc(DRAFT.data[k]||'')}</textarea>`:`<input data-if="${k}" value="${esc(DRAFT.data[k]||'')}">`}`).join('')}
    <label style="margin-top:10px">Colours</label><div class="row">${Object.entries(TH).map(([k,t])=>`<button class="swatch ${DRAFT.data.theme===k?'on':''}" data-theme="${k}" style="background:${t.bg};border-color:${t.accent}" title="${t.name}"></button>`).join('')}</div>
    <label style="margin-top:12px;display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" id="ipub" style="width:auto" ${DRAFT.published?'checked':''}> Published — families with the link can see it</label>
@@ -171,6 +176,9 @@ async function renderInvites(){
  document.querySelectorAll('[data-if]').forEach(x=>x.oninput=()=>{DRAFT.data[x.dataset.if]=x.value;upd()});
  $('#iname').oninput=e=>{DRAFT.name=e.target.value;DIRTY=true;$('#dirty').textContent='Unsaved changes'};
  $('#ipub').onchange=e=>{DRAFT.published=e.target.checked;DIRTY=true;$('#dirty').textContent='Unsaved changes'};
+ const lf=$('#ilogo');if(lf)lf.onchange=async()=>{const f=lf.files&&lf.files[0];if(!f)return;if(!/^image\/(png|jpeg|webp)$/.test(f.type)){toast('Please choose a PNG or JPG image');return}
+  try{DRAFT.data.logo=await shrinkLogo(f);DIRTY=true;renderInvites();toast('Logo added — remember to Save')}catch(e){toast('Couldn’t read that image')}};
+ const lr=$('#ilogorm');if(lr)lr.onclick=()=>{delete DRAFT.data.logo;DIRTY=true;renderInvites()};
  document.querySelectorAll('[data-theme]').forEach(b=>b.onclick=()=>{DRAFT.data.theme=b.dataset.theme;document.querySelectorAll('[data-theme]').forEach(x=>x.classList.toggle('on',x===b));upd()});
  $('#isave').onclick=async()=>{const b=$('#isave');b.disabled=true;b.textContent='Saving…';
   const row={name:DRAFT.name.trim()||'Invitation',data:DRAFT.data,published:DRAFT.published,updated_at:new Date().toISOString()};
@@ -181,6 +189,10 @@ async function renderInvites(){
  $('#iprint').onclick=()=>SBInvite.print(DRAFT.data,$('#ilay').value,$('#icopies').value);
  const L=$('#ilink');if(L)L.onclick=async()=>{const url=inviteLink(INVSEL);try{await navigator.clipboard.writeText(url);toast('Link copied ✓ — paste it into a message to families')}catch(e){prompt('Copy this link:',url)}if(DIRTY)toast('Remember to Save first, so families see your changes')};
 }
+/* resize a logo so it is small enough to save (max 480px, keeps transparency) */
+function shrinkLogo(file){return new Promise((res,rej)=>{const r=new FileReader();r.onerror=rej;r.onload=()=>{const img=new Image();img.onerror=rej;img.onload=()=>{
+ const make=max=>{const k=Math.min(1,max/Math.max(img.width,img.height));const c=document.createElement('canvas');c.width=Math.max(1,Math.round(img.width*k));c.height=Math.max(1,Math.round(img.height*k));c.getContext('2d').drawImage(img,0,0,c.width,c.height);return c.toDataURL('image/png')};
+ let out=make(480);if(out.length>350000)out=make(320);if(out.length>350000)out=make(220);res(out)};img.src=r.result};r.readAsDataURL(file)})}
 function bindTabs(){document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{if(TAB==='invites'&&DIRTY&&b.dataset.tab!=='invites'){confirmBox('Leave without saving?','Your invitation changes haven’t been saved.','Leave',()=>{DIRTY=false;TAB=b.dataset.tab;render()});return}TAB=b.dataset.tab;render()})}
 function renderWords(){
  const rows=WROWS.filter(w=>w.team===WTEAM),missing=WROWS.filter(w=>needs(w).length).length;
