@@ -44,7 +44,7 @@ const fd=d=>d?new Date(String(d).slice(0,10)+'T12:00:00').toLocaleDateString('en
 function plusYear(){const d=new Date(today+'T12:00:00');d.setFullYear(d.getFullYear()+1);return d.toISOString().slice(0,10)}
 async function load(){if(!sb){$('#app').innerHTML='<div class="card">Can’t connect.</div>';return}
  const {data:{session}}=await sb.auth.getSession();
- if(!session){$('#app').innerHTML=`<div class="card" style="max-width:480px;margin:40px auto;text-align:center"><h2>Please sign in first</h2><p class="muted">Sign in on the teacher page with your admin email, then come back.</p><a href="teacher.html"><button class="y">Teacher page</button></a></div>`;return}
+ if(!session){$('#app').innerHTML=`<div class="card" style="max-width:480px;margin:40px auto;text-align:center"><h2>Please sign in first</h2><p class="muted">Sign in with your admin email and you’ll come straight back here.</p><a href="teacher.html?next=admin"><button class="y">Sign in</button></a></div>`;return}
  const {data}=await sb.rpc('admin_overview');if(!data||data.error){$('#app').innerHTML='<div class="card">This page is only for the Spelling Bee admin.</div>';return}D=data;render()}
 function render(){const S=D.schools||[],R=D.requests||[],P=D.plans||[];const newR=R.filter(r=>r.status==='new');
  const active=S.filter(s=>s.plan_until>=today),paid=active.filter(s=>s.plan!=='trial'),trials=active.filter(s=>s.plan==='trial');

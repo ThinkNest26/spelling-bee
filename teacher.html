@@ -141,12 +141,14 @@ function renderLogin(msg,mode){mode=mode||'in';
   const {error}=await sb.auth.signInWithPassword({email,password});
   if(error){renderLogin(/confirm/i.test(error.message)?'Please click the link in the email we sent you first, then sign in.':'That email or password didn’t work.');return}start()});
 }
+const NEXT_ADMIN=new URLSearchParams(location.search).get('next')==='admin';
 async function start(){
  if(!sb){renderLogin();return}
  if(RECOVERY||/type=recovery/.test(location.hash)){RECOVERY=false;$('#app').innerHTML=`<div class="login card"><h2 style="font-size:24px">Choose a new password</h2><input id="np" type="password" placeholder="New password (8+ characters)" style="margin-top:10px"><button class="y" id="npb" style="margin-top:12px;width:100%">Save password</button><div class="msg bad" id="npm"></div></div>`;
   $('#npb').onclick=async()=>{const v=$('#np').value;if(v.length<8){$('#npm').textContent='At least 8 characters, please.';$('#npm').classList.add('show');return}const {error}=await sb.auth.updateUser({password:v});if(error){$('#npm').textContent='Couldn’t save. Try the email link again.';$('#npm').classList.add('show');return}history.replaceState(null,'',location.pathname);start()};return}
  const {data:{session}}=await sb.auth.getSession();if(!session){renderLogin();return}
  USER=session.user;
+ if(NEXT_ADMIN){try{const {data:ad}=await sb.rpc('admin_overview');if(ad&&!ad.error){location.href='admin.html';return}}catch(e){}toast&&toast('This email isn’t an admin — opening the teacher page')}
  let {data:t}=await sb.from('teachers').select('email');
  if((!t||!t.length)&&USER.user_metadata&&USER.user_metadata.new_school){const m=USER.user_metadata.new_school;const {data:r}=await sb.rpc('create_school',{p_name:m.name,p_slug:m.slug,p_contact_name:m.contact||'',p_phone:m.phone||'',p_city:m.city||''});
   if(r&&r.ok){({data:t}=await sb.from('teachers').select('email'));TAB='settings'}else if(r&&r.error==='taken'){await sb.rpc('create_school',{p_name:m.name,p_slug:m.slug+'-'+Math.floor(Math.random()*900+100),p_contact_name:m.contact||'',p_phone:m.phone||'',p_city:m.city||''});({data:t}=await sb.from('teachers').select('email'));TAB='settings'}}
