@@ -226,8 +226,9 @@ if(HAS_SPEECH){try{pv();speechSynthesis.addEventListener?speechSynthesis.addEven
 /* ---------- recorded voice (made on a Mac with make-audio.sh) ---------- */
 function slugW(w){return String(w).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')}
 const CLIP={};
-function buildClips(){for(const t of TEAMS)for(const w of WORDS[t.id])CLIP[w]='w-'+slugW(w);
- for(const w in SENT){CLIP[SENT[w]]='s-'+slugW(w);CLIP[w+'. '+SENT[w]+' '+w+'.']='ws-'+slugW(w)}
+let DBROWS=null;
+function buildClips(){if(DBROWS){DBROWS.forEach(r=>{CLIP[r.word]=r.w_clip;if(r.sentence){CLIP[r.sentence]=r.s_clip;CLIP[r.word+'. '+r.sentence+' '+r.word+'.']=r.ws_clip}})}
+ else{for(const t of TEAMS)for(const w of WORDS[t.id])CLIP[w]='w-'+slugW(w);for(const w in SENT){CLIP[SENT[w]]='s-'+slugW(w);CLIP[w+'. '+SENT[w]+' '+w+'.']='ws-'+slugW(w)}}
  CLIP["Hello! Let's practise your spellings!"]='g-start';
  CHEERS.forEach((c,i)=>CLIP[c[1]]='p-'+(i+1));ENCOURAGE.forEach((t,i)=>CLIP[t]='e-'+(i+1));for(const k in STREAK_SAY)CLIP[STREAK_SAY[k]]='k-'+k;CLIP[PERFECT_SAY]='perfect'}
 let HAVE=new Set(),curAudio=null;
@@ -455,8 +456,20 @@ async function submitCode(){const i=$('#codein'),m=$('#codemsg');if(!i)return;co
  if(r.ok){V={screen:'team',team:ME.team};render();window.scrollTo(0,0);happySound(false);setTimeout(()=>say("Hello! Let's practise your spellings!"),300);flush()}
  else{if(btn){btn.disabled=false;btn.textContent='Let’s go! 🐝'}if(m){m.textContent=r.err;m.classList.add('show')}gentleSound()}}
 document.addEventListener('submit',e=>{if(e.target.id==='codeform'){e.preventDefault();submitCode()}});
+/* spelling lists come from the teachers' Word lists (database); built-in lists are the backup */
+const WKEY='aa-sbee-words';
+function applyRows(rows){if(!Array.isArray(rows)||!rows.length)return false;const nw={buz:[],hon:[],bum:[],cha:[]};
+ rows.forEach(r=>{if(nw[r.team]&&r.word)nw[r.team].push(r.word)});for(const t in nw)if(nw[t].length)WORDS[t]=nw[t];
+ for(const k in SENT)delete SENT[k];rows.forEach(r=>{if(r.sentence)SENT[r.word]=r.sentence});
+ DBROWS=rows;for(const k in CLIP)delete CLIP[k];buildClips();return true}
+try{applyRows(JSON.parse(localStorage.getItem(WKEY)||'null'))}catch(e){}
+async function loadWords(){const c=db();if(!c)return;try{const {data,error}=await c.rpc('public_words');if(error||!Array.isArray(data)||!data.length)return;
+ const slim=data.map(r=>({team:r.team,word:r.word,sentence:r.sentence,w_clip:r.w_clip,s_clip:r.s_clip,ws_clip:r.ws_clip}));
+ const changed=JSON.stringify(slim)!==JSON.stringify(DBROWS);applyRows(slim);try{localStorage.setItem(WKEY,JSON.stringify(slim))}catch(e){}
+ if(changed&&['home','team','learn'].includes(V.screen))render()}catch(e){}}
 buildClips();
 render();
+loadWords();
 if(ME){refreshMe();flush()}
 (async()=>{try{tts=await window.claude?.use?.('tts')}catch(e){}})();
 })();
