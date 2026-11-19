@@ -481,7 +481,7 @@ function teamView(){
   <div class="act" data-go="test"><div class="e">🎧</div><h3>Spelling test</h3><p>Listen to 10 words and spell them.</p></div>
   <div class="act" data-go="miss"><div class="e">🧩</div><h3>Missing letters</h3><p>Find the letters that fell out of the word!</p></div>
   <div class="act" data-go="gap"><div class="e">📝</div><h3>Fill the gap</h3><p>Listen to the sentence and spell the missing word.</p></div>
-  <div class="act realbee" data-go="realbee"><div class="e">🏆</div><h3>Real Bee practice</h3><p>Practise like the real competition: ask for the meaning, beat the timer, no changing letters!</p></div>
+  <div class="act realbee" data-go="realbee"><div class="e">🏆</div><h3>Real Bee practice</h3><p>Practise like the real competition: ask for the meaning and beat the timer!</p></div>
   <div class="act shop" data-go="avatar"><div class="avact">${avatarSVG(prog(t.id).avatar,72)}</div><h3>My avatar & Bee Shop</h3><p>Spend your stars on clothes, hats, pets and more!</p></div>
   <div class="act games" data-go="games"><div class="e">🎮</div><h3>Spelling games</h3><p>Bee to the Hive, Honey Catch, Grow a Garden and Bee Race!</p></div>
  </div>`;
@@ -1070,13 +1070,13 @@ function rbView(){
  <div class="prog"><i style="width:${RB.i/RB.list.length*100}%"></i></div>
  <div class="rbtop"><span>${'❤️'.repeat(RB.hearts)}${'🤍'.repeat(3-RB.hearts)}</span><span class="rbtimer ${RB.left<=10?'low':''}">⏱ <b id="rbt">${RB.left}</b>s</span><span>⭐ ${RB.score}</span></div>
  <div class="panel">
-  <div class="rbrule">🎤 <b>Bee rules:</b> say each letter out loud as you type it. Once a letter is down, you can’t change it!</div>
+  <div class="rbrule">🎤 <b>Bee rules:</b> say each letter out loud as you type it. Made a mistake? Tap <b>⌫ Undo</b> to fix it.</div>
   <div class="row" style="margin-top:12px"><button class="y hear" data-rb="say">🔊 Say the word again</button>${mean?`<button class="w" data-rb="meaning">📖 What does it mean?</button>`:''}${SENT[w]?`<button class="w" data-rb="sentence">💬 Use it in a sentence</button>`:''}</div>
   ${RB.asked.meaning&&mean?`<div class="rbmean">📖 ${esc(mean)}</div>`:''}
   <div class="rbtiles">${[...RB.typed].map(c=>`<span>${esc(c)}</span>`).join('')}${RB.fb?'':'<span class="cur"></span>'}</div>
   ${RB.fb?`<div class="fb ${RB.fb==='ok'?'ok':'bad'}">${RB.fb==='ok'?pick(PRAISE)+' ⭐':(RB.fb==='time'?'⏰ Time’s up! ':pick(TRY)+' ')+'It’s spelt <u>'+esc(w)+'</u>'}</div>
    <div class="row" style="margin-top:12px">${RB.fb!=='ok'?`<button class="w" data-say="${esc(w)}">🔊 Hear it</button>`:''}<button class="y" data-rb="next">${RB.i+1<RB.list.length&&RB.hearts>0?'Next word →':'See how I did 🏁'}</button></div>`
-  :`<div class="kb">${['qwertyuiop','asdfghjkl','zxcvbnm'].map(r=>`<div class="r">${[...r].map(c=>`<button data-rbk="${c}">${c}</button>`).join('')}</div>`).join('')}</div>
+  :`<div class="kb">${['qwertyuiop','asdfghjkl','zxcvbnm'].map((r,i)=>`<div class="r">${[...r].map(c=>`<button data-rbk="${c}">${c}</button>`).join('')}${i===2?'<button class="wide" data-rb="undo">⌫ Undo</button>':''}</div>`).join('')}</div>
    <div class="row" style="margin-top:14px"><button class="g" data-rb="done" ${RB.typed?'':'disabled'}>I’ve finished spelling ✔</button></div>`}
  </div>`}
 function rbKey(c){if(!RB||RB.fb||RB.done)return;if(RB.typed.length>=40)return;RB.typed+=c;rbStart();clickSound();
@@ -1090,6 +1090,7 @@ function rbNext(){if(RB.i+1>=RB.list.length||RB.hearts<=0){RB.done=true;rbStop()
 document.addEventListener('click',e=>{const b=e.target.closest('[data-rb],[data-rbk]');if(!b||V.screen!=='realbee'||!RB)return;const d=b.dataset;
  if(d.rbk){rbKey(d.rbk);return}
  const w=RB.list[RB.i];
+ if(d.rb==='undo'){rbUndo();return}
  if(d.rb==='say'){rbSay();rbStart()}
  if(d.rb==='meaning'){RB.asked.meaning=true;render();say(MEAN[w])}
  if(d.rb==='sentence'){say(SENT[w])}
@@ -1099,7 +1100,8 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-rb],[data-
 document.addEventListener('keydown',e=>{if(V.screen!=='realbee'||!RB||RB.fb||RB.done||e.metaKey||e.ctrlKey)return;
  if(/^[a-z]$/i.test(e.key)){e.preventDefault();rbKey(e.key.toLowerCase())}
  else if(e.key==='Enter'&&RB.typed){e.preventDefault();rbCheck(false)}
- else if(e.key==='Backspace'){e.preventDefault();note('In a real Spelling Bee you can’t change a letter once it’s said! 🐝')}});
+ else if(e.key==='Backspace'){e.preventDefault();rbUndo()}});
+function rbUndo(){if(!RB||RB.fb||RB.done||!RB.typed)return;RB.typed=RB.typed.slice(0,-1);const tl=document.querySelector('.rbtiles');if(tl){const sp=tl.querySelectorAll('span:not(.cur)');if(sp.length)sp[sp.length-1].remove()}const d=document.querySelector('[data-rb=done]');if(d)d.disabled=!RB.typed}
 
 /* ---------- 🔥 streak + 🌟 word of the day ---------- */
 function dayIndex(){return Math.round((Date.parse(dubaiDay())-Date.parse('2026-01-01'))/864e5)}
