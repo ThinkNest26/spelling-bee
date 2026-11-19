@@ -80,6 +80,11 @@ button.mv{font-size:28px;padding:10px 34px}
 .lane.me{box-shadow:0 0 0 3px var(--honey)}
 .speeds{display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap;margin:0 0 10px;font-family:Fredoka;font-size:18px;color:var(--ink2)}
 .speeds button{background:#fff;color:var(--ink);border:3px solid var(--line);padding:8px 16px;font-size:18px;box-shadow:none}.speeds button.on{background:var(--honey);border-color:var(--honey)}
+.lb{margin-top:18px;text-align:center}.lbtabs{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:12px}
+.lbtabs button{background:#fff;color:var(--ink);border:3px solid var(--line);padding:8px 14px;font-size:16px;box-shadow:none}.lbtabs button.on{background:var(--honey);border-color:var(--honey)}
+.lbl{list-style:none;padding:0;margin:0 auto;max-width:520px;text-align:left}.lbl li{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:16px;font-family:Fredoka;font-size:20px}
+.lbl li:nth-child(odd){background:#FFFBEF}.lbl li.me{background:var(--honeyL);box-shadow:inset 0 0 0 3px var(--honey)}
+.lbm{width:36px;text-align:center;font-size:24px}.lbn{flex:1}.lbw{color:var(--ink2);font-size:17px}
 .acts{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
 .act{background:#fff;border-radius:26px;padding:22px;text-align:center;border:3px solid var(--line);cursor:pointer;transition:transform .12s}
 .act:hover{transform:translateY(-4px)}
@@ -575,7 +580,7 @@ function gAsk(){const w=G.list[G.i];
  ${G.fb==='bad'?`<div class="fb bad">${pick(TRY)} It’s spelt <u>${esc(w)}</u></div><div class="row" style="margin-top:12px"><button class="w" data-say="${esc(w)}">🔊 Hear it</button><button class="y" data-g="next">Keep going →</button></div>`
  :G.fb==='ok'?`<div class="fb ok">${pick(PRAISE)} ⭐</div>`
  :`${kb()}<div class="row" style="margin-top:14px"><button class="y" data-g="check">Check ✔</button></div>`}`}
-function gStart(id){if(id==='gfriend'){fStopPoll();V.screen=id;G={kind:id,stage:'menu',err:'',join:''};render();window.scrollTo(0,0);return}
+function gStart(id){if(id==='gfriend'){fStopPoll();LB={team:null,rows:null,busy:false};V.screen=id;G={kind:id,stage:'menu',err:'',join:''};render();window.scrollTo(0,0);return}
  V.screen=id;G={kind:id,i:0,val:'',fb:null,score:0,wrong:0,done:false};
  if(id==='ghive'){G.list=gWords(10);G.goal=G.list.length;G.pos=0;G.shown=0;G.tries=0}
  if(id==='ggarden'){G.list=gWords(10);G.grown=null}
@@ -719,7 +724,7 @@ document.addEventListener('keydown',e=>{if(G&&G.kind==='gballoon'&&V.screen==='g
 function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 function fWords(team,seed,n){const r=mulberry(seed);const a=WORDS[team].slice().sort();for(let i=a.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]]}const out=[];while(out.length<n&&a.length)out.push(a[out.length%a.length]);return out}
 let FPOLL=null,FBUSY=false;
-function fErr(e){return ({code:'Your bee code didn’t work. Ask your teacher.',notfound:'We couldn’t find that race code. Check it and try again!',started:'That race has already started. Ask your friend for a new code.',full:'That race is full (4 bees max).',notin:'You are not in this race.',net:'We couldn’t connect. Check the internet and try again.'})[e]||(e==='team'?'':'Something went wrong. Try again.')}
+function fErr(e){return ({code:'Your bee code didn’t work. Ask your teacher.',notfound:'We couldn’t find that race code. Check it and try again!',started:'That race has already started. Ask your friend for a new code.',full:'That race is full (6 bees max).',notin:'You are not in this race.',net:'We couldn’t connect. Check the internet and try again.'})[e]||(e==='team'?'':'Something went wrong. Try again.')}
 async function fCall(fn,args){const c=db();if(!c)return {error:'net'};try{const {data,error}=await c.rpc(fn,Object.assign({p_code:ME.code},args||{}));if(error||!data)return {error:'net'};return data}catch(e){return {error:'net'}}}
 function fApply(d){if(!G||G.kind!=='gfriend')return;if(d.error){if(G.stage==='menu'||G.stage==='busy'){G.stage='menu';G.err=d.error==='team'?`That race is for the ${T(d.team)?.name||'other team'}. You can only race bees in your own team (${T(ME.team).name}).`:fErr(d.error);render()}return}
  const was=G.stage;G.data=d;G.code=d.code;{const m=d.players.find(p=>p.me);if(m&&(G.myPos||0)>m.pos)m.pos=G.myPos}
@@ -727,7 +732,7 @@ function fApply(d){if(!G||G.kind!=='gfriend')return;if(d.error){if(G.stage==='me
  if(d.status==='wait'){G.stage='wait';if(was!=='wait'||G.nPl!==d.players.length){G.nPl=d.players.length;render();if(was==='wait')happySound(false)}fStartPoll();return}
  if(d.status==='go'&&d.starts_in>0&&was!=='race'){G.stage='count';G.startAt=performance.now()+d.starts_in*1000;if(was!=='count')render();fStartPoll();return}
  if(d.status==='go'){if(was!=='race'){G.stage='race';G.i=0;G.val='';G.fb=null;render();setTimeout(()=>sayWordSentence(G.list[0]),150)}else fLanes();fStartPoll();return}
- if(d.status==='done'&&was!=='end'){G.stage='end';fStopPoll();render();window.scrollTo(0,0);const me=d.players.find(p=>p.me);
+ if(d.status==='done'&&was!=='end'){G.stage='end';fStopPoll();LB.rows=null;LB.team=null;render();window.scrollTo(0,0);const me=d.players.find(p=>p.me);
   if(me&&me.done&&d.winner===ME.first_name){gWin('gfriend');gBig()}else{gentleSound();setTimeout(()=>playClip(pick(ENCOURAGE)),400)}}}
 function fStartPoll(){if(FPOLL)return;FPOLL=setInterval(async()=>{if(!G||G.kind!=='gfriend'||V.screen!=='gfriend'){fStopPoll();return}
  if(G.stage==='count'){const s=Math.ceil((G.startAt-performance.now())/1000);const el=$('#fcount');if(el)el.textContent=s>0?s:'GO!';if(s<=0){G.stage='go-wait'}}
@@ -741,10 +746,10 @@ function friendView(){const head=gHead('🌐 Race a friend');
   <div class="panel"><div style="font-size:60px">🏁</div><h3 class="f" style="font-size:26px;margin:6px 0">Start a race</h3><p class="muted">Get a race code and tell it to your friend.</p><button class="y" data-f="create" ${G.stage==='busy'?'disabled':''}>Get a race code</button></div>
   <div class="panel"><div style="font-size:60px">🤝</div><h3 class="f" style="font-size:26px;margin:6px 0">Join a race</h3><p class="muted">Type the race code your friend gives you.</p><input id="fjoin" class="ans" style="max-width:260px;text-transform:uppercase;font-size:30px" maxlength="8" placeholder="BEE-42" autocomplete="off" autocapitalize="characters" spellcheck="false" value="${esc(G.join||'')}"><div style="margin-top:12px"><button class="y" data-f="join" ${G.stage==='busy'?'disabled':''}>Join 🐝</button></div></div></div>
   ${G.err?`<div class="fb bad" style="margin-top:14px">${esc(G.err)}</div>`:''}
-  <p class="muted" style="text-align:center;margin-top:14px">You can race up to 3 friends from your team (${T(ME.team).name}). Everyone gets the same words!</p>`;
+  <p class="muted" style="text-align:center;margin-top:14px">You can race up to 5 friends from your team (${T(ME.team).name}). Everyone gets the same words!</p>${lbHTML()}`;
  const d=G.data;
  if(G.stage==='wait'){const n=d.players.length;return head+`<div class="panel gend"><p class="muted" style="font-size:18px">Your race code is</p><div class="fcode">${esc(d.code)}</div><p style="font-size:18px">Tell your friend to tap <b>🌐 Race a friend → Join a race</b> and type this code.</p>
-  <div class="fplayers">${d.players.map(p=>`<span>🐝 ${esc(p.name)}${p.me?' (you)':''}</span>`).join('')}${n<4?'<span class="fwait">waiting…</span>':''}</div>
+  <div class="fplayers">${d.players.map(p=>`<span>🐝 ${esc(p.name)}${p.me?' (you)':''}</span>`).join('')}${n<6?'<span class="fwait">waiting…</span>':''}</div>
   ${d.host?(n>=2?`<button class="y" style="font-size:24px;padding:14px 34px" data-f="start">Start the race! 🏁</button>`:`<p class="muted">The Start button appears when your friend joins.</p>`):`<p class="muted" style="font-size:18px">Waiting for ${esc(d.players[0].name)} to start the race…</p>`}</div>`}
  if(G.stage==='count'||G.stage==='go-wait')return head+fLanesHTML()+`<div class="panel gend"><p style="font-size:22px">Get ready…</p><div class="fcode" id="fcount">${Math.max(1,Math.ceil((G.startAt-performance.now())/1000))}</div></div>`;
  if(G.stage==='race'){const me=d.players.find(p=>p.me)||{pos:0};const w=G.list[G.i];
@@ -753,7 +758,19 @@ function friendView(){const head=gHead('🌐 Race a friend');
  const me=d.players.find(p=>p.me);const won=me&&me.done&&d.winner===ME.first_name;
  return head+fLanesHTML()+(won?`<div class="panel gend"><div style="font-size:90px">🏆</div><h2 class="f" style="font-size:34px">You won the race!</h2><p style="font-size:20px">Super fast spelling, ${esc(ME.first_name)}!</p>`
   :`<div class="panel gend"><div style="font-size:80px">🐝💨</div><h2 class="f" style="font-size:32px">${esc(d.winner||'Your friend')} won this time!</h2><p style="font-size:20px">You spelt ${me?me.pos:0} words. Great racing! Practise and race again!</p>`)+
-  `<div class="row" style="margin-top:14px"><button class="y" data-g="gfriend">New race 🔁</button><button class="w" data-g="menu">More games</button></div></div>`}
+  `<div class="row" style="margin-top:14px"><button class="y" data-g="gfriend">New race 🔁</button><button class="w" data-g="menu">More games</button></div></div>${lbHTML()}`}
+let LB={team:null,rows:null,busy:false};
+function lbHTML(){const t=LB.team||ME.team;if(LB.team!==t||!LB.rows)setTimeout(()=>lbLoad(t),0);
+ const medal=['🥇','🥈','🥉'];
+ return `<div class="panel lb" id="lb"><h3 class="f" style="font-size:26px;margin:0 0 10px">🏆 Race leaderboard</h3>
+ <div class="lbtabs">${TEAMS.map(x=>`<button data-lb="${x.id}" class="${x.id===t?'on':''}">${x.e} ${x.label}</button>`).join('')}</div>
+ <div id="lbrows">${lbRows()}</div><p class="muted" style="font-size:14px;margin-top:8px">Win a race against a friend to get on the leaderboard!</p></div>`}
+function lbRows(){const r=LB.rows;if(!r)return '<p class="muted">Loading…</p>';if(r.error)return '<p class="muted">The leaderboard isn’t available right now.</p>';
+ if(!r.length)return '<p class="muted">No winners yet. Be the first! 🐝</p>';const medal=['🥇','🥈','🥉'];
+ return `<ol class="lbl">${r.map((x,i)=>`<li class="${x.me?'me':''}"><span class="lbm">${medal[i]||(i+1)}</span><span class="lbn">${esc(x.name)}${x.me?' (you)':''}</span><span class="lbw">${x.wins} ${x.wins===1?'win':'wins'}</span></li>`).join('')}</ol>`}
+async function lbLoad(t){if(LB.busy&&LB.team===t)return;LB.team=t;LB.rows=null;LB.busy=true;const d=await fCall('race_leaders',{p_team:t});LB.busy=false;if(LB.team!==t)return;LB.rows=Array.isArray(d)?d:{error:1};
+ const el=document.getElementById('lbrows');if(el)el.innerHTML=lbRows()}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-lb]');if(!b)return;LB.rows=null;LB.team=b.dataset.lb;document.querySelectorAll('[data-lb]').forEach(x=>x.classList.toggle('on',x===b));const el=document.getElementById('lbrows');if(el)el.innerHTML=lbRows();lbLoad(b.dataset.lb)});
 async function fCreate(){G.stage='busy';G.err='';render();fApply(await fCall('race_create'))}
 async function fJoin(){const v=($('#fjoin')?.value||'').trim();G.join=v;if(!v){G.err='Type the race code first.';render();return}G.stage='busy';G.err='';render();fApply(await fCall('race_join',{p_race:v}))}
 async function fStart(){const d=await fCall('race_start',{p_race:G.code});fApply(d)}
