@@ -35,6 +35,32 @@ main{max-width:980px;margin:0 auto;padding:20px 18px 50px}
 .team:hover{transform:translateY(-4px) rotate(-1deg)}
 .team .e{font-size:62px;line-height:1}.team h3{font-size:25px;margin-top:8px}.team .gr{font-weight:800;opacity:.7}
 .buz{background:#FFE8F1;border-color:#F9A8D4}.hon{background:#FFF4CC;border-color:#FFD54A}.bum{background:#E0ECFF;border-color:#93C5FD}.cha{background:#EFE7FF;border-color:#C4B5FD}
+.act.games{background:linear-gradient(135deg,#FFF3C4,#FFE7A0);border-color:var(--honey)}
+.act.game{position:relative}.gwon{margin-top:10px;font-family:Fredoka;font-size:16px;color:#8A5A00;background:var(--honeyL);display:inline-block;padding:4px 12px;border-radius:99px}
+.gend{text-align:center;margin-top:16px}.gend h2{margin:6px 0}
+.hive{position:relative;margin:8px 0 18px;padding:34px 10px 6px;background:linear-gradient(#EAF6FF,#FFFBEF);border-radius:24px;border:3px solid var(--line)}
+.stops{display:flex;justify-content:space-between;align-items:flex-end}.stop{font-size:clamp(22px,4.5vw,38px);flex:1;text-align:center;transition:transform .3s}.stop.past{opacity:.8}.stop.home{font-size:clamp(34px,7vw,56px)}
+.flyer{position:absolute;top:0;font-size:clamp(28px,5vw,44px);transform:translateX(-50%);transition:left 1s cubic-bezier(.5,-0.3,.4,1.4)}
+.buzz{animation:buzz .5s}@keyframes buzz{0%,100%{translate:0}20%{translate:-8px}40%{translate:8px}60%{translate:-6px}80%{translate:6px}}
+.gkey{text-align:center;color:var(--ink2);font-size:15px;margin:6px 0 10px}
+.garden{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px;background:#E9DCC0;padding:12px;border-radius:22px;border:3px solid #D9C69C}
+.plot{background:#B9935A;border-radius:14px;text-align:center;padding:6px 4px;cursor:pointer;color:#fff}.plot span{font-size:34px;display:block;line-height:1.2}.plot small{font-size:12px;font-weight:700;word-break:break-word}
+.plot.secure{background:#7CC47F}.plot.almost{background:#A58B57}.plot.tricky{background:#9C7A47}
+.plot.grow span{animation:grow .9s}@keyframes grow{0%{transform:scale(.2)}70%{transform:scale(1.4)}100%{transform:scale(1)}}
+.race{margin:8px 0 18px;display:flex;flex-direction:column;gap:8px}
+.lane{position:relative;height:64px;border-radius:18px;background:repeating-linear-gradient(90deg,#FFF3C4 0 40px,#FFE9A3 40px 80px);border:3px solid var(--line);overflow:hidden}
+.lane.them{background:repeating-linear-gradient(90deg,#E3EFFF 0 40px,#D2E4FF 40px 80px)}
+.lane .who{position:absolute;left:10px;top:2px;font-family:Fredoka;font-size:13px;color:var(--ink2)}
+.runner{position:absolute;top:14px;font-size:38px;transition:left .8s ease-out;transform:scaleX(-1)}.runner.opp{filter:hue-rotate(180deg) saturate(1.6);transition:none}
+.flag{position:absolute;right:8px;top:12px;font-size:34px}
+.slots{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:6px 0 12px}.slots span{width:clamp(30px,6vw,46px);height:clamp(40px,8vw,56px);border-bottom:5px solid var(--honey);font-family:Fredoka;font-size:clamp(24px,5vw,36px);display:flex;align-items:center;justify-content:center;background:#fff;border-radius:10px 10px 0 0}.slots span.in{background:var(--okL);border-color:var(--ok)}
+.sky{position:relative;height:min(420px,58vh);border-radius:24px;overflow:hidden;background:linear-gradient(#BFE3FF,#EAF6FF 70%,#CDEBB5 70%);border:3px solid var(--line);touch-action:manipulation}
+.lanehit{position:absolute;top:0;bottom:0;width:25%;cursor:pointer}.lanehit:nth-child(1){left:0}.lanehit:nth-child(2){left:25%}.lanehit:nth-child(3){left:50%}.lanehit:nth-child(4){left:75%}
+.drop{position:absolute;width:52px;height:52px;margin-left:-26px;border-radius:50%;background:#fff;border:4px solid var(--honey);font-family:Fredoka;font-size:30px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 0 rgba(0,0,0,.08);pointer-events:none}
+.jar{position:absolute;bottom:10px;font-size:58px;transform:translateX(-50%);transition:left .18s;pointer-events:none}
+.jar.yum{animation:yum .4s}@keyframes yum{50%{transform:translateX(-50%) scale(1.3)}}
+.jar.buzz{animation:jbuzz .5s}@keyframes jbuzz{0%,100%{transform:translateX(-50%)}25%{transform:translateX(-62%)}75%{transform:translateX(-38%)}}
+button.mv{font-size:28px;padding:10px 34px}
 .acts{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
 .act{background:#fff;border-radius:26px;padding:22px;text-align:center;border:3px solid var(--line);cursor:pointer;transition:transform .12s}
 .act:hover{transform:translateY(-4px)}
@@ -332,8 +358,8 @@ function render(){
  const a=$('#app');
  if(V.screen==='home')a.innerHTML=home();
  else if(!ME){V={screen:'home',team:null};a.innerHTML=home()}
- else a.innerHTML=top()+`<main>${({team:teamView,learn:learnView,lcwc:lcwcView,test:testView,miss:missView,done:doneView,gap:gapView})[V.screen]()}</main>`;
- after();
+ else a.innerHTML=top()+`<main>${({team:teamView,learn:learnView,lcwc:lcwcView,test:testView,miss:missView,done:doneView,gap:gapView,games:gamesView,ghive:hiveView,gcatch:catchView,ggarden:gardenView,grace:raceView})[V.screen]()}</main>`;
+ after();if(V.screen==='ghive')hiveAfter();if(V.screen==='grace')raceAfter();
 }
 function home(){
  const combs=`<svg class="combs" viewBox="0 0 100 60" preserveAspectRatio="xMidYMid slice"><defs><pattern id="hc" width="12" height="20.78" patternUnits="userSpaceOnUse"><polygon points="6,0 12,3.46 12,10.39 6,13.86 0,10.39 0,3.46" fill="none" stroke="#FFD54A" stroke-width=".7"/><polygon points="12,10.39 18,13.86 18,20.78 12,24.25 6,20.78 6,13.86" fill="none" stroke="#FFD54A" stroke-width=".7"/></pattern></defs><rect width="100" height="60" fill="url(#hc)"/></svg>`;
@@ -380,6 +406,7 @@ function teamView(){
   <div class="act" data-go="test"><div class="e">🎧</div><h3>Spelling test</h3><p>Listen to 10 words and spell them.</p></div>
   <div class="act" data-go="miss"><div class="e">🧩</div><h3>Missing letters</h3><p>Find the letters that fell out of the word!</p></div>
   <div class="act" data-go="gap"><div class="e">📝</div><h3>Fill the gap</h3><p>Listen to the sentence and spell the missing word.</p></div>
+  <div class="act games" data-go="games"><div class="e">🎮</div><h3>Spelling games</h3><p>Bee to the Hive, Honey Catch, Grow a Garden and Bee Race!</p></div>
  </div>`;
 }
 function learnView(){
@@ -470,11 +497,11 @@ document.addEventListener('click',e=>{
   return}
  const j=e.target.closest('[data-jump]');if(j){document.getElementById(j.dataset.jump)?.scrollIntoView({behavior:'smooth'});return}
  const el=e.target.closest('[data-go],[data-say],[data-sayw],[data-lc],[data-ts],[data-ms],[data-tile],[data-k],[data-gp]');if(!el)return;const d=el.dataset;
- if(d.go){if(d.t)V.team=d.t;V.screen=d.go;if(d.go==='lcwc')LC=null;if(d.go==='test')TS=null;if(d.go==='miss')MS=null;if(d.go==='gap')GP=null;render();if(d.go==='home'&&V.team)setTimeout(()=>document.getElementById('practise')?.scrollIntoView(),0);else window.scrollTo(0,0);
+ if(d.go){if(d.t)V.team=d.t;V.screen=d.go;if(d.go==='lcwc')LC=null;if(d.go==='test')TS=null;if(d.go==='miss')MS=null;if(d.go==='gap')GP=null;if(d.go!=='games')G=null;render();if(d.go==='home'&&V.team)setTimeout(()=>document.getElementById('practise')?.scrollIntoView(),0);else window.scrollTo(0,0);
   if(d.go==='test')setTimeout(()=>sayWordSentence(TS.list[0]),250);if(d.go==='miss')setTimeout(()=>sayWord(MS.w),250);if(d.go==='gap')setTimeout(()=>{if(GP&&GP.list.length)sayGap(GP.list[0])},250);return}
  if(d.say!==undefined){say(d.say,el);return}
  if(d.sayw!==undefined){say(d.sayw,el);$('#ans')?.focus();return}
- if(d.k){const i=$('#ans');if(!i||i.disabled)return;i.value=d.k==='back'?i.value.slice(0,-1):i.value+d.k;if(LC)LC.val=i.value;if(TS)TS.val=i.value;if(GP)GP.val=i.value;return}
+ if(d.k){const i=$('#ans');if(!i||i.disabled)return;i.value=d.k==='back'?i.value.slice(0,-1):i.value+d.k;if(LC)LC.val=i.value;if(TS)TS.val=i.value;if(GP)GP.val=i.value;if(G)G.val=i.value;return}
  if(d.lc){if(d.lc==='cover'){LC.step=2;LC.val='';render()}else if(d.lc==='check'){LC.val=readAns();if(!LC.val)return;LC.ok=same(LC.val,LC.w);award(V.team,LC.w,LC.ok);LC.step=3;render();if(LC.ok)celebrate();else oops()}else if(d.lc==='next'){newLC();render();setTimeout(()=>say(LC.w),200)}return}
  if(d.ts){if(d.ts==='check'){const v=readAns();if(!v)return;TS.val=v;const w=TS.list[TS.i];const ok=same(v,w);TS.fb=ok?'ok':'bad';if(ok)TS.score++;else TS.missed.push(w);award(V.team,w,ok);render();if(ok)celebrate();else oops()}
   else if(d.ts==='next'){if(TS.i+1<TS.list.length){TS.i++;TS.val='';TS.fb=null;render();setTimeout(()=>sayWordSentence(TS.list[TS.i]),200)}else{V.screen='done';render();if(TS.score>=TS.list.length*0.7){burst();happySound(true);setTimeout(()=>clapSound(true),120);if(TS.score===TS.list.length)setTimeout(()=>praise(PERFECT_SAY),500)}}}
@@ -491,6 +518,138 @@ document.addEventListener('keydown',e=>{
   else if(e.target.classList&&e.target.classList.contains('team'))e.target.click()}
 });
 document.addEventListener('input',e=>{if(e.target.id==='ans'){if(V.screen==='lcwc'&&LC)LC.val=e.target.value;if(V.screen==='test'&&TS)TS.val=e.target.value;if(V.screen==='gap'&&GP)GP.val=e.target.value}});
+
+/* ================= SPELLING GAMES ================= */
+let G=null;
+const GAMES=[
+ {id:'ghive',e:'🐝',name:'Bee to the Hive',p:'Spell words to fly the bee from flower to flower, all the way home!'},
+ {id:'gcatch',e:'🍯',name:'Honey Catch',p:'Move the honey jar and catch the letters in the right order!'},
+ {id:'ggarden',e:'🌻',name:'Grow a Garden',p:'Every word you spell grows a flower. Can you fill your garden?'},
+ {id:'grace',e:'🏁',name:'Bee Race',p:'Race the speedy bee! Spell words to zoom to the finish line!'}];
+const FLOWERS=['🌻','🌷','🌹','🌺','🌸','🌼','💐','🪻'];
+function gWins(){const p=prog(V.team);p.gw=p.gw||{};return p.gw}
+function gWin(id){const w=gWins();w[id]=(w[id]||0)+1;savePR()}
+function gWords(n){const ws=WORDS[V.team];const t=shuffle(ws.filter(w=>wordLevel(V.team,w)==='tricky')),a=shuffle(ws.filter(w=>wordLevel(V.team,w)==='almost')),f=shuffle(ws.filter(w=>!wordLevel(V.team,w))),s=shuffle(ws.filter(w=>wordLevel(V.team,w)==='secure'));
+ return [...t,...a,...f,...s].slice(0,n).sort(()=>Math.random()-.5)}
+function gGood(){STREAK++;happySound(STREAK>=3);setTimeout(()=>clapSound(STREAK>=3),120);setTimeout(()=>praise(pick(CHEERS)[1],true),400);
+ const st=document.querySelector('.top .stars');if(st){st.classList.remove('pop');void st.offsetWidth;st.classList.add('pop')}}
+function gBig(){burst();happySound(true);setTimeout(()=>clapSound(true),120);setTimeout(()=>praise(pick(CHEERS)[1]),500)}
+function gHead(title,extra){return `<div class="row" style="justify-content:space-between"><button class="back" data-g="menu">← Games</button><div class="f" style="font-size:22px">${title}</div></div>${extra||''}`}
+function gAsk(){const w=G.list[G.i];
+ return `<div class="row"><button class="y hear" data-sayw="${esc(w)}">🔊 Hear the word</button>${SENT[w]?`<button class="w" data-say="${esc(SENT[w])}">💬 Sentence</button>`:''}</div>
+ <div style="margin-top:16px"><input class="ans" id="ans" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="spell it here" value="${esc(G.val||'')}" ${G.fb?'disabled':''}></div>
+ ${G.fb==='bad'?`<div class="fb bad">${pick(TRY)} It’s spelt <u>${esc(w)}</u></div><div class="row" style="margin-top:12px"><button class="w" data-say="${esc(w)}">🔊 Hear it</button><button class="y" data-g="next">Keep going →</button></div>`
+ :G.fb==='ok'?`<div class="fb ok">${pick(PRAISE)} ⭐</div>`
+ :`${kb()}<div class="row" style="margin-top:14px"><button class="y" data-g="check">Check ✔</button></div>`}`}
+function gStart(id){V.screen=id;G={kind:id,i:0,val:'',fb:null,score:0,wrong:0,done:false};
+ if(id==='ghive'){G.list=gWords(10);G.goal=G.list.length;G.pos=0;G.shown=0;G.tries=0}
+ if(id==='ggarden'){G.list=gWords(10);G.grown=null}
+ if(id==='grace'){G.list=gWords(14);G.goal=Math.min(8,G.list.length);G.pos=0;G.shown=0;G.opp=0;G.timed=!T(V.team).kb;G.last=0}
+ if(id==='gcatch'){G.list=gWords(5);G.hearts=3;G.got='';G.drops=[];G.lane=1;G.wbad=false;G.next=0}
+ render();window.scrollTo(0,0);
+ if(id==='gcatch')setTimeout(()=>{sayWord(G.list[0]);G.next=performance.now()+1300;catchLoop()},300);
+ else setTimeout(()=>sayWordSentence(G.list[0]),300);
+ if(id==='grace')setTimeout(raceLoop,300)}
+function gamesView(){const w=gWins();
+ return `<div class="row" style="justify-content:space-between;margin-bottom:6px"><button class="back" data-go="team">← Back</button><div class="f" style="font-size:22px">🎮 Spelling games</div></div>
+ <p class="muted" style="text-align:center;margin-bottom:16px">Pick a game! Every word you spell right wins a ⭐.</p>
+ <div class="acts">${GAMES.map(g=>`<div class="act game" data-g="${g.id}"><div class="e">${g.e}</div><h3>${g.name}</h3><p>${g.p}</p>${w[g.id]?`<div class="gwon">🏆 Won ${w[g.id]} ${w[g.id]===1?'time':'times'}</div>`:''}</div>`).join('')}</div>`}
+
+/* 1. Bee to the Hive */
+function hiveView(){const n=G.goal;
+ if(G.done&&G.pos<n)return gHead('🐝 Bee to the Hive')+`<div class="panel gend"><div style="font-size:80px">🌼🐝</div><h2 class="f" style="font-size:32px">Good flying!</h2><p style="font-size:20px">Your bee reached ${G.pos} of ${n} flowers. Have another go to reach the hive!</p><div class="row" style="margin-top:14px"><button class="y" data-g="ghive">Play again 🔁</button><button class="w" data-g="menu">More games</button></div></div>`;
+ if(G.done)return gHead('🐝 Bee to the Hive')+`<div class="panel gend"><div style="font-size:90px">🍯</div><h2 class="f" style="font-size:34px">The bee made it home!</h2><p style="font-size:20px">You spelt ${n} words and won a golden honey pot! 🏆</p><div class="row" style="margin-top:14px"><button class="y" data-g="ghive">Play again 🔁</button><button class="w" data-g="menu">More games</button></div></div>`;
+ const stops=Array.from({length:n},(_,k)=>`<div class="stop ${k<G.pos?'past':''}">${k<G.pos?'🌸':'🌼'}</div>`).join('');
+ return gHead('🐝 Bee to the Hive',`<p class="muted" style="text-align:center">Spell each word to fly to the next flower. ${n-G.pos} to go!</p>`)+
+ `<div class="hive"><div class="stops">${stops}<div class="stop home">🍯</div></div><div class="flyer" id="flyer" style="left:${hx(G.shown,n)}%">🐝</div></div>
+ <div class="panel">${gAsk()}</div>`}
+function hiveAfter(){const f=$('#flyer');if(f&&G.shown!==G.pos){requestAnimationFrame(()=>{f.style.left=hx(G.pos,G.goal)+'%';G.shown=G.pos})}}
+function hx(p,n){return p<=0?4:p>=n?(n+.5)/(n+1)*100:(p-.5)/(n+1)*100}
+
+/* 3. Grow a Garden */
+function plot(w,grow){const l=wordLevel(V.team,w);const e=l==='secure'?FLOWERS[[...w].reduce((a,c)=>a+c.charCodeAt(0),0)%FLOWERS.length]:l==='almost'?'🌱':l==='tricky'?'🌰':'🟫';
+ return `<div class="plot ${l||'soil'} ${grow?'grow':''}" data-say="${esc(w)}" title="${esc(w)}"><span>${e}</span><small>${esc(w)}</small></div>`}
+function gardenView(){const ws=WORDS[V.team];const bloom=ws.filter(w=>wordLevel(V.team,w)==='secure').length;
+ const garden=`<div class="gkey">🌰 seed · 🌱 sprout · 🌻 flower (secure)</div><div class="garden">${ws.map(w=>plot(w,w===G.grown)).join('')}</div>`;
+ if(G.done)return gHead('🌻 Grow a Garden')+`<div class="panel gend"><div style="font-size:70px">🌻🌷🌹</div><h2 class="f" style="font-size:30px">Your garden has ${bloom} flower${bloom===1?'':'s'}!</h2><p style="font-size:18px">You spelt ${G.score} of ${G.list.length} words right. Spell a word right twice to make it bloom.</p><div class="row" style="margin-top:12px"><button class="y" data-g="ggarden">Keep growing 🌱</button><button class="w" data-g="menu">More games</button></div></div>${garden}`;
+ return gHead(`🌻 Grow a Garden · ${G.i+1} of ${G.list.length}`,`<p class="muted" style="text-align:center">🌻 ${bloom} of ${ws.length} flowers in bloom</p>`)+`<div class="panel" style="margin-bottom:16px">${gAsk()}</div>${garden}`}
+
+/* 4. Bee Race */
+function raceView(){
+ if(G.done)return gHead('🏁 Bee Race')+(G.won?`<div class="panel gend"><div style="font-size:90px">🏆</div><h2 class="f" style="font-size:34px">You won the race!</h2><p style="font-size:20px">Your bee zoomed past the finish line. Super spelling!</p>`
+  :`<div class="panel gend"><div style="font-size:80px">🐝💨</div><h2 class="f" style="font-size:32px">So close!</h2><p style="font-size:20px">The speedy bee won this time. Practise and race again!</p>`)+`<div class="row" style="margin-top:14px"><button class="y" data-g="grace">Race again 🔁</button><button class="w" data-g="menu">More games</button></div></div>`;
+ return gHead('🏁 Bee Race',`<p class="muted" style="text-align:center">${G.timed?'The speedy bee keeps flying — spell fast and right!':'Each mistake helps the speedy bee. Spell carefully!'} ${G.goal-G.pos} words to the finish.</p>`)+
+ `<div class="race"><div class="lane me"><span class="who">${esc(ME.first_name)}</span><div class="runner" id="meBee" style="left:${G.shown/G.goal*88}%">🐝</div><div class="flag">🏁</div></div>
+ <div class="lane them"><span class="who">Speedy</span><div class="runner opp" id="oppBee" style="left:${G.opp*0.88}%">🐝</div><div class="flag">🏁</div></div></div>
+ <div class="panel">${gAsk()}</div>`}
+function raceAfter(){const f=$('#meBee');if(f&&G.shown!==G.pos)requestAnimationFrame(()=>{f.style.left=(G.pos/G.goal*88)+'%';G.shown=G.pos})}
+function raceLoop(){if(!G||G.kind!=='grace'||V.screen!=='grace'||G.done)return;const now=performance.now();
+ if(G.timed&&!G.fb){const dt=G.last?Math.min(now-G.last,200):0;const secs=V.team==='cha'?13:17;G.opp+=dt/1000*(100/(G.goal*secs))}
+ G.last=now;const o=$('#oppBee');if(o)o.style.left=(Math.min(G.opp,100)*0.88)+'%';
+ if(G.opp>=100){raceEnd(false);return}requestAnimationFrame(raceLoop)}
+function raceEnd(won){G.done=true;G.won=won;render();window.scrollTo(0,0);if(won){gWin('grace');gBig()}else{gentleSound();setTimeout(()=>playClip(pick(ENCOURAGE)),400)}}
+
+/* 2. Honey Catch */
+function catchView(){
+ if(G.done)return gHead('🍯 Honey Catch')+(G.hearts>0?`<div class="panel gend"><div style="font-size:90px">🍯</div><h2 class="f" style="font-size:34px">Jar full of honey!</h2><p style="font-size:20px">You caught all ${G.list.length} words. Sweet spelling!</p>`
+  :`<div class="panel gend"><div style="font-size:80px">💛</div><h2 class="f" style="font-size:32px">Good try!</h2><p style="font-size:20px">You caught ${G.score} word${G.score===1?'':'s'}. Have another go!</p>`)+`<div class="row" style="margin-top:14px"><button class="y" data-g="gcatch">Play again 🔁</button><button class="w" data-g="menu">More games</button></div></div>`;
+ const w=G.list[G.i];
+ return gHead(`🍯 Honey Catch · ${G.i+1} of ${G.list.length}`,`<p class="muted" style="text-align:center">Listen, then catch the letters in order. ${'❤️'.repeat(G.hearts)}${'🤍'.repeat(3-G.hearts)}</p>`)+
+ `<div class="row" style="margin-bottom:10px"><button class="y hear" data-sayw="${esc(w)}">🔊 Hear the word</button>${SENT[w]?`<button class="w" data-say="${esc(SENT[w])}">💬 Sentence</button>`:''}</div>
+ <div class="slots" id="slots">${[...w].map((c,k)=>`<span class="${k<G.got.length?'in':''}">${k<G.got.length?esc(c):''}</span>`).join('')}</div>
+ <div class="sky" id="sky">${[0,1,2,3].map(l=>`<div class="lanehit" data-glane="${l}"></div>`).join('')}<div class="jar" id="jar" style="left:${G.lane*25+12.5}%">🍯</div></div>
+ <div class="row" style="margin-top:12px"><button class="w mv" data-gmove="-1">◀</button><button class="w mv" data-gmove="1">▶</button></div>
+ <p class="muted" style="text-align:center;font-size:14px">Tap a lane, use ◀ ▶, or the arrow keys.</p>`}
+function catchWave(){const w=G.list[G.i],need=w[G.got.length].toLowerCase();const ab='abcdefghijklmnopqrstuvwxyz';
+ const lanes=shuffle([0,1,2,3]).slice(0,3);const dec=shuffle([...ab].filter(c=>c!==need)).slice(0,2);
+ G.drops=lanes.map((l,k)=>({l,c:k===0?need:dec[k-1],y:-50,id:Math.random()}));
+ const sky=$('#sky');if(!sky)return;sky.querySelectorAll('.drop').forEach(d=>d.remove());
+ G.drops.forEach(d=>{const e=document.createElement('div');e.className='drop';e.textContent=d.c;e.style.left=(d.l*25+12.5)+'%';e.style.top=d.y+'px';d.el=e;sky.appendChild(e)})}
+function catchLoop(){if(!G||G.kind!=='gcatch'||V.screen!=='gcatch'||G.done)return;const now=performance.now();const dt=G.last?Math.min(now-G.last,100):0;G.last=now;
+ const sky=$('#sky');if(!sky){requestAnimationFrame(catchLoop);return}
+ if(!G.drops.length||!G.drops[0].el||!G.drops[0].el.isConnected){if(now>=G.next)catchWave()}
+ else{const H=sky.clientHeight,jarY=H-70;const sp={buz:55,hon:65,bum:85,cha:105}[V.team]||70;
+  for(const d of G.drops){d.y+=sp*dt/1000;d.el.style.top=d.y+'px'}
+  const hit=G.drops.find(d=>d.l===G.lane&&d.y>=jarY-30&&d.y<=jarY+20);
+  if(hit){G.drops.forEach(d=>d.el.remove());G.drops=[];catchGot(hit.c)}
+  else if(G.drops.every(d=>d.y>H)){G.drops.forEach(d=>d.el.remove());G.drops=[];G.next=now+300}}
+ requestAnimationFrame(catchLoop)}
+function catchGot(c){const w=G.list[G.i];const need=w[G.got.length].toLowerCase();const jar=$('#jar');
+ if(c===need){G.got+=w[G.got.length];happySound(false);G.next=performance.now()+350;
+  const sl=$('#slots');if(sl){const s=sl.children[G.got.length-1];s.textContent=w[G.got.length-1];s.className='in'}
+  if(jar){jar.classList.remove('yum');void jar.offsetWidth;jar.classList.add('yum')}
+  if(G.got.length===w.length){award(V.team,w,!G.wbad);if(!G.wbad)G.score++;gGood();G.next=performance.now()+99999;
+   setTimeout(()=>{if(!G||G.kind!=='gcatch')return;if(G.i+1<G.list.length){G.i++;G.got='';G.wbad=false;G.drops=[];G.next=performance.now()+900;render();setTimeout(()=>sayWord(G.list[G.i]),200)}else{G.done=true;render();gWin('gcatch');gBig()}},1900)}}
+ else{G.wbad=true;G.hearts--;gentleSound();G.next=performance.now()+700;if(jar){jar.classList.remove('buzz');void jar.offsetWidth;jar.classList.add('buzz')}
+  const h=document.querySelector('main p.muted');if(h)h.innerHTML=`Oops, that was “${esc(c)}”. ${'❤️'.repeat(Math.max(G.hearts,0))}${'🤍'.repeat(3-Math.max(G.hearts,0))}`;
+  if(G.hearts<=0){award(V.team,w,false);setTimeout(()=>{if(!G||G.kind!=='gcatch')return;G.done=true;render();setTimeout(()=>playClip(pick(ENCOURAGE)),200)},700)}}}
+function catchMove(dx){if(!G||G.kind!=='gcatch')return;G.lane=Math.max(0,Math.min(3,G.lane+dx));const j=$('#jar');if(j)j.style.left=(G.lane*25+12.5)+'%'}
+
+/* shared check / next */
+function gCheck(){const v=readAns();if(!v||G.fb)return;const w=G.list[G.i];const ok=same(v,w);G.val=v;award(V.team,w,ok);
+ if(ok){G.score++;G.fb='ok';if(G.kind==='ghive')G.pos++;if(G.kind==='grace')G.pos++;if(G.kind==='ggarden')G.grown=w;render();gGood();
+  if((G.kind==='ghive'&&G.pos>=G.goal)){setTimeout(()=>{G.done=true;render();window.scrollTo(0,0);gWin('ghive');gBig()},1500);return}
+  if(G.kind==='grace'&&G.pos>=G.goal){setTimeout(()=>raceEnd(true),900);return}
+  setTimeout(gNext,1500)}
+ else{G.wrong++;G.fb='bad';if(G.kind==='ghive'&&G.tries<10){G.list.push(w);G.tries++}if(G.kind==='grace'&&!G.timed)G.opp+=12.5;render();oops();
+  const f=$('#flyer');if(f){f.classList.remove('buzz');void f.offsetWidth;f.classList.add('buzz')}
+  if(G.kind==='grace'&&G.opp>=100)setTimeout(()=>raceEnd(false),1200)}}
+function gNext(){if(!G||G.done)return;if(G.kind==='grace'&&!G.timed&&G.fb)G.opp+=6;
+ if(G.kind==='grace'&&G.opp>=100){raceEnd(false);return}
+ if(G.i+1>=G.list.length){if(G.kind==='grace'){raceEnd(G.pos>=G.goal);return}G.done=true;render();window.scrollTo(0,0);
+  if(G.kind==='ggarden'){if(G.score>=G.list.length*0.7)gBig()}return}
+ G.i++;G.val='';G.fb=null;G.grown=null;G.last=0;render();setTimeout(()=>sayWordSentence(G.list[G.i]),200)}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-g],[data-gmove],[data-glane]');if(!b)return;const d=b.dataset;
+ if(d.gmove){catchMove(+d.gmove);return}
+ if(d.glane!==undefined){if(G&&G.kind==='gcatch'){G.lane=+d.glane;catchMove(0)}return}
+ if(d.g==='menu'){G=null;V.screen='games';render();window.scrollTo(0,0);return}
+ if(d.g==='check'){gCheck();return}
+ if(d.g==='next'){gNext();return}
+ if(GAMES.some(x=>x.id===d.g))gStart(d.g)});
+document.addEventListener('keydown',e=>{if(!G||G.kind!==V.screen)return;
+ if(G.kind==='gcatch'&&(e.key==='ArrowLeft'||e.key==='ArrowRight')){e.preventDefault();catchMove(e.key==='ArrowLeft'?-1:1);return}
+ if(e.key==='Enter'&&e.target.id==='ans'){e.preventDefault();gCheck()}});
+document.addEventListener('input',e=>{if(e.target.id==='ans'&&G)G.val=e.target.value});
 
 async function submitCode(){const i=$('#codein'),m=$('#codemsg');if(!i)return;const btn=document.querySelector('[data-code]');
  if(btn){btn.disabled=true;btn.textContent='Checking… 🐝'}const r=await loginCode(i.value);
