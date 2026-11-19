@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Spelling Bee</title>
+<title>The Big Spelling Bee — for primary schools</title>
+<meta name="description" content="A fun Spelling Bee for primary schools: practice, games, avatars and streaks for children, plus class rounds, a Grand Final screen, certificates and reports for teachers.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -132,6 +133,14 @@ button.mv{font-size:28px;padding:10px 34px}
 .nextg{flex:1;min-width:220px;font-size:16px}.nbar{height:12px;background:#fff;border-radius:99px;overflow:hidden;margin-top:6px;border:2px solid #F8DDBF}.nbar i{display:block;height:100%;background:linear-gradient(90deg,#FBBF24,#F59E0B);border-radius:99px}
 .avparade{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin:6px 0 18px}.avparade span{animation:bob 2.4s ease-in-out infinite;line-height:0}.avparade svg{border-radius:50%;border:4px solid #fff;box-shadow:0 6px 16px rgba(31,42,68,.12)}
 .funs{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}@media(max-width:900px){.funs{grid-template-columns:1fr 1fr}}@media(max-width:520px){.funs{grid-template-columns:1fr}}.fun{background:#fff;border:3px solid var(--line);border-radius:24px;padding:16px 18px}.fun .e{font-size:40px}.fun b{font-family:Fredoka;font-size:21px;display:block;margin:4px 0}.fun p{margin:0;color:var(--ink2);font-size:15.5px}
+.herologo{display:inline-flex;background:#fff;border-radius:16px;padding:8px 14px;margin-bottom:10px}.herologo img{max-height:64px;max-width:220px;object-fit:contain}
+.phero .chip{display:inline-block;background:rgba(255,255,255,.15);border-radius:99px;padding:6px 14px;font-weight:800;margin-bottom:10px}
+.hsteps{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}.hstep{background:#fff;border:3px solid var(--line);border-radius:24px;padding:18px}.hstep span{display:inline-flex;width:40px;height:40px;border-radius:50%;background:var(--honey);align-items:center;justify-content:center;font-family:Fredoka;font-size:22px}.hstep b{display:block;font-family:Fredoka;font-size:21px;margin:8px 0 4px}.hstep p{margin:0;color:var(--ink2)}
+.pplans{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;align-items:start}.pplan{position:relative;background:#fff;border:3px solid var(--line);border-radius:26px;padding:22px}.pplan.pbest{border-color:var(--honey);box-shadow:0 10px 30px rgba(245,183,0,.25)}
+.pprice{font-family:Fredoka;font-size:30px;margin:6px 0}.pprice span{font-size:15px;color:var(--ink2)}.pplan ul{padding-left:20px;margin:10px 0 16px;line-height:1.6}
+.ribbon{position:absolute;top:-14px;right:18px;background:var(--aa2);color:#fff;font-weight:800;font-size:13px;padding:4px 12px;border-radius:99px}
+.faq{max-width:820px;margin:0 auto}.faq details{background:#fff;border:3px solid var(--line);border-radius:18px;padding:14px 18px;margin-bottom:10px}.faq summary{font-family:Fredoka;font-size:20px;cursor:pointer}.faq p{margin:8px 0 0;color:var(--ink2)}
+.hero a button{font-family:inherit}
 .acts{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
 .act{background:#fff;border-radius:26px;padding:22px;text-align:center;border:3px solid var(--line);cursor:pointer;transition:transform .12s}
 .act:hover{transform:translateY(-4px)}
@@ -300,14 +309,15 @@ function cleanCode(c){return String(c||'').toUpperCase().replace(/[^A-Z0-9]/g,''
 async function loginCode(code){code=cleanCode(code);if(code.length<4)return {err:'Please type your whole code.'};
  const c=db();if(!c)return {err:'Practice will open very soon — please try again later.'};
  try{const {data,error}=await c.rpc('student_login',{p_code:code});if(error)throw error;if(!data)return {err:'Hmm, that code didn’t work. Check it and try again!'};
-  ME={code,first_name:data.first_name,grade:data.grade,team:teamOfGrade(data.grade)};saveMe();
+  if(data.error==='paused')return {err:`Practice for ${data.school||'your school'} is paused at the moment. Please ask your teacher.`};
+  ME={code,first_name:data.first_name,grade:data.grade,team:teamOfGrade(data.grade),school:data.school||null};saveMe();
   PR={};PR[ME.team]={stars:data.stars||0,ok:data.words||{},bad:data.tricky||{},spent:data.spent||0,owned:data.owned||[],avatar:data.avatar||{},streak:data.streak||0,bestStreak:data.best_streak||0,streakDay:data.streak_day||'',dailyDay:data.daily_done?dubaiDay():'',dayCount:data.day_count||0,dayDay:data.day_count?dubaiDay():'',sDays:Array.isArray(data.streak_days)?data.streak_days:[]};savePR();return {ok:true}}
  catch(e){return {err:'We couldn’t connect. Check the internet and try again.'}}}
 async function refreshMe(){if(!ME||!db())return;try{const {data,error}=await db().rpc('student_login',{p_code:ME.code});if(error)return;
- if(!data){ME=null;saveMe();render();return}
- ME.first_name=data.first_name;ME.grade=data.grade;ME.team=teamOfGrade(data.grade);saveMe();
+ if(!data||data.error){if(data&&data.error==='paused'){ME=null;saveMe();render();note('Practice for your school is paused. Please ask your teacher.');return}ME=null;saveMe();render();return}
+ ME.first_name=data.first_name;ME.grade=data.grade;ME.team=teamOfGrade(data.grade);if(data.school)ME.school=data.school;saveMe();
  const p=prog(ME.team);p.stars=Math.max(data.stars||0,p.stars);p.ok=mergeMax(p.ok,data.words);p.bad=mergeMax(p.bad,data.tricky);if(typeof data.spent==='number')p.spent=Math.max(data.spent,p.spent||0);if(Array.isArray(data.owned))p.owned=[...new Set([...(p.owned||[]),...data.owned])];if(data.avatar&&Object.keys(data.avatar).length&&!AVS.dirty)p.avatar=data.avatar;if(typeof data.streak==='number'&&(data.streak_day||'')>=(p.streakDay||'')){if(data.streak_day!==p.streakDay||data.streak>(p.streak||0)){p.streak=data.streak;p.streakDay=data.streak_day}}p.bestStreak=Math.max(p.bestStreak||0,data.best_streak||0);if(typeof data.day_count==='number'&&data.day_count>((p.dayDay===dubaiDay()?p.dayCount:0)||0)){p.dayCount=data.day_count;p.dayDay=dubaiDay()}if(Array.isArray(data.streak_days))p.sDays=[...new Set([...(p.sDays||[]),...data.streak_days])].sort();if(data.daily_done)p.dailyDay=dubaiDay();savePR();if(V.screen==='home'||V.screen==='team')render()}catch(e){}}
-function logout(){ME=null;saveMe();PR={};savePR();try{localStorage.removeItem(Q_KEY)}catch(e){};V={screen:'home',team:null};render();setTimeout(()=>document.getElementById('practise')?.scrollIntoView(),0)}
+function logout(){ME=null;saveMe();PR={};savePR();try{localStorage.removeItem(Q_KEY);localStorage.removeItem(WKEY)}catch(e){};setTimeout(()=>location.reload(),50);V={screen:'home',team:null};render();setTimeout(()=>document.getElementById('practise')?.scrollIntoView(),0)}
 let flushing=false;
 let MEMQ=[];
 function readQ(){try{return JSON.parse(localStorage.getItem(Q_KEY)||'null')||MEMQ}catch(e){return MEMQ}}
@@ -457,34 +467,73 @@ function render(){
  else a.innerHTML=top()+`<main>${({team:teamView,learn:learnView,lcwc:lcwcView,test:testView,miss:missView,done:doneView,gap:gapView,games:gamesView,avatar:avatarView,realbee:rbView,wod:wodView,gballoon:balloonView,gfriend:friendView,ghive:hiveView,gcatch:catchView,ggarden:gardenView,grace:raceView})[V.screen]()}</main>`;
  after();if(V.screen==='ghive')hiveAfter();if(V.screen==='grace')raceAfter();
 }
-function home(){
- const combs=`<svg class="combs" viewBox="0 0 100 60" preserveAspectRatio="xMidYMid slice"><defs><pattern id="hc" width="12" height="20.78" patternUnits="userSpaceOnUse"><polygon points="6,0 12,3.46 12,10.39 6,13.86 0,10.39 0,3.46" fill="none" stroke="#FFD54A" stroke-width=".7"/><polygon points="12,10.39 18,13.86 18,20.78 12,24.25 6,20.78 6,13.86" fill="none" stroke="#FFD54A" stroke-width=".7"/></pattern></defs><rect width="100" height="60" fill="url(#hc)"/></svg>`;
- return `<section class="hero">${combs}<div class="flybee">${BEE}</div><div style="position:relative"><h1><small>The Big</small>Spelling Bee</h1><p>Spell it! Say it! Shine! ✨</p><p style="font-size:18px;opacity:.85;margin-top:4px">KG2 – Grade 5 · Grand Final Friday 22 January 2027</p>${totalStars()?`<p style="font-size:20px">You have ⭐ ${totalStars()} stars!</p>`:''}<div class="row" style="margin-top:20px"><button class="y" data-jump="practise">🐝 Start practising</button><button class="w" data-jump="dates">📅 Key dates</button></div></div></section>
- <nav class="sitenav">${[['about','About'],['fun','Fun stuff'],['dates','Key dates'],['how','How it works'],['practise','Practise'],['parents','Parents']].map(([k,l])=>`<button data-jump="${k}">${l}</button>`).join('')}${HAVE.size?'':'<button data-voice="1">🔊 Voice</button>'}</nav>
+/* ---------- schools: product page + each school's page ---------- */
+let SCH=null,PLANLIST=null;
+const URLQ=new URLSearchParams(location.search);const SLUG=(URLQ.get('s')||'').toLowerCase().trim();const FOR_SCHOOLS=URLQ.has('for');
+try{if(SLUG)SCH=JSON.parse(localStorage.getItem('sb-school-'+SLUG)||'null')}catch(e){}
+async function loadSchoolPage(){if(!SLUG)return;const c=db();if(!c)return;try{const {data}=await c.rpc('school_public',{p_slug:SLUG});
+ if(data){const was=JSON.stringify(SCH);SCH=data;try{localStorage.setItem('sb-school-'+SLUG,JSON.stringify(data))}catch(e){}if(was!==JSON.stringify(data)&&V.screen==='home')render()}else if(!SCH){SCH={missing:true};if(V.screen==='home')render()}}catch(e){}}
+function curSchool(){if(FOR_SCHOOLS)return null;if(ME&&ME.school)return ME.school;if(SCH&&!SCH.missing)return SCH;return null}
+async function loadPlans(){if(PLANLIST)return;const c=db();if(!c)return;try{const {data}=await c.from('plans').select('*').order('sort');if(Array.isArray(data)&&data.length){PLANLIST=data;if(V.screen==='home'&&!curSchool())render()}}catch(e){}}
+function fmtDay(d,opt){try{return new Date(d+'T12:00:00').toLocaleDateString('en-GB',opt||{weekday:'long',day:'numeric',month:'long',year:'numeric'})}catch(e){return d}}
+function home(){const sc=curSchool();if(sc)return schoolHome(sc);if(SLUG&&SCH&&SCH.missing)return missingSchool();loadPlans();return productHome()}
+const HIVE=`<svg class="combs" viewBox="0 0 100 60" preserveAspectRatio="xMidYMid slice"><defs><pattern id="hc" width="12" height="20.78" patternUnits="userSpaceOnUse"><polygon points="6,0 12,3.46 12,10.39 6,13.86 0,10.39 0,3.46" fill="none" stroke="#FFD54A" stroke-width=".7"/><polygon points="12,10.39 18,13.86 18,20.78 12,24.25 6,20.78 6,13.86" fill="none" stroke="#FFD54A" stroke-width=".7"/></pattern></defs><rect width="100" height="60" fill="url(#hc)"/></svg>`;
+function footer(name){return `<footer class="foot"><div style="width:46px;height:46px;margin:0 auto 6px">${BEE}</div><b class="f" style="font-size:20px">${esc(name||'Spelling Bee')}</b><div>Spell it! Say it! Shine!</div>${name?`<div style="margin-top:8px"><a href="./?for=schools" style="color:var(--aa);font-weight:800">Bring the Spelling Bee to your school →</a></div>`:''}<div class="powered">Powered by <a href="https://thinknestonline.com" target="_blank" rel="noopener">ThinkNest</a></div></footer>`}
+function missingSchool(){return `<section class="hero">${HIVE}<div style="position:relative"><h1><small>Hmm…</small>School not found</h1><p>We couldn’t find a school with that link.</p></div></section><main><section class="sec2">${practiseBox()}<p style="text-align:center;margin-top:16px"><a href="./" style="font-weight:800;color:var(--aa)">Go to the Spelling Bee home page →</a></p></section>${footer()}</main>`}
+function schoolHome(sc){const S=Object.assign({tagline:'Spell it! Say it! Shine!',grades:'KG2 – Grade 5',dates:[],timer:60},sc.settings||{});
+ const fd=S.final_date;const days=fd?Math.max(0,Math.ceil((new Date(fd+'T00:00:00')-new Date())/864e5)):null;
+ const rules=RULES.map((r,i)=>i===3?(+S.timer?`You have ${+S.timer>=60?(+S.timer===60?'1 minute':(S.timer/60)+' minutes'):S.timer+' seconds'} to finish spelling — watch the timer on the big screen.`:'Take your time to spell the word carefully.'):r);
+ const dates=(S.dates||[]).filter(d=>d&&(d.when||d.title));
+ const nav=[['about','About'],['fun','Fun stuff'],...(dates.length||fd?[['dates','Key dates']]:[]),['how','How it works'],['practise','Practise'],['parents','Parents']];
+ return `<section class="hero">${HIVE}<div class="flybee">${BEE}</div><div style="position:relative">${sc.logo?`<div class="herologo"><img src="${sc.logo}" alt=""></div>`:''}${/spelling bee/i.test(sc.name)?`<h1 style="font-size:clamp(34px,7vw,70px)">${esc(sc.name)}</h1>`:`<h1><small>${esc(sc.name)}</small>Spelling Bee</h1>`}<p>${esc(S.tagline||'Spell it! Say it! Shine!')} ✨</p><p style="font-size:18px;opacity:.85;margin-top:4px">${esc(S.grades||'')}${fd?` · Grand Final ${esc(fmtDay(fd))}`:''}</p>${totalStars()?`<p style="font-size:20px">You have ⭐ ${totalStars()} stars!</p>`:''}<div class="row" style="margin-top:20px"><button class="y" data-jump="practise">🐝 Start practising</button>${dates.length||fd?'<button class="w" data-jump="dates">📅 Key dates</button>':''}</div></div></section>
+ <nav class="sitenav">${nav.map(([k,l])=>`<button data-jump="${k}">${l}</button>`).join('')}${HAVE.size?'':'<button data-voice="1">🔊 Voice</button>'}</nav>
  <main>
+ ${sc.active===false?`<div class="tipbox" style="margin-top:16px">⏸ Practice for ${esc(sc.name)} is paused at the moment. Please check with your school.</div>`:''}
  <section id="about" class="sec2"><h2 class="h2">What is the Spelling Bee? 🐝</h2>
+ ${S.welcome?`<div class="tipbox" style="margin-bottom:16px;white-space:pre-wrap">${esc(S.welcome)}</div>`:''}
  <div class="about"><div class="aboutcard"><div class="e">✏️</div><b>Learn</b><p>Every child learns the spelling words for their year group from the National Curriculum.</p></div>
  <div class="aboutcard"><div class="e">🎤</div><b>Be brave</b><p>Spellers stand up, listen to a word and spell it out loud, letter by letter.</p></div>
- <div class="aboutcard"><div class="e">🏆</div><b>Shine</b><p>The best spellers from KG2 to Grade 5 meet in the Grand Final. Every child who takes part gets a certificate!</p></div></div>
- <p class="lead2">Joining is optional, and every child from KG2 to Grade 5 is warmly invited. Ask your class teacher how to sign up — every speller gets their own bee code to practise here.</p></section>
- <section id="fun" class="sec2"><h2 class="h2">What you can do here ✨</h2>
- <div class="avparade">${[{char:'princess',hat:'hat-tiara',bg:'pink'},{char:'zib',acc:'acc-glasses',bg:'mint'},{char:'knight',hat:'hat-helmet',bg:'sky'},{char:'panda',hat:'hat-party',bg:'honey'},{char:'mermaid',acc:'acc-necklace',bg:'bg-beach'},{char:'astro',back:'back-jetpack',bg:'bg-space'},{char:'unicorn',bg:'lilac'}].map((a,i)=>`<span style="animation-delay:${i*.15}s">${avatarSVG(a,78)}</span>`).join('')}</div>
- <div class="funs">${FUN.map(f=>`<div class="fun"><div class="e">${f[0]}</div><b>${f[1]}</b><p>${f[2]}</p></div>`).join('')}</div></section>
- <section id="dates" class="sec2"><h2 class="h2">Key dates 📅</h2>
- <div class="countbox"><div class="n">${Math.max(0,Math.ceil((new Date(FINAL+'T00:00:00')-new Date())/864e5))}</div><div>days until the Grand Final · <b>Friday 22 January 2027</b></div></div>
- <div class="dates">${DATES.map((d,i)=>`<div class="date ${i===DATES.length-2?'final':''}"><div class="when">${d[0]}</div><div><b>${d[1]}</b><p>${d[2]}</p></div></div>`).join('')}</div></section>
+ <div class="aboutcard"><div class="e">🏆</div><b>Shine</b><p>The best spellers meet in the Grand Final. Every child who takes part gets a certificate!</p></div></div>
+ <p class="lead2">Joining is optional, and every child is warmly invited. Ask your class teacher how to sign up — every speller gets their own bee code to practise here.</p></section>
+ <section id="fun" class="sec2"><h2 class="h2">What you can do here ✨</h2>${avParade()}<div class="funs">${FUN.map(f=>`<div class="fun"><div class="e">${f[0]}</div><b>${f[1]}</b><p>${f[2]}</p></div>`).join('')}</div></section>
+ ${dates.length||fd?`<section id="dates" class="sec2"><h2 class="h2">Key dates 📅</h2>
+ ${fd?`<div class="countbox"><div class="n">${days}</div><div>days until the Grand Final · <b>${esc(fmtDay(fd))}</b>${S.final_time?' · '+esc(S.final_time):''}${S.final_place?' · '+esc(S.final_place):''}</div></div>`:''}
+ <div class="dates">${dates.map(d=>`<div class="date ${/final/i.test(d.title||'')?'final':''}"><div class="when">${esc(d.when)}</div><div><b>${esc(d.title)}</b><p>${esc(d.text||'')}</p></div></div>`).join('')}</div></section>`:''}
  <section id="how" class="sec2"><h2 class="h2">How it works on stage 🎤</h2>
- <div class="rules">${RULES.map((r,i)=>`<div class="rule"><span>${i+1}</span>${r}</div>`).join('')}</div></section>
+ <div class="rules">${rules.map((r,i)=>`<div class="rule"><span>${i+1}</span>${r}</div>`).join('')}</div></section>
  <section id="practise" class="sec2"><h2 class="h2">Let’s practise! 🐝</h2>${practiseBox()}
  <h3 class="f" style="text-align:center;font-size:24px;margin:26px 0 12px">Our four bee teams</h3>
- <div class="teams">${TEAMS.map(t=>`<div class="team ${t.id} still"><div class="e">${t.e}</div><h3>${t.name}</h3><div class="gr">${t.label} · ${t.yr}</div></div>`).join('')}</div>
- </section>
+ <div class="teams">${TEAMS.map(t=>`<div class="team ${t.id} still"><div class="e">${t.e}</div><h3>${t.name}</h3><div class="gr">${t.label} · ${t.yr}</div></div>`).join('')}</div></section>
  <section id="parents" class="sec2"><h2 class="h2">For parents 💛</h2>
  <div class="about">${PARENTS.map(p=>`<div class="aboutcard" style="text-align:left"><div class="e">${p[0]}</div><b>${p[1]}</b><p>${p[2]}</p></div>`).join('')}</div>
  <div class="tipbox">Your child’s stars, avatar and progress are saved with their bee code, so they can practise on any device. Turn the sound on so your child can hear Kate read each word. Try <b>🏆 Real Bee practice</b> together — it’s just like the real competition!</div></section>
- <footer class="foot"><div style="width:46px;height:46px;margin:0 auto 6px">${BEE}</div><b class="f" style="font-size:20px">Spelling Bee 2026–2027</b><div>Spell it! Say it! Shine!</div><div class="powered">Powered by <a href="https://thinknestonline.com" target="_blank" rel="noopener">ThinkNest</a></div></footer>
- </main>`;
-}
+ ${footer(/spelling bee/i.test(sc.name)?sc.name:sc.name+' Spelling Bee')}
+ </main>`}
+function avParade(){return `<div class="avparade">${[{char:'princess',hat:'hat-tiara',bg:'pink'},{char:'zib',acc:'acc-glasses',bg:'mint'},{char:'knight',hat:'hat-helmet',bg:'sky'},{char:'panda',hat:'hat-party',bg:'honey'},{char:'mermaid',acc:'acc-necklace',bg:'bg-beach'},{char:'astro',back:'back-jetpack',bg:'bg-space'},{char:'unicorn',bg:'lilac'}].map((a,i)=>`<span style="animation-delay:${i*.15}s">${avatarSVG(a,78)}</span>`).join('')}</div>`}
+const TEACH_FEAT=[['📊','Teacher dashboard','See who practised this week, the trickiest words for each class, and progress for every child.'],['📚','Ready-made word lists','National Curriculum lists for KG2 to Grade 5 with sentences and meanings — edit them any time.'],['🎤','Bee rounds & Grand Final','Run class rounds and the final with Kate’s voice, a timer and a big projector screen.'],['🎓','Certificates & reports','Print certificates with each child’s avatar and one-page progress reports for parents.'],['✉️','Invitations','Design and print invitations for families, with your school logo.'],['🏫','Your own school page','Share one link with parents: your dates, your Grand Final and the children’s log-in.']];
+const FAQ=[['Which children is it for?','Primary children from KG2 (Year 1) to Grade 5 (Year 6). The word lists follow the National Curriculum for England, and you can change them.'],['Is it safe for children?','Children log in with a secret bee code — no emails or passwords. We only use first names, avatars are cartoons, and there are no adverts.'],['What devices does it work on?','Any device with a web browser: iPads, Chromebooks, laptops, tablets and phones, at school or at home.'],['How do we pay?','Choose a plan and we email your school an invoice for the year. No card details are needed.'],['What happens after the free trial?','Pick Standard or Premium. Everything your children and teachers have done is kept.'],['Can we use our own dates and logo?','Yes! In School settings you add your logo, your Grand Final date and place, and all your key dates.']];
+function productHome(){const plans=PLANLIST||[{id:'trial',name:'Free trial',price:0,currency:'AED',blurb:'Try everything free for 30 days.',features:['Everything in Premium','30 days free','No payment details needed']},{id:'standard',name:'Standard',price:1200,currency:'AED',blurb:'Everything children need to practise.',features:[]},{id:'premium',name:'Premium',price:2000,currency:'AED',blurb:'Run the whole competition, start to finish.',features:[]}];
+ return `<section class="hero phero">${HIVE}<div class="flybee">${BEE}</div><div style="position:relative;max-width:900px;margin:0 auto"><div class="chip">🏫 For primary schools · KG2 – Grade 5</div><h1><small>The Big</small>Spelling Bee</h1>
+ <p>Run a brilliant school Spelling Bee — the fun way!</p><p style="font-size:18px;opacity:.9;margin-top:8px;font-family:inherit">Practice children love at home, games, avatars and streaks — plus everything teachers need for class rounds and a Grand Final.</p>
+ <div class="row" style="margin-top:22px"><a href="signup.html"><button class="y" style="font-size:20px;padding:14px 26px">🚀 Start a free 30-day trial</button></a><button class="w" data-jump="plans">See plans</button><a href="teacher.html"><button class="w">Teacher sign in</button></a></div></div></section>
+ <nav class="sitenav">${[['kids','Children'],['features','Features'],['steps','How it works'],['plans','Plans'],['faq','Questions']].map(([k,l])=>`<button data-jump="${k}">${l}</button>`).join('')}</nav>
+ <main>
+ <section id="kids" class="sec2"><h2 class="h2">Children: start here! 🐝</h2>${practiseBox()}</section>
+ <section id="features" class="sec2"><h2 class="h2">Children love it ✨</h2>${avParade()}<div class="funs">${FUN.map(f=>`<div class="fun"><div class="e">${f[0]}</div><b>${f[1]}</b><p>${f[2]}</p></div>`).join('')}</div>
+ <h2 class="h2">Teachers love it too 👩‍🏫</h2><div class="funs">${TEACH_FEAT.map(f=>`<div class="fun"><div class="e">${f[0]}</div><b>${f[1]}</b><p>${f[2]}</p></div>`).join('')}</div></section>
+ <section id="steps" class="sec2"><h2 class="h2">How it works 🚀</h2><div class="hsteps">
+  <div class="hstep"><span>1</span><b>Start your free trial</b><p>Sign up your school in two minutes. Everything is unlocked for 30 days.</p></div>
+  <div class="hstep"><span>2</span><b>Add your children</b><p>Paste your class lists and print a bee code card for every speller.</p></div>
+  <div class="hstep"><span>3</span><b>Practise & compete</b><p>Children practise at home; you run class rounds and a Grand Final on the big screen.</p></div></div></section>
+ <section id="plans" class="sec2"><h2 class="h2">Plans 💛</h2><div class="pplans">${plans.map(p=>`<div class="pplan ${p.id==='premium'?'pbest':''}">${p.id==='premium'?'<div class="ribbon">Most popular</div>':''}<div class="f" style="font-size:26px">${esc(p.name)}</div>
+  <div class="pprice">${p.price?`${esc(p.currency)} ${Number(p.price).toLocaleString()}<span> / school / year</span>`:'Free<span> for 30 days</span>'}</div><p class="muted">${esc(p.blurb||'')}</p>
+  <ul>${(p.features||[]).map(f=>`<li>${esc(f)}</li>`).join('')}</ul><a href="signup.html"><button class="${p.id==='premium'?'y':'w'}" style="width:100%">${p.price?'Start free, then choose '+esc(p.name):'Start free trial'}</button></a></div>`).join('')}</div>
+  <p style="text-align:center" class="muted">Prices are per school, per year, with unlimited children and teachers. We send an invoice — no card needed.</p></section>
+ <section id="faq" class="sec2"><h2 class="h2">Questions 🙋</h2><div class="faq">${FAQ.map(q=>`<details><summary>${esc(q[0])}</summary><p>${esc(q[1])}</p></details>`).join('')}</div>
+  <div style="text-align:center;margin-top:24px"><a href="signup.html"><button class="y" style="font-size:20px;padding:14px 26px">🚀 Start your free trial</button></a></div></section>
+ ${footer()}
+ </main>`}
+
 function practiseBox(){
  if(ME){const t=T(ME.team);return `<div class="codecard ${t.id}"><div class="e" style="font-size:64px">${t.e}</div><h3 class="f" style="font-size:32px">Hi ${esc(ME.first_name)}! 👋</h3><div class="gr" style="font-size:18px">You’re a <b>${t.name.replace(/s$/,'')}</b> · ${gradeLabel(ME.grade)}</div>
   <div class="muted" style="margin:8px 0 16px;font-size:17px">⭐ ${totalStars()} stars · ${mastered(t.id)}/${WORDS[t.id].length} words learnt</div>
@@ -503,7 +552,7 @@ function teamView(){
  ${ME&&t.id===ME.team&&!hasAvatar()?`<div class="avbanner" data-go="avatar">${avatarSVG({},70)}<div><b class="f" style="font-size:24px">Create your own avatar! 🎨</b><div>Choose a cute character, then dress it up with your stars in the Bee Shop!</div></div><button class="y">Let’s go →</button></div>`:''}
  <div class="acts">
   <div class="act" data-go="test"><div class="e">🎧</div><h3>Spelling test</h3><p>Listen to 10 words and spell them.</p></div>
-  <div class="act realbee" data-go="realbee"><div class="e">🏆</div><h3>Real Bee practice</h3><p>Practise like the real competition: ask for the meaning and beat the timer!</p></div>
+  ${ME&&ME.school&&ME.school.premium===false?'':`<div class="act realbee" data-go="realbee"><div class="e">🏆</div><h3>Real Bee practice</h3><p>Practise like the real competition: ask for the meaning and beat the timer!</p></div>`}
   <div class="act games" data-go="games"><div class="e">🎮</div><h3>Spelling games</h3><p>6 games: Bee to the Hive, Honey Catch, Grow a Garden, Bee Race, Balloon Rescue and Race a friend!</p></div>
   <div class="act shop" data-go="avatar"><div class="avact">${avatarSVG(prog(t.id).avatar,72)}</div><h3>My avatar & Bee Shop</h3><p>Spend your stars on clothes, hats, pets and more!</p></div>
   <div class="act" data-go="learn"><div class="e">📖</div><h3>My word list</h3><p>See all my words and tap to hear them.</p></div>
@@ -1183,7 +1232,7 @@ document.addEventListener('keydown',e=>{if(V.screen==='wod'&&e.key==='Enter'&&e.
 
 async function submitCode(){const i=$('#codein'),m=$('#codemsg');if(!i)return;const btn=document.querySelector('[data-code]');
  if(btn){btn.disabled=true;btn.textContent='Checking… 🐝'}const r=await loginCode(i.value);
- if(r.ok){V={screen:'team',team:ME.team};render();window.scrollTo(0,0);happySound(false);setTimeout(()=>say("Hello! Let's practise your spellings!"),300);flush()}
+ if(r.ok){loadWords();V={screen:'team',team:ME.team};render();window.scrollTo(0,0);happySound(false);setTimeout(()=>say("Hello! Let's practise your spellings!"),300);flush()}
  else{if(btn){btn.disabled=false;btn.textContent='Let’s go! 🐝'}if(m){m.textContent=r.err;m.classList.add('show')}gentleSound()}}
 document.addEventListener('submit',e=>{if(e.target.id==='codeform'){e.preventDefault();submitCode()}});
 /* spelling lists come from the teachers' Word lists (database); built-in lists are the backup */
@@ -1193,13 +1242,13 @@ function applyRows(rows){if(!Array.isArray(rows)||!rows.length)return false;cons
  for(const k in SENT)delete SENT[k];rows.forEach(r=>{if(r.sentence)SENT[r.word]=r.sentence});for(const k in MEAN)delete MEAN[k];rows.forEach(r=>{if(r.meaning)MEAN[r.word]=r.meaning});
  DBROWS=rows;for(const k in CLIP)delete CLIP[k];buildClips();return true}
 try{applyRows(JSON.parse(localStorage.getItem(WKEY)||'null'))}catch(e){}
-async function loadWords(){const c=db();if(!c)return;try{const {data,error}=await c.rpc('public_words');if(error||!Array.isArray(data)||!data.length)return;
+async function loadWords(){const c=db();if(!c||!ME)return;try{const {data,error}=await c.rpc('school_words',{p_code:ME.code});if(error||!Array.isArray(data)||!data.length)return;
  const slim=data.map(r=>({team:r.team,word:r.word,sentence:r.sentence,w_clip:r.w_clip,s_clip:r.s_clip,ws_clip:r.ws_clip,meaning:r.meaning||'',m_clip:r.m_clip||''}));
  const changed=JSON.stringify(slim)!==JSON.stringify(DBROWS);applyRows(slim);try{localStorage.setItem(WKEY,JSON.stringify(slim))}catch(e){}
  if(changed&&['home','team','learn'].includes(V.screen))render()}catch(e){}}
 buildClips();
 render();
-loadWords();
+loadWords();loadSchoolPage();
 if(ME){refreshMe();flush()}
 (async()=>{try{tts=await window.claude?.use?.('tts')}catch(e){}})();
 })();

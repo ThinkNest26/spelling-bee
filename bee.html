@@ -80,6 +80,7 @@ const SUPABASE_URL='https://xpbkdnkfufkahaszfycd.supabase.co';
 const SUPABASE_KEY='sb_publishable_QIAV_9tLUBbDCu7FHqaTEw_zYQ0teEG';
 const TEAMS={buz:['Buzzy Bees','🌼','KG2'],hon:['Honey Bees','🍯','Grade 1'],bum:['Bumble Bees','🐝','Grades 2–3'],cha:['Champion Bees','🏆','Grades 4–5']};
 const KINDS={class:'Class round',grade:'Grade round',final:'Grand Final'};
+function lockPage(what){document.getElementById('app').innerHTML=`<div class="card" style="max-width:560px;margin:40px auto;text-align:center"><div style="font-size:54px">⭐</div><h2 style="font-size:24px;margin:8px 0">${what} is part of the Premium plan</h2><p class="muted">Ask your school to upgrade in <b>⚙️ School settings → Plan</b> on the teacher page.</p><a href="teacher.html"><button class="y">Go to the teacher page</button></a></div>`}
 function teamOf(g){g=+g;return g===0?'buz':g===1?'hon':g<=3?'bum':'cha'}
 function GL(g){return +g===0?'KG2':'Grade '+g}
 const $=s=>document.querySelector(s);
@@ -87,7 +88,7 @@ function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;',
 let tT;function toast(m){const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(tT);tT=setTimeout(()=>t.style.display='none',2600)}
 function av(a,s){try{return window.SBAvatar.svg(a||{},s)}catch(e){return ''}}
 let sb=null;try{sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY)}catch(e){}
-let USER=null,KIDS=[],PROG={},WROWS=[],HAVE=new Set(),ROUNDS=[],R=null,HIST=[];
+let SCH=null,USER=null,KIDS=[],PROG={},WROWS=[],HAVE=new Set(),ROUNDS=[],R=null,HIST=[];
 const CH=('BroadcastChannel' in window)?new BroadcastChannel('sb-bee-screen'):null;
 
 /* ---------- Kate's voice ---------- */
@@ -105,9 +106,10 @@ async function start(){
  USER=session.user;
  const {data:t}=await sb.from('teachers').select('email');
  if(!t||!t.length){$('#app').innerHTML='<div class="card">This account isn’t on the teacher list.</div>';return}
+ {const {data:si}=await sb.rpc('my_school_info');SCH=si||null;if(SCH&&!SCH.premium){lockPage('Bee rounds & the Grand Final screen');return}if(SCH){document.querySelector('header .s').textContent=SCH.name+' · class rounds, grade rounds and the Grand Final';if(SCH.settings&&SCH.settings.timer!=null&&NF.time==null)NF.time=+SCH.settings.timer}}
  const [{data:k},{data:p},{data:w},{data:r,error:re}]=await Promise.all([
   sb.from('students').select('*').eq('active',true).order('grade').order('class_name').order('first_name'),
-  sb.from('progress').select('student_id,avatar,words'),sb.rpc('public_words'),
+  sb.from('progress').select('student_id,avatar,words'),sb.rpc('teacher_words'),
   sb.from('bee_rounds').select('*').order('created_at',{ascending:false})]);
  KIDS=k||[];(p||[]).forEach(x=>PROG[x.student_id]=x);WROWS=Array.isArray(w)?w:[];
  if(re){$('#app').innerHTML=`<div class="card"><b>One more step:</b> run <code>spelling-bee-bee-rounds.sql</code> in Supabase (SQL Editor → New query → paste → Run), then refresh this page.</div>`;return}
@@ -277,7 +279,7 @@ function runView(keepScroll){const st=S();const y=window.scrollY;const t=TEAMS[R
 document.addEventListener('keydown',e=>{if(!R||!S().cur||e.target.tagName==='INPUT')return;if(e.key===' '){e.preventDefault();say('word')}});
 
 /* ---------- projector screen ---------- */
-function sendScreen(extra){if(!CH)return;let view={type:'idle'};
+function sendScreen(extra){if(!CH)return;let view={type:'idle',school:SCH?SCH.name:'',tagline:SCH&&SCH.settings?SCH.settings.tagline:''};
  if(R){const st=S();const nowId=st.cur?st.order[st.idx]:null;const now=nowId?sp(nowId):null;
   view={type:'round',title:R.name,team:TEAMS[R.team][0],teamE:TEAMS[R.team][1],phase:st.phase,round:st.round,timer:R.settings.time?TIMER.left:null,timerRun:TIMER.run,
    speller:now?{name:now.name,cls:now.cls,avatar:now.avatar}:null,left:st.spellers.filter(x=>!x.out).map(x=>({name:x.name,avatar:x.avatar})),

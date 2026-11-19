@@ -48,8 +48,8 @@ const vh=n=>Math.round(innerHeight*n/100);
 let V={type:'idle'},FL=null,FLT=null;
 function confetti(n){const cols=['#F5B700','#FFD54A','#F472B6','#60A5FA','#34D399','#A78BFA','#FB923C'];for(let i=0;i<n;i++){const e=document.createElement('i');e.className='cf';e.style.left=Math.random()*100+'vw';e.style.background=cols[i%cols.length];e.style.animationDelay=Math.random()*.8+'s';e.style.animationDuration=(2.2+Math.random()*1.5)+'s';document.body.appendChild(e);setTimeout(()=>e.remove(),4500)}}
 function render(){const s=$('#stage');
- if(V.type!=='round'){$('#tt').textContent='The Big Spelling Bee';$('#ts').textContent='Spell it! Say it! Shine!';$('#tr').textContent='';$('#left').innerHTML='';
-  s.innerHTML=`<div style="font-size:18vh">🐝</div><div class="big">The Big Spelling Bee</div><div class="mid" style="margin-top:2vh">Get ready to spell! ✨</div>`;return}
+ if(V.type!=='round'){const nm=V.school||'The Big Spelling Bee';$('#tt').textContent=nm;$('#ts').textContent=V.tagline||'Spell it! Say it! Shine!';$('#tr').textContent='';$('#left').innerHTML='';
+  s.innerHTML=`<div style="font-size:18vh">🐝</div><div class="big">${esc(nm)}</div><div class="mid" style="margin-top:2vh">Get ready to spell! ✨</div>`;return}
  $('#tt').textContent=V.title;$('#ts').textContent=V.teamE+' '+V.team;$('#tr').textContent=V.phase==='champ'?'🏆 Championship word':V.round?'Round '+V.round:'';
  const left=V.phase==='done'?[]:V.left;$('#left').innerHTML=left.length>1?left.map(x=>`<div>${av(x.avatar,vh(7))}${esc(x.name)}</div>`).join(''):'';
  let h='';

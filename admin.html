@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Spelling Bee – Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--aa:#1B3A6B;--honey:#F5B700;--honeyL:#FFF3C4;--ink:#1F2A44;--ink2:#46506B;--muted:#6B7280;--bg:#FFFBEF;--line:#EFE6CC;--ok:#1E9E5A;--okL:#E3F6EA;--bad:#D64545;--badL:#FDE8E8}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Nunito,system-ui,sans-serif;font-size:14.5px}
+h1,h2,h3,.f{font-family:Fredoka,Nunito,sans-serif;font-weight:600;margin:0}
+header{background:var(--aa);color:#fff;padding:12px 22px;display:flex;align-items:center;gap:12px}header .t{font-family:Fredoka;font-size:21px}header a{color:#fff;font-weight:800;margin-left:auto}
+main{max-width:1250px;margin:0 auto;padding:22px}
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:16px}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-bottom:16px}.stat{font-family:Fredoka;font-size:32px;line-height:1}
+.muted{color:var(--muted)}.small{font-size:12.5px}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.spacer{flex:1}
+button{font-family:inherit;font-weight:800;font-size:13.5px;border:0;border-radius:9px;padding:8px 12px;cursor:pointer;background:var(--aa);color:#fff}button.y{background:var(--honey);color:var(--ink)}button.w{background:#fff;color:var(--ink);border:1.5px solid var(--line)}button.sm{padding:5px 9px;font-size:12.5px}
+input,select,textarea{font-family:inherit;font-size:13.5px;border:1.5px solid var(--line);border-radius:8px;padding:6px 8px;background:#fff;color:var(--ink)}
+table{width:100%;border-collapse:collapse}th{text-align:left;font-size:11.5px;text-transform:uppercase;color:var(--muted);padding:8px;border-bottom:2px solid var(--line)}td{padding:8px;border-bottom:1px solid #F4EEDC;vertical-align:top}
+.pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:800}.trial{background:#E8F0FF;color:#1E3A8A}.standard{background:#FEF3C7;color:#92400E}.premium{background:#EDE9FE;color:#5B21B6}.ended{background:var(--badL);color:#991B1B}.new{background:var(--badL);color:#991B1B}.done{background:var(--okL);color:#166534}
+.tablewrap{overflow-x:auto}.plansgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:12px;font-weight:800;display:none}
+</style>
+</head>
+<body>
+<header><div style="font-size:28px">🛠</div><div class="t">Spelling Bee — Admin</div><a href="teacher.html">← Teacher page</a></header>
+<main id="app"><p class="muted">Loading…</p></main>
+<div class="toast" id="toast"></div>
+<script>
+(function(){
+"use strict";
+const SUPABASE_URL='https://xpbkdnkfufkahaszfycd.supabase.co';
+const SUPABASE_KEY='sb_publishable_QIAV_9tLUBbDCu7FHqaTEw_zYQ0teEG';
+const $=s=>document.querySelector(s);
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+let tT;function toast(m){const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(tT);tT=setTimeout(()=>t.style.display='none',2600)}
+let sb=null;try{sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY)}catch(e){}
+let D=null,Q='';
+const today=new Date(Date.now()+4*3600e3).toISOString().slice(0,10);
+const fd=d=>d?new Date(String(d).slice(0,10)+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'—';
+function plusYear(){const d=new Date(today+'T12:00:00');d.setFullYear(d.getFullYear()+1);return d.toISOString().slice(0,10)}
+async function load(){if(!sb){$('#app').innerHTML='<div class="card">Can’t connect.</div>';return}
+ const {data:{session}}=await sb.auth.getSession();
+ if(!session){$('#app').innerHTML=`<div class="card" style="max-width:480px;margin:40px auto;text-align:center"><h2>Please sign in first</h2><p class="muted">Sign in on the teacher page with your admin email, then come back.</p><a href="teacher.html"><button class="y">Teacher page</button></a></div>`;return}
+ const {data}=await sb.rpc('admin_overview');if(!data||data.error){$('#app').innerHTML='<div class="card">This page is only for the Spelling Bee admin.</div>';return}D=data;render()}
+function render(){const S=D.schools||[],R=D.requests||[],P=D.plans||[];const newR=R.filter(r=>r.status==='new');
+ const active=S.filter(s=>s.plan_until>=today),paid=active.filter(s=>s.plan!=='trial'),trials=active.filter(s=>s.plan==='trial');
+ const income=paid.reduce((n,s)=>n+((P.find(p=>p.id===s.plan)||{}).price||0),0);
+ const list=S.filter(s=>!Q||(s.name+' '+s.slug+' '+s.contact_email+' '+s.city).toLowerCase().includes(Q));
+ $('#app').innerHTML=`<div class="grid">
+  <div class="card"><div class="stat">${S.length}</div><div class="small muted">schools</div></div>
+  <div class="card"><div class="stat">${trials.length}</div><div class="small muted">on free trial</div></div>
+  <div class="card"><div class="stat">${paid.length}</div><div class="small muted">paying schools</div></div>
+  <div class="card"><div class="stat">AED ${income.toLocaleString()}</div><div class="small muted">yearly value of active plans</div></div>
+  <div class="card"><div class="stat">${newR.length}</div><div class="small muted">plan requests waiting</div></div></div>
+ <div class="card"><h2 style="font-size:20px">📨 Plan requests</h2><p class="small muted">When a school asks for a plan: send them an invoice, and once it’s paid click <b>Switch on</b>.</p>
+  <div class="tablewrap"><table><thead><tr><th>Date</th><th>School</th><th>Plan</th><th>Asked by</th><th>Status</th><th></th></tr></thead><tbody>
+  ${R.map(r=>`<tr><td>${fd(r.at)}</td><td><b>${esc(r.school)}</b></td><td><span class="pill ${r.plan}">${esc((P.find(p=>p.id===r.plan)||{}).name||r.plan)}</span> AED ${((P.find(p=>p.id===r.plan)||{}).price||0).toLocaleString()}</td><td>${esc(r.by)}</td><td><span class="pill ${r.status}">${r.status==='new'?'Waiting':'Done'}</span></td>
+   <td style="white-space:nowrap">${r.status==='new'?`<button class="y sm" data-on="${r.school_id}" data-plan="${r.plan}">Switch on for 1 year</button> <button class="w sm" data-rdone="${r.id}">Mark done</button>`:''}</td></tr>`).join('')||'<tr><td colspan="6" class="muted">No requests yet.</td></tr>'}</tbody></table></div></div>
+ <div class="card"><div class="row"><h2 style="font-size:20px">🏫 Schools</h2><div class="spacer"></div><input id="q" placeholder="Search…" value="${esc(Q)}" style="width:220px"></div>
+  <div class="tablewrap" style="margin-top:8px"><table><thead><tr><th>School</th><th>Contact</th><th>Children</th><th>Last active</th><th>Plan</th><th>Until</th><th>Change plan</th></tr></thead><tbody>
+  ${list.map(s=>{const ended=s.plan_until<today;return `<tr><td><b>${esc(s.name)}</b><div class="small"><a href="./?s=${esc(s.slug)}" target="_blank">?s=${esc(s.slug)}</a> · ${esc(s.city||'')}</div><div class="small muted">Joined ${fd(s.created_at)}</div></td>
+   <td class="small">${esc(s.contact_name)}<br><a href="mailto:${esc(s.contact_email)}">${esc(s.contact_email)}</a><br>${esc(s.contact_phone)}</td>
+   <td>${s.children}<div class="small muted">${s.teachers} teacher${s.teachers==1?'':'s'}</div></td><td class="small">${s.last_active?fd(s.last_active):'—'}</td>
+   <td><span class="pill ${ended?'ended':s.plan}">${ended?'Ended':esc((P.find(p=>p.id===s.plan)||{}).name||s.plan)}</span></td><td>${fd(s.plan_until)}</td>
+   <td style="white-space:nowrap"><select data-ps="${s.id}">${P.map(p=>`<option value="${p.id}" ${p.id===s.plan?'selected':''}>${esc(p.name)}</option>`).join('')}</select> <input type="date" data-pu="${s.id}" value="${s.plan_until}"> <button class="w sm" data-save="${s.id}">Save</button></td></tr>`}).join('')||'<tr><td colspan="7" class="muted">No schools.</td></tr>'}</tbody></table></div></div>
+ <div class="card"><h2 style="font-size:20px">💰 Plans & prices</h2><p class="small muted">These show on the website’s Plans section and on every school’s settings page. One feature per line.</p>
+  <div class="plansgrid">${P.map(p=>`<div class="card" style="margin:0"><div class="row"><b class="f" style="font-size:19px">${esc(p.name)}</b><div class="spacer"></div>${p.id==='trial'?'<span class="small muted">30 days free</span>':`AED <input type="number" min="0" step="50" data-price="${p.id}" value="${p.price}" style="width:100px">`}</div>
+   <label class="small muted" style="display:block;margin-top:8px">Short description</label><input data-blurb="${p.id}" value="${esc(p.blurb)}" style="width:100%">
+   <label class="small muted" style="display:block;margin-top:8px">Features</label><textarea data-feat="${p.id}" rows="6" style="width:100%">${esc((p.features||[]).join('\n'))}</textarea>
+   <button class="y sm" data-psave="${p.id}" style="margin-top:8px">Save ${esc(p.name)}</button></div>`).join('')}</div></div>`;
+ $('#q').oninput=e=>{Q=e.target.value.toLowerCase();const pos=e.target.selectionStart;render();const i=$('#q');i.focus();i.setSelectionRange(pos,pos)};
+ document.querySelectorAll('[data-on]').forEach(b=>b.onclick=()=>setPlan(b.dataset.on,b.dataset.plan,plusYear()));
+ document.querySelectorAll('[data-rdone]').forEach(b=>b.onclick=async()=>{await sb.rpc('admin_request_done',{p_id:+b.dataset.rdone});await load();toast('Done ✓')});
+ document.querySelectorAll('[data-save]').forEach(b=>b.onclick=()=>{const id=b.dataset.save;setPlan(id,document.querySelector(`[data-ps="${id}"]`).value,document.querySelector(`[data-pu="${id}"]`).value)});
+ document.querySelectorAll('[data-psave]').forEach(b=>b.onclick=async()=>{const id=b.dataset.psave;const pr=document.querySelector(`[data-price="${id}"]`);
+  const {data}=await sb.rpc('admin_set_price',{p_plan:id,p_price:pr?+pr.value:0,p_blurb:document.querySelector(`[data-blurb="${id}"]`).value,p_features:document.querySelector(`[data-feat="${id}"]`).value.split('\n').map(x=>x.trim()).filter(Boolean)});
+  if(data&&data.ok){await load();toast('Saved ✓')}else toast('Couldn’t save')});
+}
+async function setPlan(id,plan,until){if(!until){toast('Choose a date');return}const {data}=await sb.rpc('admin_set_plan',{p_school:id,p_plan:plan,p_until:until});if(data&&data.ok){await load();toast('Plan updated ✓')}else toast('Couldn’t update')}
+load();
+})();
+</script>
+</body>
+</html>

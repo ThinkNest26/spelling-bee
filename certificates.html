@@ -70,6 +70,7 @@ const SUPABASE_KEY='sb_publishable_QIAV_9tLUBbDCu7FHqaTEw_zYQ0teEG';
 const $=s=>document.querySelector(s);
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 let tT;function toast(m){const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(tT);tT=setTimeout(()=>t.style.display='none',2600)}
+function lockPage(what){document.getElementById('app').innerHTML=`<div class="card" style="max-width:560px;margin:40px auto;text-align:center"><div style="font-size:54px">⭐</div><h2 style="font-size:24px;margin:8px 0">${what} is part of the Premium plan</h2><p class="muted">Ask your school to upgrade in <b>⚙️ School settings → Plan</b> on the teacher page.</p><a href="teacher.html"><button class="y">Go to the teacher page</button></a></div>`}
 function teamOf(g){g=+g;return g===0?'buz':g===1?'hon':g<=3?'bum':'cha'}
 function GL(g){return +g===0?'KG2':'Grade '+g}
 function av(a,px){try{return window.SBAvatar.svg(a||{},px)}catch(e){return ''}}
@@ -93,10 +94,11 @@ function keep(){try{localStorage.setItem('sb-cert',JSON.stringify({theme:ST.them
 async function start(){
  if(!sb){$('#app').innerHTML='<div class="card">Can’t connect.</div>';return}
  const {data:{session}}=await sb.auth.getSession();
+ if(session){const {data:si}=await sb.rpc('my_school_info');if(si&&!si.premium){lockPage('Certificates');return}if(si){if(!ST.school)ST.school=si.name;if(!ST.logo&&si.logo)ST.logo=si.logo}}
  if(!session){$('#app').innerHTML=`<div class="card" style="max-width:520px;margin:40px auto;text-align:center"><h2>Please sign in first</h2><p class="muted">Sign in on the teacher page, then come back here.</p><a href="teacher.html"><button class="y">Go to the teacher page</button></a></div>`;return}
  const [{data:k},{data:p},{data:w},{data:rw},{data:br}]=await Promise.all([
   sb.from('students').select('*').eq('active',true).order('grade').order('class_name').order('first_name'),
-  sb.from('progress').select('*'),sb.rpc('public_words'),sb.from('race_wins').select('student_id'),sb.from('bee_rounds').select('kind,state')]);
+  sb.from('progress').select('*'),sb.rpc('teacher_words'),sb.from('race_wins').select('student_id'),sb.from('bee_rounds').select('kind,state')]);
  KIDS=k||[];(p||[]).forEach(x=>PROG[x.student_id]=x);
  (Array.isArray(w)?w:[]).forEach(r=>TOT[r.team]=(TOT[r.team]||0)+1);
  (rw||[]).forEach(r=>WINS[r.student_id]=(WINS[r.student_id]||0)+1);

@@ -72,23 +72,25 @@ const SITE='school-spellingbee.com';
 const $=s=>document.querySelector(s);
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 let tT;function toast(m){const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(tT);tT=setTimeout(()=>t.style.display='none',2600)}
+function lockPage(what){document.getElementById('app').innerHTML=`<div class="card" style="max-width:560px;margin:40px auto;text-align:center"><div style="font-size:54px">⭐</div><h2 style="font-size:24px;margin:8px 0">${what} is part of the Premium plan</h2><p class="muted">Ask your school to upgrade in <b>⚙️ School settings → Plan</b> on the teacher page.</p><a href="teacher.html"><button class="y">Go to the teacher page</button></a></div>`}
 function teamOf(g){g=+g;return g===0?'buz':g===1?'hon':g<=3?'bum':'cha'}
 function GL(g){return +g===0?'KG2':'Grade '+g}
 const TEAMN={buz:'Buzzy Bees (KG2)',hon:'Honey Bees (Grade 1)',bum:'Bumble Bees (Grades 2–3)',cha:'Champion Bees (Grades 4–5)'};
 function av(a,px){try{return window.SBAvatar.svg(a||{},px)}catch(e){return ''}}
 function fmtCode(c){return c&&c.length===6?c.slice(0,3)+'-'+c.slice(3):c}
 let sb=null;try{sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY)}catch(e){}
-let KIDS=[],PROG={},WINS={},WORDS={};
+let SCH=null,KIDS=[],PROG={},WINS={},WORDS={};
 let ST={grade:'all',cls:'all',sel:new Set(),msg:'',sig:'',role:'Class Teacher',date:new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}),showCode:true,logo:''};
 try{const c=JSON.parse(localStorage.getItem('sb-cert')||'{}');if(c.logo)ST.logo=c.logo;if(c.sig1)ST.sig=c.sig1;if(c.role1)ST.role=c.role1;const r=JSON.parse(localStorage.getItem('sb-report')||'{}');Object.assign(ST,r,{sel:new Set()})}catch(e){}
 function keep(){try{localStorage.setItem('sb-report',JSON.stringify({msg:ST.msg,sig:ST.sig,role:ST.role,showCode:ST.showCode}))}catch(e){}}
 async function start(){
  if(!sb){$('#app').innerHTML='<div class="card">Can’t connect.</div>';return}
  const {data:{session}}=await sb.auth.getSession();
+ if(session){const {data:si}=await sb.rpc('my_school_info');if(si&&!si.premium){lockPage('Parent reports');return}if(si){SCH=si;if(!ST.logo&&si.logo)ST.logo=si.logo}}
  if(!session){$('#app').innerHTML=`<div class="card" style="max-width:520px;margin:40px auto;text-align:center"><h2>Please sign in first</h2><p class="muted">Sign in on the teacher page, then come back here.</p><a href="teacher.html"><button class="y">Go to the teacher page</button></a></div>`;return}
  const [{data:k},{data:p},{data:w},{data:rw}]=await Promise.all([
   sb.from('students').select('*').eq('active',true).order('grade').order('class_name').order('first_name'),
-  sb.from('progress').select('*'),sb.rpc('public_words'),sb.from('race_wins').select('student_id')]);
+  sb.from('progress').select('*'),sb.rpc('teacher_words'),sb.from('race_wins').select('student_id')]);
  KIDS=k||[];(p||[]).forEach(x=>PROG[x.student_id]=x);(rw||[]).forEach(r=>WINS[r.student_id]=(WINS[r.student_id]||0)+1);
  (Array.isArray(w)?w:[]).forEach(r=>(WORDS[r.team]=WORDS[r.team]||[]).push(r));
  render()}
@@ -101,7 +103,7 @@ function report(k){const a=analyse(k),p=a.p;const pct=a.total?Math.round(a.sec.l
  const practise=[...a.tri,...a.alm,...a.todo].slice(0,ST.msg?7:9);
  const wl=(arr,n)=>arr.length?`<div class="words">${arr.slice(0,n).map(r=>`<span>${esc(r.word)}</span>`).join('')}${arr.length>n?`<span>+${arr.length-n} more</span>`:''}</div>`:'<span style="color:#6B7280">—</span>';
  return `<div class="rep">
- <div class="hd">${ST.logo?`<div class="logo"><img src="${ST.logo}" alt=""></div>`:'<div style="font-size:11mm">🐝</div>'}<div><h1>Spelling Bee progress report</h1><div class="sub">The Big Spelling Bee · Grand Final Friday 22 January 2027</div></div><div style="margin-left:auto;text-align:right;font-weight:800">${esc(ST.date)}</div></div>
+ <div class="hd">${ST.logo?`<div class="logo"><img src="${ST.logo}" alt=""></div>`:'<div style="font-size:11mm">🐝</div>'}<div><h1>Spelling Bee progress report</h1><div class="sub">${esc(SCH?SCH.name:'The Big Spelling Bee')}${SCH&&SCH.settings&&SCH.settings.final_date?' · Grand Final '+new Date(SCH.settings.final_date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}):''}</div></div><div style="margin-left:auto;text-align:right;font-weight:800">${esc(ST.date)}</div></div>
  <div class="kid">${av(p.avatar,96)}<div><div class="nm">${esc(k.first_name)}</div><div class="cl">${esc(k.class_name||GL(k.grade))} · ${TEAMN[teamOf(k.grade)]}</div></div></div>
  <div class="stats"><div class="st"><b>${p.stars||0}</b><span>⭐ stars earned</span></div><div class="st"><b>${a.sec.length}/${a.total}</b><span>🔵 words secure</span></div><div class="st"><b>${p.attempts||0}</b><span>✏️ words practised</span></div><div class="st"><b>${acc}%</b><span>✅ spelt correctly</span></div><div class="st"><b>${p.best_streak||0}</b><span>🔥 best streak (days)</span></div></div>
  <div style="font-weight:800">Spelling list progress: ${pct}% secure</div><div class="bar"><i style="width:${pct}%"></i></div>
@@ -113,7 +115,7 @@ function report(k){const a=analyse(k),p=a.p;const pct=a.total?Math.round(a.sec.l
  ${practise.length?`<table>${practise.map(r=>`<tr><td>${esc(r.word)}</td><td>${esc(r.meaning||'')}${r.sentence?` <span style="color:#46506B;font-style:italic">“${esc(r.sentence)}”</span>`:''}</td></tr>`).join('')}</table>`:`<p>Amazing — every word is secure! Keep practising so the words stay strong. 🌟</p>`}
  ${ST.msg?`<h3>💬 A message from school</h3><div class="msg">${esc(ST.msg)}</div>`:''}
  <h3>🏠 How you can help at home</h3>
- <div class="help"><div>📱 Practise together for <b>10 minutes a day</b> on <b>${SITE}</b>${ST.showCode&&k.code?`<br>Bee code: <span class="code">${esc(fmtCode(k.code))}</span>`:''}</div>
+ <div class="help"><div>📱 Practise together for <b>10 minutes a day</b> on <b>${SITE}</b>${SCH?'/?s='+esc(SCH.slug):''}${ST.showCode&&k.code?`<br>Bee code: <span class="code">${esc(fmtCode(k.code))}</span>`:''}</div>
   <div>🗣️ Ask ${esc(k.first_name)} to <b>spell words out loud</b>, letter by letter, just like in the real Spelling Bee.</div>
   <div>🎮 Try <b>Real Bee practice</b> and the <b>spelling games</b> — stars can be spent on their avatar!</div>
   <div>🌟 Celebrate effort! Every word practised helps. ${WINS[k.id]?`${esc(k.first_name)} has won ${WINS[k.id]} race${WINS[k.id]>1?'s':''} 🏁`:''}</div></div>
