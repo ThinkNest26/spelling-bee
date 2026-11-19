@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Spelling Bee – Parent reports</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="avatar.js"></script>
+<style>
+:root{--aa:#1B3A6B;--honey:#F5B700;--honey2:#FFD54A;--honeyL:#FFF3C4;--ink:#1F2A44;--ink2:#46506B;--muted:#6B7280;--bg:#FFFBEF;--line:#EFE6CC;--ok:#1E9E5A;--okL:#E3F6EA}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Nunito,system-ui,sans-serif;font-size:15px}
+h1,h2,h3,.f{font-family:Fredoka,Nunito,sans-serif;font-weight:600;margin:0}
+button{font-family:inherit;font-weight:800;font-size:14px;border:0;border-radius:10px;padding:9px 14px;cursor:pointer;background:var(--aa);color:#fff}
+button.y{background:var(--honey);color:var(--ink)}button.w{background:#fff;color:var(--ink);border:1.5px solid var(--line)}button.sm{padding:5px 9px;font-size:12.5px;border-radius:8px}button:disabled{opacity:.45;cursor:not-allowed}
+input,select,textarea{font-family:inherit;font-size:14px;border:1.5px solid var(--line);border-radius:9px;padding:8px 10px;background:#fff;color:var(--ink);width:100%}
+label{font-size:12.5px;font-weight:800;color:var(--ink2);display:block;margin:10px 0 4px}
+header{background:var(--aa);color:#fff;padding:12px 22px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+header .t{font-family:Fredoka;font-size:21px}header .s{font-size:12.5px;opacity:.75}header .right{margin-left:auto}header a{color:#fff;font-weight:800}
+main{max-width:1250px;margin:0 auto;padding:22px}
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.spacer{flex:1}.muted{color:var(--muted)}.small{font-size:12.5px}
+.layout{display:grid;grid-template-columns:360px 1fr;gap:16px;align-items:start}.layout>div{min-width:0}@media(max-width:980px){.layout{grid-template-columns:1fr}}
+.kids{max-height:360px;overflow:auto;border:1.5px solid var(--line);border-radius:12px;padding:6px}
+.kids label{display:flex;align-items:center;gap:8px;margin:0;padding:5px 8px;border-radius:9px;font-size:14px;color:var(--ink);cursor:pointer}.kids label:hover{background:var(--honeyL)}.kids input{width:auto}.kids svg{border-radius:50%;flex:none}
+.kids .on{background:var(--honeyL)}
+.preview{width:100%;background:#E9E3D2;border-radius:16px;padding:16px;overflow:auto}
+/* report: A4 portrait */
+.rep{width:210mm;height:297mm;background:#fff;position:relative;overflow:hidden;padding:12mm 13mm;font-size:3.6mm;color:#1F2A44;break-after:page;page-break-after:always;display:flex;flex-direction:column}
+.rep:last-child{break-after:auto;page-break-after:auto}
+.rep .hd{display:flex;align-items:center;gap:4mm;background:#1B3A6B;color:#fff;border-radius:4mm;padding:4mm 6mm}
+.rep .hd .logo{background:#fff;border-radius:2.5mm;padding:1.5mm 2.5mm;display:flex;align-items:center}.rep .hd .logo img{max-height:12mm;max-width:40mm}
+.rep .hd h1{font-size:7.5mm}.rep .hd .sub{opacity:.85;font-size:3.6mm}
+.rep .kid{display:flex;align-items:center;gap:5mm;margin:4mm 0 2mm}
+.rep .kid svg{border-radius:50%;border:1.2mm solid #F5B700}
+.rep .kid .nm{font-family:Fredoka;font-size:10mm;line-height:1}.rep .kid .cl{color:#46506B;font-weight:800;margin-top:1mm}
+.rep .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:2.5mm;margin:2mm 0 4mm}
+.rep .st{background:#FFF8E1;border-radius:3mm;padding:3mm;text-align:center}.rep .st b{display:block;font-family:Fredoka;font-size:7mm;line-height:1.1}.rep .st span{font-size:3mm;color:#46506B;font-weight:700}
+.rep .bar{height:4mm;background:#F3EBD2;border-radius:3mm;overflow:hidden;margin:1.5mm 0}.rep .bar i{display:block;height:100%;background:linear-gradient(90deg,#7FB3F5,#3D7DD8)}
+.rep h3{font-size:4.6mm;margin:3mm 0 1.5mm;color:#1B3A6B}
+.rep .cols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:3mm}
+.rep .box{border-radius:3mm;padding:2.5mm;min-height:16mm}.rep .box .t{font-weight:800;margin-bottom:1.5mm}
+.rep .b-sec{background:#E3EFFF}.rep .b-alm{background:#E3F6EA}.rep .b-tri{background:#FFF2B8}
+.rep .words{display:flex;flex-wrap:wrap;gap:1.2mm}.rep .words span{background:#fff;border-radius:2mm;padding:.6mm 1.8mm;font-weight:700;font-size:3.3mm}
+.rep table{width:100%;border-collapse:collapse;font-size:3.4mm}.rep td{padding:1.1mm 2mm;border-bottom:.3mm solid #EFE6CC;vertical-align:top}.rep td:first-child{font-weight:800;width:32mm;font-size:3.8mm}
+.rep .msg{background:#FFF8E1;border-left:1.5mm solid #F5B700;border-radius:2mm;padding:3mm 4mm;white-space:pre-wrap}
+.rep .help{display:grid;grid-template-columns:1fr 1fr;gap:3mm;margin-top:2mm}.rep .help div{background:#F6F8FC;border-radius:3mm;padding:2.2mm 3mm}
+.rep .code{font-family:ui-monospace,Menlo,monospace;font-weight:800;font-size:5mm;letter-spacing:.1em;background:#FFF3C4;border-radius:2mm;padding:.5mm 2.5mm}
+.rep .foot{margin-top:auto;display:flex;justify-content:space-between;align-items:flex-end;font-size:3.2mm;color:#6B7280;padding-top:3mm}
+.rep .sig{width:60mm;border-top:.4mm solid #999;text-align:center;padding-top:1mm;color:#1F2A44;font-weight:800}
+.scale{transform-origin:top left}
+#printarea{display:none}
+@media print{@page{size:A4 portrait;margin:0}body *{visibility:hidden}#printarea,#printarea *{visibility:visible}#printarea{display:block;position:absolute;left:0;top:0}header,main,footer{display:none}}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:12px;font-weight:800;z-index:60;display:none}
+</style>
+</head>
+<body>
+<header><div style="font-size:30px">📄</div><div><div class="t">Spelling Bee — Parent reports</div><div class="s">A one-page progress report for each child</div></div><div class="right"><a href="teacher.html">← Teacher page</a></div></header>
+<main id="app"><p class="muted">Loading…</p></main>
+<footer style="text-align:center;padding:24px;font-size:13px;color:#6B7280;font-weight:700">Powered by <a href="https://thinknestonline.com" target="_blank" rel="noopener" style="color:#1B3A6B">ThinkNest</a></footer>
+<div id="printarea"></div>
+<div class="toast" id="toast"></div>
+<script>
+(function(){
+"use strict";
+const SUPABASE_URL='https://xpbkdnkfufkahaszfycd.supabase.co';
+const SUPABASE_KEY='sb_publishable_QIAV_9tLUBbDCu7FHqaTEw_zYQ0teEG';
+const SITE='school-spellingbee.com';
+const $=s=>document.querySelector(s);
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+let tT;function toast(m){const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(tT);tT=setTimeout(()=>t.style.display='none',2600)}
+function teamOf(g){g=+g;return g===0?'buz':g===1?'hon':g<=3?'bum':'cha'}
+function GL(g){return +g===0?'KG2':'Grade '+g}
+const TEAMN={buz:'Buzzy Bees (KG2)',hon:'Honey Bees (Grade 1)',bum:'Bumble Bees (Grades 2–3)',cha:'Champion Bees (Grades 4–5)'};
+function av(a,px){try{return window.SBAvatar.svg(a||{},px)}catch(e){return ''}}
+function fmtCode(c){return c&&c.length===6?c.slice(0,3)+'-'+c.slice(3):c}
+let sb=null;try{sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY)}catch(e){}
+let KIDS=[],PROG={},WINS={},WORDS={};
+let ST={grade:'all',cls:'all',sel:new Set(),msg:'',sig:'',role:'Class Teacher',date:new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}),showCode:true,logo:''};
+try{const c=JSON.parse(localStorage.getItem('sb-cert')||'{}');if(c.logo)ST.logo=c.logo;if(c.sig1)ST.sig=c.sig1;if(c.role1)ST.role=c.role1;const r=JSON.parse(localStorage.getItem('sb-report')||'{}');Object.assign(ST,r,{sel:new Set()})}catch(e){}
+function keep(){try{localStorage.setItem('sb-report',JSON.stringify({msg:ST.msg,sig:ST.sig,role:ST.role,showCode:ST.showCode}))}catch(e){}}
+async function start(){
+ if(!sb){$('#app').innerHTML='<div class="card">Can’t connect.</div>';return}
+ const {data:{session}}=await sb.auth.getSession();
+ if(!session){$('#app').innerHTML=`<div class="card" style="max-width:520px;margin:40px auto;text-align:center"><h2>Please sign in first</h2><p class="muted">Sign in on the teacher page, then come back here.</p><a href="teacher.html"><button class="y">Go to the teacher page</button></a></div>`;return}
+ const [{data:k},{data:p},{data:w},{data:rw}]=await Promise.all([
+  sb.from('students').select('*').eq('active',true).order('grade').order('class_name').order('first_name'),
+  sb.from('progress').select('*'),sb.rpc('public_words'),sb.from('race_wins').select('student_id')]);
+ KIDS=k||[];(p||[]).forEach(x=>PROG[x.student_id]=x);(rw||[]).forEach(r=>WINS[r.student_id]=(WINS[r.student_id]||0)+1);
+ (Array.isArray(w)?w:[]).forEach(r=>(WORDS[r.team]=WORDS[r.team]||[]).push(r));
+ render()}
+function visible(){return KIDS.filter(k=>(ST.grade==='all'||k.grade==ST.grade)&&(ST.cls==='all'||k.class_name===ST.cls))}
+function analyse(k){const p=PROG[k.id]||{},ok=p.words||{},bad=p.tricky||{},list=WORDS[teamOf(k.grade)]||[];
+ const sec=[],alm=[],tri=[],todo=[];list.forEach(r=>{const o=+ok[r.word]||0,b=+bad[r.word]||0;if(o>=2)sec.push(r);else if(o===1&&b<=o)alm.push(r);else if(b>0)tri.push(r);else todo.push(r)});
+ tri.sort((a,b)=>(+bad[b.word]||0)-(+bad[a.word]||0));
+ return {p,sec,alm,tri,todo,total:list.length}}
+function report(k){const a=analyse(k),p=a.p;const pct=a.total?Math.round(a.sec.length/a.total*100):0;const acc=p.attempts?Math.round((p.correct||0)/p.attempts*100):0;
+ const practise=[...a.tri,...a.alm,...a.todo].slice(0,ST.msg?7:9);
+ const wl=(arr,n)=>arr.length?`<div class="words">${arr.slice(0,n).map(r=>`<span>${esc(r.word)}</span>`).join('')}${arr.length>n?`<span>+${arr.length-n} more</span>`:''}</div>`:'<span style="color:#6B7280">—</span>';
+ return `<div class="rep">
+ <div class="hd">${ST.logo?`<div class="logo"><img src="${ST.logo}" alt=""></div>`:'<div style="font-size:11mm">🐝</div>'}<div><h1>Spelling Bee progress report</h1><div class="sub">The Big Spelling Bee · Grand Final Friday 22 January 2027</div></div><div style="margin-left:auto;text-align:right;font-weight:800">${esc(ST.date)}</div></div>
+ <div class="kid">${av(p.avatar,96)}<div><div class="nm">${esc(k.first_name)}</div><div class="cl">${esc(k.class_name||GL(k.grade))} · ${TEAMN[teamOf(k.grade)]}</div></div></div>
+ <div class="stats"><div class="st"><b>${p.stars||0}</b><span>⭐ stars earned</span></div><div class="st"><b>${a.sec.length}/${a.total}</b><span>🔵 words secure</span></div><div class="st"><b>${p.attempts||0}</b><span>✏️ words practised</span></div><div class="st"><b>${acc}%</b><span>✅ spelt correctly</span></div><div class="st"><b>${p.best_streak||0}</b><span>🔥 best streak (days)</span></div></div>
+ <div style="font-weight:800">Spelling list progress: ${pct}% secure</div><div class="bar"><i style="width:${pct}%"></i></div>
+ <h3>How ${esc(k.first_name)} is doing with the words</h3>
+ <div class="cols"><div class="box b-sec"><div class="t">🔵 Secure (${a.sec.length})</div><div class="small">Spelt correctly at least twice</div>${wl(a.sec,14)}</div>
+  <div class="box b-alm"><div class="t">🟢 Almost there (${a.alm.length})</div><div class="small">Spelt correctly once</div>${wl(a.alm,14)}</div>
+  <div class="box b-tri"><div class="t">🟡 Keep practising (${a.tri.length})</div><div class="small">Words that have been tricky</div>${wl(a.tri,14)}</div></div>
+ <h3>📝 Words to practise at home</h3>
+ ${practise.length?`<table>${practise.map(r=>`<tr><td>${esc(r.word)}</td><td>${esc(r.meaning||'')}${r.sentence?` <span style="color:#46506B;font-style:italic">“${esc(r.sentence)}”</span>`:''}</td></tr>`).join('')}</table>`:`<p>Amazing — every word is secure! Keep practising so the words stay strong. 🌟</p>`}
+ ${ST.msg?`<h3>💬 A message from school</h3><div class="msg">${esc(ST.msg)}</div>`:''}
+ <h3>🏠 How you can help at home</h3>
+ <div class="help"><div>📱 Practise together for <b>10 minutes a day</b> on <b>${SITE}</b>${ST.showCode&&k.code?`<br>Bee code: <span class="code">${esc(fmtCode(k.code))}</span>`:''}</div>
+  <div>🗣️ Ask ${esc(k.first_name)} to <b>spell words out loud</b>, letter by letter, just like in the real Spelling Bee.</div>
+  <div>🎮 Try <b>Real Bee practice</b> and the <b>spelling games</b> — stars can be spent on their avatar!</div>
+  <div>🌟 Celebrate effort! Every word practised helps. ${WINS[k.id]?`${esc(k.first_name)} has won ${WINS[k.id]} race${WINS[k.id]>1?'s':''} 🏁`:''}</div></div>
+ <div class="foot"><div>${ST.sig?`<div class="sig">${esc(ST.sig)}<div style="font-weight:600;color:#6B7280">${esc(ST.role)}</div></div>`:'<div class="sig">&nbsp;<div style="font-weight:600;color:#6B7280">Class Teacher</div></div>'}</div><div>Powered by ThinkNest</div></div>
+ </div>`}
+function render(){const list=visible();const classes=[...new Set(KIDS.filter(k=>ST.grade==='all'||k.grade==ST.grade).map(k=>k.class_name).filter(Boolean))].sort();
+ const chosen=KIDS.filter(k=>ST.sel.has(k.id));const prev=chosen[0]||list[0];
+ $('#app').innerHTML=`<div class="layout"><div class="card">
+  <h3 style="font-size:19px">1. Choose children</h3>
+  <div class="row" style="margin:8px 0"><select id="fg" style="flex:1"><option value="all">All grades</option>${[0,1,2,3,4,5].map(g=>`<option value="${g}" ${ST.grade==g?'selected':''}>${GL(g)}</option>`).join('')}</select><select id="fc" style="flex:1"><option value="all">All classes</option>${classes.map(c=>`<option ${ST.cls===c?'selected':''}>${esc(c)}</option>`).join('')}</select></div>
+  <div class="row" style="margin-bottom:8px"><button class="y sm" id="all">Tick all shown (${list.length})</button><button class="w sm" id="none">Clear</button></div>
+  <div class="kids">${list.map(k=>`<label class="${ST.sel.has(k.id)?'on':''}"><input type="checkbox" data-k="${k.id}" ${ST.sel.has(k.id)?'checked':''}>${av(PROG[k.id]?.avatar,26)}<span>${esc(k.first_name)} <span class="muted small">${esc(k.class_name||GL(k.grade))}</span></span></label>`).join('')||'<p class="muted small">No children here yet.</p>'}</div>
+  <h3 style="font-size:19px;margin-top:16px">2. Details</h3>
+  <label>Message to parents (optional, same for everyone)</label><textarea id="msg" rows="4" placeholder="e.g. Thank you for supporting your child’s spelling at home!">${esc(ST.msg)}</textarea>
+  <label>Date</label><input id="date" value="${esc(ST.date)}">
+  <div class="row"><div style="flex:1"><label>Signed by</label><input id="sig" value="${esc(ST.sig)}" placeholder="Name"></div><div style="flex:1"><label>Role</label><input id="role" value="${esc(ST.role)}"></div></div>
+  <label style="display:flex;align-items:center;gap:8px;margin-top:12px"><input type="checkbox" id="showCode" style="width:auto" ${ST.showCode?'checked':''}> Show the child’s bee code (so parents can log in)</label>
+  ${ST.logo?'<p class="small muted">Your school logo from Certificates is used.</p>':'<p class="small muted">Tip: add your school logo on the Certificates page and it appears here too.</p>'}
+ </div><div><div class="card"><div class="row"><h3 style="font-size:19px">Preview</h3><span class="muted small">${prev?esc(prev.first_name)+"'s report":''}</span><div class="spacer"></div><button class="y" id="print" ${chosen.length?'':'disabled'}>🖨 Print ${chosen.length||''} report${chosen.length===1?'':'s'}</button></div>
+  <div class="preview" style="margin-top:12px">${prev?`<div class="scale" id="sc">${report(prev)}</div>`:'<p class="muted">No children yet.</p>'}</div>
+  <p class="small muted">Prints on A4, one page per child. Turn off <b>Headers and footers</b> in the print window if they appear.</p></div></div></div>`;
+ fit();bind()}
+function fit(){const sc=$('#sc');if(!sc)return;const w=sc.parentElement.clientWidth-32;const k=Math.min(1,w/(210*3.78));sc.style.transform=`scale(${k})`;sc.parentElement.style.height=(297*3.78*k+32)+'px'}
+addEventListener('resize',fit);
+function bind(){$('#fg').onchange=e=>{ST.grade=e.target.value;ST.cls='all';render()};$('#fc').onchange=e=>{ST.cls=e.target.value;render()};
+ $('#all').onclick=()=>{visible().forEach(k=>ST.sel.add(k.id));render()};$('#none').onclick=()=>{ST.sel.clear();render()};
+ document.querySelectorAll('[data-k]').forEach(c=>c.onchange=()=>{c.checked?ST.sel.add(c.dataset.k):ST.sel.delete(c.dataset.k);render()});
+ ['msg','date','sig','role'].forEach(id=>{const i=$('#'+id);i.onchange=()=>{ST[id]=i.value;keep();render()}});
+ $('#showCode').onchange=e=>{ST.showCode=e.target.checked;keep();render()};
+ $('#print').onclick=()=>{const kids=KIDS.filter(k=>ST.sel.has(k.id));$('#printarea').innerHTML=kids.map(report).join('');setTimeout(()=>window.print(),300)}}
+start();
+})();
+</script>
+</body>
+</html>
