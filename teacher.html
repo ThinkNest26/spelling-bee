@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="invite.js"></script>
+<script src="avatar.js"></script>
 <style>
 :root{--aa:#1B3A6B;--aa2:#D62839;--honey:#F5B700;--honey2:#FFD54A;--honeyL:#FFF3C4;--ink:#1F2A44;--ink2:#46506B;--muted:#6B7280;--bg:#FFFBEF;--line:#EFE6CC;--ok:#1E9E5A;--okL:#E3F6EA;--bad:#D64545;--badL:#FDE8E8}
 *{box-sizing:border-box}
@@ -66,6 +67,16 @@ code{background:#F3EBD2;padding:1px 6px;border-radius:6px;font-size:13px}
 .ccard .tm{font-weight:800;color:#46506B}.ccard .cd{font-family:ui-monospace,Menlo,monospace;font-size:34px;font-weight:800;letter-spacing:.12em;background:#FFF3C4;border-radius:12px;padding:8px;margin:10px 0}
 .ccard .go{font-size:14px}
 @media print{body:not(.inv-printing)>*:not(#cards){display:none!important}body:not(.inv-printing) #cards{display:block!important}body:not(.inv-printing){}@page{size:A4;margin:8mm}}
+
+.bars{display:flex;align-items:flex-end;gap:6px;height:190px;margin-top:12px;padding-bottom:34px}
+.bcol{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;position:relative}
+.bbar{width:100%;max-width:38px;background:linear-gradient(var(--honey2),var(--honey));border-radius:8px 8px 3px 3px;min-height:2px}
+.bval{font-size:11.5px;font-weight:800;color:var(--ink2);margin-bottom:3px}
+.blab{position:absolute;bottom:-32px;font-size:11px;color:var(--muted);text-align:center;line-height:1.2}.blab.today{color:var(--ink);font-weight:800}
+.dgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:14px}
+.dlist{max-height:330px;overflow:auto;margin-top:6px}
+.drow{display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid #F4EEDC}.drow svg{border-radius:50%;flex:none}
+td svg{border-radius:50%;flex:none}
 </style>
 </head>
 <body>
@@ -96,7 +107,7 @@ const ALPH='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 function newCode(){const a=new Uint32Array(6);crypto.getRandomValues(a);return Array.from(a,x=>ALPH[x%ALPH.length]).join('')}
 function ago(t){if(!t)return '—';const d=(Date.now()-new Date(t))/1000;if(d<90)return 'just now';if(d<3600)return Math.round(d/60)+' min ago';if(d<86400)return Math.round(d/3600)+' h ago';const n=Math.round(d/86400);return n===1?'yesterday':n+' days ago'}
 
-let TAB='spellers',WROWS=[],HAVE=new Set(),WTEAM='buz',sb=null,USER=null,KIDS=[],PROG={},F={grade:'all',cls:'all',q:''},SORT={k:'grade',d:1},SEL=new Set();
+let TAB='dash',WROWS=[],HAVE=new Set(),WTEAM='buz',sb=null,USER=null,KIDS=[],PROG={},F={grade:'all',cls:'all',q:''},SORT={k:'grade',d:1},SEL=new Set();
 if(READY){try{sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY)}catch(e){}}
 
 function renderLogin(msg){
@@ -131,7 +142,7 @@ async function loadWords(){
  try{const {data,error}=await sb.rpc('public_words');if(!error&&Array.isArray(data)){WROWS=data;for(const t in TEAMS)TEAMS[t][2]=WROWS.filter(w=>w.team===t).length}}catch(e){}
  try{const r=await fetch('audio/manifest.json',{cache:'no-cache'});if(r.ok){const a=await r.json();if(Array.isArray(a))HAVE=new Set(a)}}catch(e){}
 }
-function tabs(){return `<div class="tabs">${[['spellers','👧 Spellers & progress'],['words','📚 Word lists'],['invites','✉️ Invitations'],['rounds','🎤 Bee rounds & Grand Final'],['certs','🎓 Certificates']].map(([k,l])=>`<button class="${TAB===k?'on':''}" data-tab="${k}">${l}</button>`).join('')}</div>`}
+function tabs(){return `<div class="tabs">${[['dash','📊 Dashboard'],['spellers','👧 Spellers & progress'],['words','📚 Word lists'],['invites','✉️ Invitations'],['rounds','🎤 Bee rounds & Grand Final'],['certs','🎓 Certificates']].map(([k,l])=>`<button class="${TAB===k?'on':''}" data-tab="${k}">${l}</button>`).join('')}</div>`}
 function needs(w){const n=[];if(!HAVE.has(w.w_clip))n.push('word');if(w.sentence&&(!HAVE.has(w.s_clip)||!HAVE.has(w.ws_clip)))n.push('sentence');if(w.meaning&&w.m_clip&&!HAVE.has(w.m_clip))n.push('meaning');return n}
 /* ---------- invitations ---------- */
 let INVS=null,INVSEL=null,DRAFT=null,DIRTY=false;
@@ -237,13 +248,68 @@ function addWordsModal(){
   if(error){b.disabled=false;b.textContent='Add words';const m=$('#wmsg');m.textContent='Couldn’t add the words. Please try again.';m.classList.add('show');return}
   $('#modal').innerHTML='';await loadWords();render();toast(add.length+' word'+(add.length>1?'s':'')+' added'+(dup.length?' ('+dup.length+' already there)':'')+' — remember to record Kate’s voice')};
 }
+/* ---------- dashboard ---------- */
+let DF={grade:'all',cls:'all'},DAILY=null,DAILY_T=0;
+function dayStr(d){return new Date(d.getTime()+4*3600e3).toISOString().slice(0,10)}
+function avt(a,px){try{return window.SBAvatar?window.SBAvatar.svg(a||{},px):''}catch(e){return ''}}
+async function loadDaily(){if(DAILY&&Date.now()-DAILY_T<60000)return;try{const {data,error}=await sb.rpc('teacher_daily',{p_days:14});DAILY=error?[]:(data||[]);DAILY_T=Date.now()}catch(e){DAILY=[]}}
+async function renderDash(){if(!DAILY){$('#app').innerHTML=tabs()+'<p class="muted">Loading the dashboard…</p>';await loadDaily()}
+ const kids=KIDS.filter(c=>(DF.grade==='all'||c.grade==DF.grade)&&(DF.cls==='all'||c.class_name===DF.cls));const ids=new Set(kids.map(k=>k.id));
+ const classes=[...new Set(KIDS.filter(c=>DF.grade==='all'||c.grade==DF.grade).map(c=>c.class_name).filter(Boolean))].sort();
+ const today=dayStr(new Date());const days=[...Array(14)].map((_,i)=>dayStr(new Date(Date.now()-(13-i)*864e5)));const week=new Set(days.slice(7));
+ const rows=(DAILY||[]).filter(r=>ids.has(r.student_id));
+ const perDay={};days.forEach(d=>perDay[d]={a:0,c:0,kids:new Set()});rows.forEach(r=>{if(perDay[r.day]){perDay[r.day].a+=r.attempts;perDay[r.day].c+=r.correct;perDay[r.day].kids.add(r.student_id)}});
+ const wk={};rows.filter(r=>week.has(r.day)).forEach(r=>{const w=wk[r.student_id]||(wk[r.student_id]={a:0,c:0,d:0});w.a+=r.attempts;w.c+=r.correct;w.d++});
+ const practised=kids.filter(k=>wk[k.id]);const notYet=kids.filter(k=>!wk[k.id]);
+ const wa=Object.values(wk).reduce((n,w)=>n+w.a,0),wc=Object.values(wk).reduce((n,w)=>n+w.c,0);
+ const secureAll=kids.reduce((n,k)=>n+learnt(k.id),0);
+ const yday=dayStr(new Date(Date.now()-864e5));
+ const streakers=kids.filter(k=>{const p=PROG[k.id]||{};return (p.streak||0)>=2&&(p.streak_day===today||p.streak_day===yday)});
+ const pct=k=>{const t=TEAMS[teamOf(k.grade)][2]||1;return Math.round(learnt(k.id)/t*100)};
+ /* trickiest words */
+ const tw={};kids.forEach(k=>{const p=PROG[k.id]||{};const ok=p.words||{};Object.entries(p.tricky||{}).forEach(([w,n])=>{if((ok[w]||0)>=2)return;const t=tw[w]||(tw[w]={w,kids:0,miss:0});t.kids++;t.miss+=+n})});
+ const tricky=Object.values(tw).sort((a,b)=>b.kids-a.kids||b.miss-a.miss).slice(0,12);
+ const stars=practised.slice().sort((a,b)=>wk[b.id].a-wk[a.id].a).slice(0,8);
+ const byClass={};kids.forEach(k=>{const c=k.class_name||GL(k.grade);const o=byClass[c]||(byClass[c]={c,g:k.grade,n:0,p:0,sec:0,st:0});o.n++;if(wk[k.id])o.p++;o.sec+=pct(k);o.st+=(PROG[k.id]?.stars||0)});
+ const cls=Object.values(byClass).sort((a,b)=>a.g-b.g||a.c.localeCompare(b.c,undefined,{numeric:true}));
+ const maxA=Math.max(1,...days.map(d=>perDay[d].a));
+ const kidRow=(k,extra)=>`<div class="drow">${avt(PROG[k.id]?.avatar,30)}<b>${esc(k.first_name)}</b><span class="muted small">${esc(k.class_name||GL(k.grade))}</span><span class="spacer"></span>${extra}</div>`;
+ $('#app').innerHTML=tabs()+`
+ <div class="row" style="margin-bottom:14px"><select id="dg" style="max-width:170px"><option value="all">All grades</option>${GRADES.map(g=>`<option value="${g}" ${DF.grade==g?'selected':''}>${GL(g)}</option>`).join('')}</select>
+  <select id="dc" style="max-width:170px"><option value="all">All classes</option>${classes.map(c=>`<option ${DF.cls===c?'selected':''}>${esc(c)}</option>`).join('')}</select><span class="spacer"></span><button class="w" id="drefresh">↻ Refresh</button></div>
+ <div class="grid g4" style="margin-bottom:14px">
+  <div class="card"><div class="stat">${kids.length}</div><div class="small muted">spellers</div></div>
+  <div class="card"><div class="stat">${practised.length}<span class="small muted"> / ${kids.length}</span></div><div class="small muted">practised this week (${kids.length?Math.round(practised.length/kids.length*100):0}%)</div></div>
+  <div class="card"><div class="stat">${wa}</div><div class="small muted">words practised this week · ${wa?Math.round(wc/wa*100):0}% correct</div></div>
+  <div class="card"><div class="stat">${secureAll}</div><div class="small muted">words secure 🔵 in total</div></div>
+  <div class="card"><div class="stat">${streakers.length}</div><div class="small muted">children on a 🔥 streak</div></div></div>
+ <div class="card" style="margin-bottom:14px"><div class="row"><h3 style="font-size:18px">Practice over the last 2 weeks</h3><span class="spacer"></span><span class="small muted">words practised each day</span></div>
+  <div class="bars">${days.map(d=>{const v=perDay[d];const dt=new Date(d+'T12:00:00');return `<div class="bcol" title="${v.a} words · ${v.kids.size} children"><div class="bval">${v.a||''}</div><div class="bbar" style="height:${Math.round(v.a/maxA*100)}%"></div><div class="blab ${d===today?'today':''}">${dt.toLocaleDateString('en-GB',{weekday:'short'})}<br>${dt.getDate()}</div></div>`}).join('')}</div></div>
+ <div class="dgrid">
+  <div class="card"><div class="row"><h3 style="font-size:18px">😴 Not practised this week</h3><span class="pill need">${notYet.length}</span><span class="spacer"></span>${notYet.length?'<button class="w sm" id="copynames">Copy names</button>':''}</div>
+   <div class="dlist">${notYet.sort((a,b)=>a.grade-b.grade||(a.class_name||'').localeCompare(b.class_name||'')).map(k=>kidRow(k,`<span class="small muted">${PROG[k.id]?.last_seen?'last: '+ago(PROG[k.id].last_seen):'not started'}</span>`)).join('')||'<p class="muted">Everyone has practised this week! 🎉</p>'}</div></div>
+  <div class="card"><h3 style="font-size:18px">🧩 Trickiest words</h3><p class="small muted" style="margin:4px 0 8px">Words these children keep missing (not yet secure). Great for a class lesson!</p>
+   <div class="dlist">${tricky.map(t=>`<div class="drow"><b style="font-size:16px">${esc(t.w)}</b><span class="spacer"></span><span class="small"><b>${t.kids}</b> ${t.kids===1?'child':'children'}</span><span class="small muted">· ${t.miss} misses</span></div>`).join('')||'<p class="muted">No tricky words yet.</p>'}</div></div>
+  <div class="card"><h3 style="font-size:18px">⭐ Busiest spellers this week</h3>
+   <div class="dlist">${stars.map((k,i)=>kidRow(k,`<span class="small"><b>${wk[k.id].a}</b> words · ${wk[k.id].d} day${wk[k.id].d>1?'s':''}</span>${i<3?` <span>${['🥇','🥈','🥉'][i]}</span>`:''}`)).join('')||'<p class="muted">No practice yet this week.</p>'}</div></div>
+  <div class="card"><h3 style="font-size:18px">🏫 Classes</h3>
+   <table style="margin-top:6px"><thead><tr><th>Class</th><th>Children</th><th>Practised this week</th><th>Words secure</th><th>⭐ Stars</th></tr></thead><tbody>
+   ${cls.map(o=>`<tr><td><b>${esc(o.c)}</b> <span class="pill ${teamOf(o.g)}">${GL(o.g)}</span></td><td>${o.n}</td><td><div class="row" style="gap:6px;flex-wrap:nowrap"><div class="bar"><i style="width:${Math.round(o.p/o.n*100)}%"></i></div><span class="small">${Math.round(o.p/o.n*100)}%</span></div></td><td><div class="row" style="gap:6px;flex-wrap:nowrap"><div class="bar"><i style="width:${Math.round(o.sec/o.n)}%"></i></div><span class="small">${Math.round(o.sec/o.n)}%</span></div></td><td>${o.st}</td></tr>`).join('')||'<tr><td colspan="5" class="muted">No classes yet.</td></tr>'}</tbody></table></div>
+ </div>`;
+ document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{TAB=b.dataset.tab;render()});
+ $('#dg').onchange=e=>{DF.grade=e.target.value;DF.cls='all';renderDash()};$('#dc').onchange=e=>{DF.cls=e.target.value;renderDash()};
+ $('#drefresh').onclick=async()=>{DAILY=null;await load()};
+ const cp=$('#copynames');if(cp)cp.onclick=()=>{const t=notYet.map(k=>`${k.first_name} (${k.class_name||GL(k.grade)})`).join('\n');navigator.clipboard.writeText(t).then(()=>toast('Names copied ✓'),()=>toast('Couldn’t copy'))};
+}
+
 function learnt(id){const p=PROG[id];if(!p)return 0;return Object.values(p.words||{}).filter(n=>n>=2).length}
 function tricky(id){const p=PROG[id];if(!p)return [];return Object.entries(p.tricky||{}).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0])}
 function visible(){const q=F.q.toLowerCase();return KIDS.filter(c=>(F.grade==='all'||c.grade==F.grade)&&(F.cls==='all'||c.class_name===F.cls)&&(!q||c.first_name.toLowerCase().includes(q)||c.code.toLowerCase().includes(q.replace(/-/g,''))))
  .sort((a,b)=>{const k=SORT.k,d=SORT.d;const v=c=>k==='stars'?(PROG[c.id]?.stars||0):k==='learnt'?learnt(c.id):k==='seen'?(PROG[c.id]?.last_seen||''):k==='grade'?c.grade*1000+(c.class_name||'').charCodeAt(0):String(c[k]||'').toLowerCase();const x=v(a),y=v(b);return (x>y?1:x<y?-1:0)*d||a.first_name.localeCompare(b.first_name)})}
 function render(){
- if(TAB==='rounds'){TAB='spellers';location.href='bee.html';return}
- if(TAB==='certs'){TAB='spellers';location.href='certificates.html';return}
+ if(TAB==='dash'){renderDash();return}
+ if(TAB==='rounds'){TAB='dash';location.href='bee.html';return}
+ if(TAB==='certs'){TAB='dash';location.href='certificates.html';return}
  if(TAB==='words'){renderWords();return}
  if(TAB==='invites'){renderInvites();return}
  const list=visible();const classes=[...new Set(KIDS.filter(c=>F.grade==='all'||c.grade==F.grade).map(c=>c.class_name).filter(Boolean))].sort();
@@ -266,7 +332,7 @@ function render(){
    <th data-s="first_name">Name</th><th data-s="grade">Grade · class</th><th>Code</th><th data-s="stars">⭐ Stars</th><th data-s="learnt">Words learnt</th><th>Tricky words</th><th data-s="seen">Last practised</th><th></th></tr></thead><tbody>
    ${list.map(c=>{const t=teamOf(c.grade),p=PROG[c.id]||{},L=learnt(c.id),tot=TEAMS[t][2];return `<tr>
     <td><input type="checkbox" data-sel="${c.id}" style="width:auto" ${SEL.has(c.id)?'checked':''}></td>
-    <td><input value="${esc(c.first_name)}" data-ed="${c.id}" data-f="first_name" style="min-width:120px;font-weight:800"></td>
+    <td><div class="row" style="gap:6px;flex-wrap:nowrap">${avt(p.avatar,28)}<input value="${esc(c.first_name)}" data-ed="${c.id}" data-f="first_name" style="min-width:110px;font-weight:800"></div></td>
     <td><div class="row" style="gap:6px;flex-wrap:nowrap"><select data-ed="${c.id}" data-f="grade" style="width:84px">${GRADES.map(g=>`<option value="${g}" ${c.grade==g?'selected':''}>${g===0?'KG2':g}</option>`).join('')}</select><input value="${esc(c.class_name)}" data-ed="${c.id}" data-f="class_name" style="width:70px"><span class="pill ${t}" title="${TEAMS[t][0]}">${TEAMS[t][1]}</span></div></td>
     <td><span class="code">${fmtCode(c.code)}</span></td>
     <td><b>${p.stars||0}</b></td>
