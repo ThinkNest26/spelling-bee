@@ -194,14 +194,15 @@ function shrinkLogo(file){return new Promise((res,rej)=>{const r=new FileReader(
  const make=max=>{const k=Math.min(1,max/Math.max(img.width,img.height));const c=document.createElement('canvas');c.width=Math.max(1,Math.round(img.width*k));c.height=Math.max(1,Math.round(img.height*k));c.getContext('2d').drawImage(img,0,0,c.width,c.height);return c.toDataURL('image/png')};
  let out=make(480);if(out.length>350000)out=make(320);if(out.length>350000)out=make(220);res(out)};img.src=r.result};r.readAsDataURL(file)})}
 function bindTabs(){document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{if(TAB==='invites'&&DIRTY&&b.dataset.tab!=='invites'){confirmBox('Leave without saving?','Your invitation changes haven’t been saved.','Leave',()=>{DIRTY=false;TAB=b.dataset.tab;render()});return}TAB=b.dataset.tab;render()})}
+function hasWord(w,s){return new RegExp('\\b'+String(w).replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','i').test(s)}
 function renderWords(){
  const rows=WROWS.filter(w=>w.team===WTEAM),missing=WROWS.filter(w=>needs(w).length).length;
  $('#app').innerHTML=tabs()+`
  ${missing?`<div class="card warn"><b>🎙 ${missing} word${missing>1?'s':''} need${missing>1?'':'s'} Kate’s voice recorded.</b> Until then, children hear their device’s own voice for ${missing>1?'these':'this one'}. To record: on the Mac, open Terminal, type <code>cd ~/Documents/GitHub/spelling-bee</code> then <code>bash make-audio.sh</code>, then commit and Push origin in GitHub Desktop.</div>`:`<div class="card okc">✅ Every word has Kate’s recording.</div>`}
  <div class="card" style="margin-top:14px"><div class="row"><h2 style="font-size:20px">Word lists</h2><div class="spacer"></div><button class="y" id="addw">+ Add words</button></div>
  <div class="row teams" style="margin-top:12px">${Object.entries(TEAMS).map(([t,v])=>`<button class="${WTEAM===t?'on':''} ${t}" data-wteam="${t}">${v[1]} ${v[0]} <span class="muted">(${WROWS.filter(w=>w.team===t).length})</span></button>`).join('')}</div>
- <p class="small muted">${{buz:'KG2 · Year 1',hon:'Grade 1 · Year 2',bum:'Grades 2–3 · Years 3–4',cha:'Grades 4–5 · Years 5–6'}[WTEAM]}. Changes appear on the children’s practice pages straight away (they may need to refresh). The sentence is optional — it helps with words that sound like others (there / their).</p>
- <div class="tablewrap"><table><thead><tr><th style="width:40px">#</th><th>Word</th><th>Example sentence (optional)</th><th>Kate’s voice</th><th></th></tr></thead><tbody>
+ <p class="small muted">${{buz:'KG2 · Year 1',hon:'Grade 1 · Year 2',bum:'Grades 2–3 · Years 3–4',cha:'Grades 4–5 · Years 5–6'}[WTEAM]}. Changes appear on the children’s practice pages straight away (they may need to refresh). Sentences are used in <b>📝 Fill the gap</b> and must include the word. A word without a sentence is left out of Fill the gap.</p>
+ <div class="tablewrap"><table><thead><tr><th style="width:40px">#</th><th>Word</th><th>Example sentence (for Fill the gap)</th><th>Kate’s voice</th><th></th></tr></thead><tbody>
  ${rows.map((w,i)=>{const n=needs(w);return `<tr><td class="muted small">${i+1}</td>
   <td><input value="${esc(w.word)}" data-wid="${w.id}" data-wf="word" style="font-weight:800;min-width:140px"></td>
   <td><input value="${esc(w.sentence)}" data-wid="${w.id}" data-wf="sentence" placeholder="—" style="min-width:260px"></td>
@@ -213,6 +214,8 @@ function renderWords(){
  $('#addw').onclick=addWordsModal;
  document.querySelectorAll('[data-wid]').forEach(x=>x.onchange=async()=>{const id=+x.dataset.wid,f=x.dataset.wf,v=x.value.trim().replace(/\s+/g,' ');const w=WROWS.find(r=>r.id===id);
   if(f==='word'&&!/^[\p{L}'’-]{1,40}$/u.test(v)){toast('A word can only have letters (no spaces).');x.value=w.word;return}
+  if(f==='sentence'&&v&&!hasWord(w.word,v)){toast('The sentence must include the word “'+w.word+'” (for Fill the gap).');x.value=w.sentence;return}
+  if(f==='word'&&w.sentence&&!hasWord(v,w.sentence)){toast('Remember to update the sentence so it includes “'+v+'”.')}
   if(f==='word'&&WROWS.some(r=>r.team===w.team&&r.id!==id&&r.word.toLowerCase()===v.toLowerCase())){toast('That word is already in this list.');x.value=w.word;return}
   const {error}=await sb.from('words').update({[f]:v}).eq('id',id);if(error){toast('Couldn’t save that change');x.value=w[f];return}
   await loadWords();render();toast('Saved ✓')});
@@ -226,8 +229,8 @@ function addWordsModal(){
  $('#wc').onclick=()=>$('#modal').innerHTML='';
  $('#wo').onclick=async()=>{const have=new Set(WROWS.filter(r=>r.team===WTEAM).map(r=>r.word.toLowerCase()));let pos=WROWS.filter(r=>r.team===WTEAM).length;const add=[],bad=[],dup=[];
   $('#nw').value.split('\n').map(l=>l.trim()).filter(Boolean).forEach((l,i)=>{const [w0,...rest]=l.split('|');const word=w0.trim().replace(/[.,;:!?]+$/,'');const sentence=rest.join('|').trim();
-   if(!/^[\p{L}'’-]{1,40}$/u.test(word)){bad.push(i+1);return}if(have.has(word.toLowerCase())){dup.push(word);return}have.add(word.toLowerCase());add.push({team:WTEAM,word,sentence,position:++pos})});
-  if(bad.length){const m=$('#wmsg');m.innerHTML='Please check line'+(bad.length>1?'s ':' ')+bad.join(', ')+' — one word per line (letters only), with an optional <b>| sentence</b>.';m.classList.add('show');return}
+   if(!/^[\p{L}'’-]{1,40}$/u.test(word)||(sentence&&!hasWord(word,sentence))){bad.push(i+1);return}if(have.has(word.toLowerCase())){dup.push(word);return}have.add(word.toLowerCase());add.push({team:WTEAM,word,sentence,position:++pos})});
+  if(bad.length){const m=$('#wmsg');m.innerHTML='Please check line'+(bad.length>1?'s ':' ')+bad.join(', ')+' — one word per line (letters only), with an optional <b>| sentence</b> that includes the word.';m.classList.add('show');return}
   if(!add.length){$('#modal').innerHTML='';toast(dup.length?'Those words are already in the list':'Nothing to add');return}
   const b=$('#wo');b.disabled=true;b.textContent='Adding…';const {error}=await sb.from('words').insert(add);
   if(error){b.disabled=false;b.textContent='Add words';const m=$('#wmsg');m.textContent='Couldn’t add the words. Please try again.';m.classList.add('show');return}
