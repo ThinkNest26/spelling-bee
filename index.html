@@ -59,7 +59,12 @@ main{max-width:980px;margin:0 auto;padding:20px 18px 50px}
 .tiles button{width:64px;height:64px;padding:0;font-size:30px;background:var(--honey);color:var(--ink)}
 .wordgrid{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));margin-top:16px}
 .wc{background:#fff;border:3px solid var(--line);border-radius:18px;padding:12px;font-family:Fredoka;font-size:21px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
-.wc.m{border-color:#A7E3BF;background:var(--okL)}
+.wc.secure{border-color:#7FB3F5;background:#E3EFFF}
+.wc.almost{border-color:#A7E3BF;background:var(--okL)}
+.wc.tricky{border-color:#F2C230;background:#FFF2B8}
+.legend{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin:0 0 16px}
+.legend span{font-family:Fredoka;font-size:16px;padding:6px 14px;border-radius:999px;border:3px solid}
+.legend .secure{background:#E3EFFF;border-color:#7FB3F5}.legend .almost{background:var(--okL);border-color:#A7E3BF}.legend .tricky{background:#FFF2B8;border-color:#F2C230}
 .vback{position:fixed;inset:0;background:rgba(20,26,43,.55);display:grid;place-items:center;z-index:30;padding:16px}
 .vcard{background:#fff;border-radius:26px;padding:22px;max-width:560px;width:100%;max-height:88vh;overflow:auto}
 .vlist{display:grid;gap:8px}
@@ -167,7 +172,9 @@ function T(id){return TEAMS.find(t=>t.id===id)}
 /* progress on this device only */
 const KEY='aa-sbee-practice-v1';let PR={};
 try{PR=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){PR={}}
-function prog(team){PR[team]=PR[team]||{stars:0,ok:{}};return PR[team]}
+function prog(team){PR[team]=PR[team]||{stars:0,ok:{}};PR[team].bad=PR[team].bad||{};return PR[team]}
+function mergeMax(a,b){const o=Object.assign({},a||{});for(const k in (b||{}))o[k]=Math.max(+o[k]||0,+b[k]||0);return o}
+function wordLevel(team,w){const p=prog(team),ok=+p.ok[w]||0,bad=+p.bad[w]||0;if(!ok&&!bad)return '';if(bad>=2&&ok<=bad)return 'tricky';if(ok>=2)return 'secure';return 'almost'}
 function savePR(){try{localStorage.setItem(KEY,JSON.stringify(PR))}catch(e){}}
 /* ---------- online accounts (bee codes) ---------- */
 const SUPABASE_URL='https://xpbkdnkfufkahaszfycd.supabase.co';
@@ -184,12 +191,12 @@ async function loginCode(code){code=cleanCode(code);if(code.length<4)return {err
  const c=db();if(!c)return {err:'Practice will open very soon — please try again later.'};
  try{const {data,error}=await c.rpc('student_login',{p_code:code});if(error)throw error;if(!data)return {err:'Hmm, that code didn’t work. Check it and try again!'};
   ME={code,first_name:data.first_name,grade:data.grade,team:teamOfGrade(data.grade)};saveMe();
-  PR={};PR[ME.team]={stars:data.stars||0,ok:data.words||{}};savePR();return {ok:true}}
+  PR={};PR[ME.team]={stars:data.stars||0,ok:data.words||{},bad:data.tricky||{}};savePR();return {ok:true}}
  catch(e){return {err:'We couldn’t connect. Check the internet and try again.'}}}
 async function refreshMe(){if(!ME||!db())return;try{const {data,error}=await db().rpc('student_login',{p_code:ME.code});if(error)return;
  if(!data){ME=null;saveMe();render();return}
  ME.first_name=data.first_name;ME.grade=data.grade;ME.team=teamOfGrade(data.grade);saveMe();
- const p=prog(ME.team);p.stars=Math.max(data.stars||0,p.stars);p.ok=Object.assign({},p.ok,data.words||{});savePR();if(V.screen==='home'||V.screen==='team')render()}catch(e){}}
+ const p=prog(ME.team);p.stars=Math.max(data.stars||0,p.stars);p.ok=mergeMax(p.ok,data.words);p.bad=mergeMax(p.bad,data.tricky);savePR();if(V.screen==='home'||V.screen==='team')render()}catch(e){}}
 function logout(){ME=null;saveMe();PR={};savePR();try{localStorage.removeItem(Q_KEY)}catch(e){};V={screen:'home',team:null};render();setTimeout(()=>document.getElementById('practise')?.scrollIntoView(),0)}
 let flushing=false;
 let MEMQ=[];
@@ -203,9 +210,9 @@ async function flush(){if(flushing||!ME||!db())return;flushing=true;
  finally{flushing=false}}
 setInterval(()=>{if(ME&&readQ().length)flush()},20000);
 window.addEventListener('online',flush);
-function award(team,w,ok){const p=prog(team);if(ok){p.stars++;p.ok[w]=(p.ok[w]||0)+1}savePR();
+function award(team,w,ok){const p=prog(team);if(ok){p.stars++;p.ok[w]=(p.ok[w]||0)+1}else{p.bad[w]=(p.bad[w]||0)+1}savePR();
  if(ME){const q=readQ();q.push({id:Date.now()+'-'+Math.random().toString(36).slice(2,7),w,ok,a:V.screen});writeQ(q.slice(-500));flush()}}
-function mastered(team){const p=prog(team);return WORDS[team].filter(w=>(p.ok[w]||0)>=2).length}
+function mastered(team){const p=prog(team);return WORDS[team].filter(w=>wordLevel(team,w)==='secure').length}
 function totalStars(){return TEAMS.reduce((n,t)=>n+(PR[t.id]?.stars||0),0)}
 
 /* speech */
@@ -363,7 +370,7 @@ function practiseBox(){
 function teamView(){
  const t=T(V.team);const m=mastered(t.id),n=WORDS[t.id].length;
  return `<div class="row" style="justify-content:space-between;margin-bottom:14px"><button class="back" data-go="home">← Home</button><div class="f" style="font-size:22px">${t.e} ${t.name} · ${t.label}</div></div>
- <div class="panel" style="margin-bottom:18px"><div class="f" style="font-size:22px">I have learnt ${m} of ${n} words</div><div class="prog"><i style="width:${Math.round(m/n*100)}%"></i></div><div class="muted">Spell a word correctly twice to learn it. ⭐ ${prog(t.id).stars} stars</div></div>
+ <div class="panel" style="margin-bottom:18px"><div class="f" style="font-size:22px">I have learnt ${m} of ${n} words</div><div class="prog"><i style="width:${Math.round(m/n*100)}%"></i></div><div class="muted">Spell a word correctly twice to make it secure 🔵. ⭐ ${prog(t.id).stars} stars</div></div>
  <div class="acts">
   <div class="act" data-go="learn"><div class="e">📖</div><h3>My word list</h3><p>See all my words and tap to hear them.</p></div>
   <div class="act" data-go="lcwc"><div class="e">👀</div><h3>Look, Cover, Write</h3><p>Look at the word, cover it, write it, check it!</p></div>
@@ -375,13 +382,14 @@ function teamView(){
 function learnView(){
  const t=T(V.team),p=prog(t.id);
  return `<div class="row" style="justify-content:space-between"><button class="back" data-go="team">← Back</button><div class="f" style="font-size:22px">📖 My word list</div></div>
- <p class="muted" style="text-align:center">Tap a word to hear it. Green words are ones you have learnt. ✅</p>
- <div class="wordgrid">${WORDS[t.id].map(w=>`<div class="wc ${(p.ok[w]||0)>=2?'m':''}" data-say="${esc(w)}">🔊 ${esc(w)}</div>`).join('')}</div>`;
+ <p class="muted" style="text-align:center">Tap a word to hear it.</p>
+ <div class="legend"><span class="secure">🔵 Secure</span><span class="almost">🟢 Almost there</span><span class="tricky">🟡 Keep practising</span></div>
+ <div class="wordgrid">${WORDS[t.id].map(w=>`<div class="wc ${wordLevel(t.id,w)}" data-say="${esc(w)}">🔊 ${esc(w)}</div>`).join('')}</div>`;
 }
 
 /* Look, Cover, Write, Check */
 let LC=null;
-function newLC(){const p=prog(V.team);const ws=WORDS[V.team];const fresh=ws.filter(w=>(p.ok[w]||0)<2);LC={w:pick(fresh.length?fresh:ws),step:0,val:'',ok:null}}
+function newLC(){const p=prog(V.team);const ws=WORDS[V.team];const fresh=ws.filter(w=>wordLevel(V.team,w)!=='secure');LC={w:pick(fresh.length?fresh:ws),step:0,val:'',ok:null}}
 function lcwcView(){
  if(!LC)newLC();const st=['Look & say','Cover','Write','Check'];
  let body='';
@@ -394,7 +402,7 @@ function lcwcView(){
 
 /* Spelling test */
 let TS=null;
-function newTest(){const p=prog(V.team);const ws=shuffle(WORDS[V.team]);const fresh=ws.filter(w=>(p.ok[w]||0)<2);const list=(fresh.length>=10?fresh:fresh.concat(ws.filter(w=>!fresh.includes(w)))).slice(0,10);TS={list,i:0,val:'',fb:null,score:0,missed:[]}}
+function newTest(){const p=prog(V.team);const ws=shuffle(WORDS[V.team]);const fresh=ws.filter(w=>wordLevel(V.team,w)!=='secure');const list=(fresh.length>=10?fresh:fresh.concat(ws.filter(w=>!fresh.includes(w)))).slice(0,10);TS={list,i:0,val:'',fb:null,score:0,missed:[]}}
 function testView(){
  if(!TS)newTest();const w=TS.list[TS.i];
  return `<div class="row" style="justify-content:space-between"><button class="back" data-go="team">← Back</button><div class="f" style="font-size:22px">🎧 Spelling test · ${TS.i+1} of ${TS.list.length}</div></div>
@@ -412,7 +420,7 @@ function newMiss(){const t=T(V.team);const ws=WORDS[t.id].filter(w=>w.length>=3)
 /* ---------- Fill the gap ---------- */
 let GP=null;
 function gapWords(){return WORDS[V.team].filter(w=>SENT[w]&&new RegExp('\\b'+w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','i').test(SENT[w]))}
-function newGap(){const p=prog(V.team);const ws=shuffle(gapWords());const fresh=ws.filter(w=>(p.ok[w]||0)<2);const list=(fresh.length>=10?fresh:fresh.concat(ws.filter(w=>!fresh.includes(w)))).slice(0,10);GP={list,i:0,val:'',fb:null,score:0,missed:[],done:false}}
+function newGap(){const p=prog(V.team);const ws=shuffle(gapWords());const fresh=ws.filter(w=>wordLevel(V.team,w)!=='secure');const list=(fresh.length>=10?fresh:fresh.concat(ws.filter(w=>!fresh.includes(w)))).slice(0,10);GP={list,i:0,val:'',fb:null,score:0,missed:[],done:false}}
 function gapSentence(w,reveal){const s=SENT[w]||'';const re=new RegExp('\\b('+w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')\\b','i');const m=s.match(re);if(!m)return esc(s);
  const i=m.index;return esc(s.slice(0,i))+(reveal?`<span class="gapw ${GP&&GP.fb==='ok'?'ok':'bad'}">${esc(m[1])}</span>`:'<span class="gapb">?</span>')+esc(s.slice(i+m[1].length))}
 function sayGap(w){say(SENT[w]||w)}
