@@ -61,6 +61,18 @@ main{max-width:980px;margin:0 auto;padding:20px 18px 50px}
 .jar.yum{animation:yum .4s}@keyframes yum{50%{transform:translateX(-50%) scale(1.3)}}
 .jar.buzz{animation:jbuzz .5s}@keyframes jbuzz{0%,100%{transform:translateX(-50%)}25%{transform:translateX(-62%)}75%{transform:translateX(-38%)}}
 button.mv{font-size:28px;padding:10px 34px}
+.bscene{position:relative;height:230px;margin:6px auto 0;max-width:420px}
+.bset{position:absolute;left:50%;top:0;transform:translateX(-50%);display:flex;gap:2px}
+.bl{font-size:46px;display:inline-block;transform:rotate(var(--r));transform-origin:50% 140%;transition:opacity .3s,transform .3s;animation:bob 2.6s ease-in-out infinite}
+.bl:nth-child(even){animation-delay:.6s}.bl.gone{opacity:0;transform:scale(.2)}
+.bl.popping{animation:pop .35s forwards}@keyframes pop{0%{opacity:1;transform:scale(1)}60%{transform:scale(1.5)}100%{opacity:0;transform:scale(.1)}}
+@keyframes bob{50%{translate:0 -6px}}
+.bstrings{position:absolute;left:50%;top:62px;width:2px;height:90px;background:#9AA4B8;transform:translateX(-50%)}
+.bbee{position:absolute;left:50%;top:140px;font-size:64px;transform:translateX(-50%);animation:bob 2.6s ease-in-out infinite}
+.bbee.fall{animation:none;top:160px;transform:translateX(-50%) rotate(20deg);transition:top .6s}
+.kb.hm button.good{background:var(--okL);border-color:#A7E3BF;color:#166534}.kb.hm button.bad{background:#EEE;color:#AAA;text-decoration:line-through}
+.kb.hm button:disabled{cursor:default}
+.slots span.miss{background:var(--badL);border-color:var(--bad);color:var(--bad)}
 .acts{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
 .act{background:#fff;border-radius:26px;padding:22px;text-align:center;border:3px solid var(--line);cursor:pointer;transition:transform .12s}
 .act:hover{transform:translateY(-4px)}
@@ -358,7 +370,7 @@ function render(){
  const a=$('#app');
  if(V.screen==='home')a.innerHTML=home();
  else if(!ME){V={screen:'home',team:null};a.innerHTML=home()}
- else a.innerHTML=top()+`<main>${({team:teamView,learn:learnView,lcwc:lcwcView,test:testView,miss:missView,done:doneView,gap:gapView,games:gamesView,ghive:hiveView,gcatch:catchView,ggarden:gardenView,grace:raceView})[V.screen]()}</main>`;
+ else a.innerHTML=top()+`<main>${({team:teamView,learn:learnView,lcwc:lcwcView,test:testView,miss:missView,done:doneView,gap:gapView,games:gamesView,gballoon:balloonView,ghive:hiveView,gcatch:catchView,ggarden:gardenView,grace:raceView})[V.screen]()}</main>`;
  after();if(V.screen==='ghive')hiveAfter();if(V.screen==='grace')raceAfter();
 }
 function home(){
@@ -525,7 +537,8 @@ const GAMES=[
  {id:'ghive',e:'🐝',name:'Bee to the Hive',p:'Spell words to fly the bee from flower to flower, all the way home!'},
  {id:'gcatch',e:'🍯',name:'Honey Catch',p:'Move the honey jar and catch the letters in the right order!'},
  {id:'ggarden',e:'🌻',name:'Grow a Garden',p:'Every word you spell grows a flower. Can you fill your garden?'},
- {id:'grace',e:'🏁',name:'Bee Race',p:'Race the speedy bee! Spell words to zoom to the finish line!'}];
+ {id:'grace',e:'🏁',name:'Bee Race',p:'Race the speedy bee! Spell words to zoom to the finish line!'},
+ {id:'gballoon',e:'🎈',name:'Balloon Rescue',p:'Guess the letters to keep the bee flying! Wrong letters pop a balloon.'}];
 const FLOWERS=['🌻','🌷','🌹','🌺','🌸','🌼','💐','🪻'];
 function gWins(){const p=prog(V.team);p.gw=p.gw||{};return p.gw}
 function gWin(id){const w=gWins();w[id]=(w[id]||0)+1;savePR()}
@@ -547,6 +560,7 @@ function gStart(id){V.screen=id;G={kind:id,i:0,val:'',fb:null,score:0,wrong:0,do
  if(id==='ghive'){G.list=gWords(10);G.goal=G.list.length;G.pos=0;G.shown=0;G.tries=0}
  if(id==='ggarden'){G.list=gWords(10);G.grown=null}
  if(id==='grace'){G.list=gWords(14);G.goal=Math.min(8,G.list.length);G.pos=0;G.shown=0;G.opp=0;G.timed=!T(V.team).kb;G.last=0}
+ if(id==='gballoon'){G.list=gWords(5);G.used='';G.pop=0;G.saved=0;G.lost=false}
  if(id==='gcatch'){G.list=gWords(5);G.hearts=3;G.got='';G.drops=[];G.lane=1;G.wbad=false;G.next=0}
  render();window.scrollTo(0,0);
  if(id==='gcatch')setTimeout(()=>{sayWord(G.list[0]);G.next=performance.now()+1300;catchLoop()},300);
@@ -652,6 +666,32 @@ document.addEventListener('keydown',e=>{if(!G||G.kind!==V.screen)return;
  if(G.kind==='gcatch'&&(e.key==='ArrowLeft'||e.key==='ArrowRight')){e.preventDefault();catchMove(e.key==='ArrowLeft'?-1:1);return}
  if(e.key==='Enter'&&e.target.id==='ans'){e.preventDefault();gCheck()}});
 document.addEventListener('input',e=>{if(e.target.id==='ans'&&G)G.val=e.target.value});
+
+/* 5. Balloon Rescue (child-friendly hangman) */
+const BMAX=6;
+function bShown(w,c){return !/[a-z]/i.test(c)||G.used.includes(c.toLowerCase())||G.lost}
+function balloonView(){
+ if(G.done){const win=G.saved>=Math.ceil(G.list.length*0.6);return gHead('🎈 Balloon Rescue')+`<div class="panel gend"><div style="font-size:84px">${win?'🎈🐝🎈':'💛'}</div><h2 class="f" style="font-size:32px">${win?'You rescued the bee!':'Good try!'}</h2><p style="font-size:20px">You saved ${G.saved} of ${G.list.length} words.${win?' The bee is flying high! 🏆':' Have another go!'}</p><div class="row" style="margin-top:14px"><button class="y" data-g="gballoon">Play again 🔁</button><button class="w" data-g="menu">More games</button></div></div>`}
+ const w=G.list[G.i];const left=BMAX-G.pop;
+ const balloons=Array.from({length:BMAX},(_,k)=>`<span class="bl ${k<left?'':'gone'}" style="--r:${(k-(BMAX-1)/2)*9}deg">🎈</span>`).join('');
+ const rows=['qwertyuiop','asdfghjkl','zxcvbnm'];
+ const keys=`<div class="kb hm">${rows.map(r=>`<div class="r">${[...r].map(c=>{const u=G.used.includes(c);const good=u&&w.toLowerCase().includes(c);return `<button data-hl="${c}" class="${u?(good?'good':'bad'):''}" ${u||G.lost||G.won?'disabled':''}>${c}</button>`}).join('')}</div>`).join('')}</div>`;
+ return gHead(`🎈 Balloon Rescue · ${G.i+1} of ${G.list.length}`,`<p class="muted" style="text-align:center">Listen to the word, then tap its letters. ${left} balloon${left===1?'':'s'} left!</p>`)+
+ `<div class="bscene"><div class="bset">${balloons}</div><div class="bstrings"></div><div class="bbee ${G.lost?'fall':''}">🐝</div></div>
+ <div class="row" style="margin:10px 0"><button class="y hear" data-sayw="${esc(w)}">🔊 Hear the word</button>${SENT[w]?`<button class="w" data-say="${esc(SENT[w])}">💬 Sentence</button>`:''}</div>
+ <div class="slots">${[...w].map(c=>`<span class="${bShown(w,c)?(G.lost&&!G.used.includes(c.toLowerCase())&&/[a-z]/i.test(c)?'miss':'in'):''}">${bShown(w,c)?esc(c):''}</span>`).join('')}</div>
+ <div class="panel" style="padding:16px">${G.lost?`<div class="fb bad">The balloons popped! It’s spelt <u>${esc(w)}</u></div><div class="row" style="margin-top:12px"><button class="w" data-say="${esc(w)}">🔊 Hear it</button><button class="y" data-g="bnext">Keep going →</button></div>`:G.won?`<div class="fb ok">${pick(PRAISE)} ⭐</div>`:keys}</div>`}
+function bGuess(c){if(!G||G.kind!=='gballoon'||G.lost||G.won||G.done)return;c=c.toLowerCase();if(G.used.includes(c))return;G.used+=c;const w=G.list[G.i];
+ if(w.toLowerCase().includes(c)){happySound(false);
+  if([...w].every(ch=>bShown(w,ch))){G.won=true;G.saved++;award(V.team,w,G.pop<=2);render();gGood();gAfterTalk(bNext);return}
+  render()}
+ else{G.pop++;gentleSound();
+  if(G.pop>=BMAX){G.lost=true;award(V.team,w,false);render();setTimeout(()=>playClip(pick(ENCOURAGE)),500);return}
+  render();const b=document.querySelectorAll('.bl:not(.gone)');const last=document.querySelectorAll('.bl')[BMAX-G.pop];if(last){last.classList.add('popping')}}}
+function bNext(){if(!G||G.kind!=='gballoon')return;if(G.i+1<G.list.length){G.i++;G.used='';G.pop=0;G.lost=false;G.won=false;render();setTimeout(()=>sayWordSentence(G.list[G.i]),200)}
+ else{G.done=true;render();window.scrollTo(0,0);if(G.saved>=Math.ceil(G.list.length*0.6)){gWin('gballoon');gBig()}else setTimeout(()=>playClip(pick(ENCOURAGE)),300)}}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-hl]');if(b){bGuess(b.dataset.hl);return}const n=e.target.closest('[data-g=bnext]');if(n)bNext()});
+document.addEventListener('keydown',e=>{if(G&&G.kind==='gballoon'&&V.screen==='gballoon'&&/^[a-z]$/i.test(e.key)&&!e.metaKey&&!e.ctrlKey){bGuess(e.key)}});
 
 async function submitCode(){const i=$('#codein'),m=$('#codemsg');if(!i)return;const btn=document.querySelector('[data-code]');
  if(btn){btn.disabled=true;btn.textContent='Checking… 🐝'}const r=await loginCode(i.value);
