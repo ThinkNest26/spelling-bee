@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spelling Bee – Invitation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="invite.js"></script>
+<style>
+html,body{margin:0;background:#FFFBEF;color:#1F2A44;font-family:Nunito,system-ui,sans-serif}
+main{max-width:700px;margin:0 auto;padding:22px 16px 30px}
+.bar{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:20px 0 6px}
+button,.btn{font-family:Fredoka,Nunito,sans-serif;font-weight:600;font-size:17px;border:0;border-radius:999px;padding:12px 20px;cursor:pointer;background:#F5B700;color:#1F2A44;text-decoration:none;box-shadow:0 4px 0 rgba(0,0,0,.15)}
+.btn.w{background:#fff;border:2px solid #F1E7C8;box-shadow:none}
+select{font-family:inherit;font-size:15px;border:2px solid #F1E7C8;border-radius:999px;padding:10px 14px;background:#fff}
+.msg{text-align:center;padding:60px 20px;font-size:18px}
+.foot{text-align:center;margin-top:26px;font-size:14px;font-weight:700;color:#46506B}
+.foot a{color:#1B3A6B;text-decoration:none;border-bottom:2px solid #F5B700}
+</style>
+</head>
+<body>
+<main id="app"><div class="msg">Loading the invitation… 🐝</div></main>
+<script>
+(function(){
+const SUPABASE_URL='https://xpbkdnkfufkahaszfycd.supabase.co';
+const SUPABASE_KEY='sb_publishable_QIAV_9tLUBbDCu7FHqaTEw_zYQ0teEG';
+const app=document.getElementById('app');
+SBInvite.injectCSS();
+function footer(){return `<div class="foot"><a href="./">school-spellingbee.com</a> · Powered by <a href="https://thinknestonline.com" target="_blank" rel="noopener">ThinkNest</a></div>`}
+async function start(){
+ let sb=null;try{sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:false}})}catch(e){}
+ if(!sb){app.innerHTML='<div class="msg">Sorry, the invitation couldn’t load. Please try again later.</div>'+footer();return}
+ const id=new URLSearchParams(location.search).get('id');
+ let q=sb.from('invitations').select('name,data,updated_at');q=id?q.eq('id',id):q.order('updated_at',{ascending:false});
+ const {data,error}=await q.limit(1);
+ if(error||!data||!data.length){app.innerHTML='<div class="msg">This invitation isn’t available. 🐝</div>'+footer();return}
+ const inv=data[0];document.title=(inv.data.title||'Invitation')+' – Spelling Bee';
+ app.innerHTML=SBInvite.card(inv.data)+`<div class="bar"><select id="lay"><option value="one">1 per page (A4)</option><option value="two">2 per page (A5)</option></select><button id="pr">🖨 Print</button><a class="btn w" href="./">🐝 Spelling Bee website</a></div>`+footer();
+ document.getElementById('pr').onclick=()=>SBInvite.print(inv.data,document.getElementById('lay').value,document.getElementById('lay').value==='two'?2:1);
+}
+start();
+})();
+</script>
+</body>
+</html>
