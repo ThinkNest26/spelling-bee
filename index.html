@@ -218,7 +218,7 @@ function vScore(x){if(!x||BADV.test(x.name))return -1;const l=x.lang||'';let s;
  if(/^(Daniel|Arthur|Oliver|Jamie|George|Rishi)\b/i.test(n)||/Male|Ryan|Thomas/i.test(n))s-=12;
  if(/^(Samantha|Karen|Moira|Tessa|Ava|Allison|Susan|Zoe|Evan|Nathan|Joelle|Noelle)\b/i.test(n))s+=8;
  return s}
-function goodVoices(){try{return speechSynthesis.getVoices().filter(x=>vScore(x)>0).sort((a,b)=>vScore(b)-vScore(a))}catch(e){return []}}
+function goodVoices(){try{const seen=new Set();return speechSynthesis.getVoices().filter(x=>vScore(x)>0).sort((a,b)=>vScore(b)-vScore(a)).filter(x=>{const k=x.name+'|'+x.lang;if(seen.has(k))return false;seen.add(k);return true})}catch(e){return []}}
 function pv(){try{const g=goodVoices();if(!g.length){voice=null;return}let saved=null;try{saved=localStorage.getItem(VKEY)}catch(e){}
  voice=(saved&&g.find(x=>x.name===saved))||g[0]}catch(e){}}
 if(HAS_SPEECH){try{pv();speechSynthesis.addEventListener?speechSynthesis.addEventListener('voiceschanged',pv):(speechSynthesis.onvoiceschanged=pv)}catch(e){}}
@@ -230,7 +230,7 @@ function buildClips(){for(const t of TEAMS)for(const w of WORDS[t.id])CLIP[w]='w
  CLIP["Hello! Let's practise your spellings!"]='g-start';
  CHEERS.forEach((c,i)=>CLIP[c[1]]='p-'+(i+1));ENCOURAGE.forEach((t,i)=>CLIP[t]='e-'+(i+1));for(const k in STREAK_SAY)CLIP[STREAK_SAY[k]]='k-'+k;CLIP[PERFECT_SAY]='perfect'}
 let HAVE=new Set(),curAudio=null;
-(function(){if(location.protocol.indexOf('http')!==0)return;fetch('audio/manifest.json',{cache:'no-cache'}).then(r=>r.ok?r.json():[]).then(a=>{if(Array.isArray(a))HAVE=new Set(a)}).catch(()=>{})})();
+(function(){if(location.protocol.indexOf('http')!==0)return;fetch('audio/manifest.json',{cache:'no-cache'}).then(r=>r.ok?r.json():[]).then(a=>{if(Array.isArray(a)){HAVE=new Set(a);if(HAVE.size)try{render()}catch(e){}}}).catch(()=>{})})();
 function playClip(t){const n=CLIP[t];if(!n||!HAVE.has(n))return false;
  try{if(curAudio){curAudio.pause()}try{speechSynthesis.cancel()}catch(e){}
   const a=new Audio('audio/'+n+'.m4a');curAudio=a;a.play().catch(()=>{curAudio=null;HAVE.delete(n);say(t)});return true}catch(e){return false}}
@@ -305,7 +305,7 @@ function burst(){const b=document.createElement('div');b.className='burst';for(l
 
 /* ---------- views ---------- */
 let V={screen:'home',team:null};
-function top(){return `<div class="top"><div style="width:40px;height:40px">${BEE}</div><div><div class="t">Spelling Bee</div><div class="s">${ME?'Hi '+esc(ME.first_name)+'! 🐝':'Practice Zone'}</div></div><div class="stars">⭐ ${totalStars()}</div><button data-voice="1">🔊 Voice</button></div>`}
+function top(){return `<div class="top"><div style="width:40px;height:40px">${BEE}</div><div><div class="t">Spelling Bee</div><div class="s">${ME?'Hi '+esc(ME.first_name)+'! 🐝':'Practice Zone'}</div></div><div class="stars">⭐ ${totalStars()}</div>${HAVE.size?'':'<button data-voice="1">🔊 Voice</button>'}</div>`}
 function voicePanel(){pv();const g=goodVoices();const cur=voice&&voice.name;
  let m=document.getElementById('vmodal');if(!m){m=document.createElement('div');m.id='vmodal';document.body.appendChild(m)}
  m.innerHTML=`<div class="vback" data-vclose="1"><div class="vcard"><h2 style="font-size:26px">🔊 Choose a voice</h2><p class="muted" style="margin:6px 0 14px">All voices here speak <b>UK English</b>. Tap <b>Try</b> to listen, then pick the one that sounds nicest. It’s remembered on this device.</p>
@@ -322,7 +322,7 @@ function render(){
 function home(){
  const combs=`<svg class="combs" viewBox="0 0 100 60" preserveAspectRatio="xMidYMid slice"><defs><pattern id="hc" width="12" height="20.78" patternUnits="userSpaceOnUse"><polygon points="6,0 12,3.46 12,10.39 6,13.86 0,10.39 0,3.46" fill="none" stroke="#FFD54A" stroke-width=".7"/><polygon points="12,10.39 18,13.86 18,20.78 12,24.25 6,20.78 6,13.86" fill="none" stroke="#FFD54A" stroke-width=".7"/></pattern></defs><rect width="100" height="60" fill="url(#hc)"/></svg>`;
  return `<section class="hero">${combs}<div class="flybee">${BEE}</div><div style="position:relative"><h1><small>The Big</small>Spelling Bee</h1><p>Spell it! Say it! Shine! ✨</p><p style="font-size:18px;opacity:.85;margin-top:4px">KG2 – Grade 5 · Grand Final Friday 22 January 2027</p>${totalStars()?`<p style="font-size:20px">You have ⭐ ${totalStars()} stars!</p>`:''}<div class="row" style="margin-top:20px"><button class="y" data-jump="practise">🐝 Start practising</button><button class="w" data-jump="dates">📅 Key dates</button></div></div></section>
- <nav class="sitenav">${[['about','About'],['dates','Key dates'],['how','How it works'],['practise','Practise'],['parents','Parents']].map(([k,l])=>`<button data-jump="${k}">${l}</button>`).join('')}<button data-voice="1">🔊 Voice</button></nav>
+ <nav class="sitenav">${[['about','About'],['dates','Key dates'],['how','How it works'],['practise','Practise'],['parents','Parents']].map(([k,l])=>`<button data-jump="${k}">${l}</button>`).join('')}${HAVE.size?'':'<button data-voice="1">🔊 Voice</button>'}</nav>
  <main>
  <section id="about" class="sec2"><h2 class="h2">What is the Spelling Bee? 🐝</h2>
  <div class="about"><div class="aboutcard"><div class="e">✏️</div><b>Learn</b><p>Every child learns the spelling words for their year group from the National Curriculum.</p></div>
