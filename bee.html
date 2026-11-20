@@ -68,7 +68,7 @@ main{max-width:1200px;margin:0 auto;padding:22px}
 </style>
 </head>
 <body>
-<header><div style="font-size:30px">🎤</div><div><div class="t">Spelling Bee — Bee rounds</div><div class="s">Class rounds, grade rounds and the Grand Final</div></div><div class="right" id="who"><a href="teacher.html">← Teacher page</a></div></header>
+<header><div style="font-size:30px">🎤</div><div><div class="t">Spelling Bee — Bee rounds</div><div class="s">Class rounds, grade rounds and the Grand Final</div></div><div class="right" id="who"><label style="font-weight:800;margin-right:12px">Kate: <select id="kspd" style="font:inherit;padding:4px 8px;border-radius:10px"><option value="fast">🐇 Fast</option><option value="slow">🐢 Slow</option><option value="vslow">🐌 Very slow</option></select></label><a href="teacher.html">← Teacher page</a></div></header>
 <main id="app"><p class="muted">Loading…</p></main>
 <footer style="text-align:center;padding:24px;font-size:13px;color:#6B7280;font-weight:700">Powered by <a href="https://thinknestonline.com" target="_blank" rel="noopener" style="color:#1B3A6B">ThinkNest</a></footer>
 <div id="modal"></div>
@@ -93,9 +93,10 @@ const CH=('BroadcastChannel' in window)?new BroadcastChannel('sb-bee-screen'):nu
 
 /* ---------- Kate's voice ---------- */
 const KATE=new Audio();let ttsU=null;
+const KSPEED={fast:1,slow:.85,vslow:.7};function kSpeed(){try{return localStorage.getItem('kate-speed')||'slow'}catch(e){return 'slow'}}function kRate(){return KSPEED[kSpeed()]||.85}
 function speak(text,clip){try{KATE.pause()}catch(e){}try{speechSynthesis.cancel()}catch(e){}
- if(clip&&HAVE.has(clip)){KATE.src='audio/'+clip+'.m4a';KATE.play().catch(()=>tts(text));return}tts(text)}
-function tts(t){try{const u=new SpeechSynthesisUtterance(t);u.lang='en-GB';u.rate=.85;const v=speechSynthesis.getVoices().find(v=>/en-GB/i.test(v.lang)&&/female|kate|serena|stephanie|martha/i.test(v.name))||speechSynthesis.getVoices().find(v=>/en-GB/i.test(v.lang));if(v)u.voice=v;ttsU=u;speechSynthesis.speak(u)}catch(e){}}
+ if(clip&&HAVE.has(clip)){KATE.src='audio/'+clip+'.m4a';try{KATE.preservesPitch=true;KATE.webkitPreservesPitch=true;KATE.defaultPlaybackRate=KATE.playbackRate=kRate()}catch(e){}KATE.play().catch(()=>tts(text));return}tts(text)}
+function tts(t){try{const u=new SpeechSynthesisUtterance(t);u.lang='en-GB';u.rate=kRate();const v=speechSynthesis.getVoices().find(v=>/en-GB/i.test(v.lang)&&/female|kate|serena|stephanie|martha/i.test(v.name))||speechSynthesis.getVoices().find(v=>/en-GB/i.test(v.lang));if(v)u.voice=v;ttsU=u;speechSynthesis.speak(u)}catch(e){}}
 function sfx(ok){try{const c=new (window.AudioContext||window.webkitAudioContext)();const notes=ok?[523,659,784,1047]:[392,330];notes.forEach((f,i)=>{const o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(.0001,c.currentTime+i*.12);g.gain.exponentialRampToValueAtTime(.25,c.currentTime+i*.12+.02);g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+i*.12+.35);o.connect(g).connect(c.destination);o.start(c.currentTime+i*.12);o.stop(c.currentTime+i*.12+.4)})}catch(e){}}
 
 /* ---------- start ---------- */
@@ -287,6 +288,7 @@ function sendScreen(extra){if(!CH)return;let view={type:'idle',school:SCH?SCH.na
  if(extra)view.flash=extra;CH.postMessage(view)}
 if(CH)CH.onmessage=e=>{if(e.data&&e.data.hello)sendScreen()};
 start();
+(()=>{const k=document.getElementById('kspd');if(!k)return;k.value=kSpeed();k.onchange=()=>{try{localStorage.setItem('kate-speed',k.value)}catch(e){}tts('This is how I will read the words.')}})()
 })();
 </script>
 </body>

@@ -258,6 +258,7 @@ button.mv{font-size:28px;padding:10px 34px}
 .schoice:hover{border-color:var(--y,#F5B800);transform:translateY(-2px)}
 .schoice .e{font-size:46px}.schoice b{display:block;font-size:20px;margin-top:6px;color:var(--aa)}.schoice span{display:block;font-size:14px;color:#6B7280;margin-top:4px}
 @media(max-width:640px){.schoices{grid-template-columns:1fr}.schoice{display:flex;align-items:center;gap:14px;text-align:left;padding:12px 16px}.schoice .e{font-size:36px}.schoice b{margin-top:0}}
+.kspdb{padding:6px 10px!important;font-size:18px!important}.kspov{position:fixed;inset:0;background:rgba(31,42,68,.55);z-index:40;display:grid;place-items:center;padding:16px}.kspcard{background:#fff;border-radius:22px;padding:18px;max-width:440px;width:100%;box-shadow:0 10px 30px rgba(0,0,0,.2)}.ksprow{display:flex;gap:8px;margin-top:12px}.ksp{flex:1;font-family:Fredoka,Arial;font-weight:700;font-size:17px;padding:12px 6px;border-radius:16px;border:3px solid #EFE6CC;background:#fff;color:#1F2A44;cursor:pointer}.ksp.on{border-color:#F5B700;background:#FFF3C4}
 </style>
 </head>
 <body>
@@ -350,6 +351,7 @@ function totalStars(){return Math.max(0,TEAMS.reduce((n,t)=>n+(PR[t.id]?.stars||
 
 /* speech */
 let tts=null,voice=null;
+const KSPEED={fast:1,slow:.85,vslow:.7};function kSpeed(){try{return localStorage.getItem('kate-speed')||'slow'}catch(e){return 'slow'}}function kRate(){return KSPEED[kSpeed()]||.85}
 const HAS_SPEECH=('speechSynthesis' in window)&&('SpeechSynthesisUtterance' in window);
 /* novelty / robotic voices that sound strange to children */
 const BADV=/^(Eddy|Flo|Grandma|Grandpa|Reed|Rocko|Sandy|Shelley|Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Good News|Jester|Organ|Pipe Organ|Superstar|Trinoids|Whisper|Wobble|Zarvox|Fred|Junior|Ralph|Kathy|Princess|Deranged|Hysterical|Agnes|Bruce|Vicki|Victoria)\b/i;
@@ -386,7 +388,7 @@ function silentWav(){const n=800,b=new ArrayBuffer(44+n),v=new DataView(b);const
 function openKate(){if(KATE_OPEN)return;KATE_OPEN=true;try{if(!KATE.src){KATE.src=silentWav();const p=KATE.play();if(p&&p.catch)p.catch(()=>{KATE_OPEN=false})}}catch(e){KATE_OPEN=false}}
 ['pointerdown','touchend','keydown'].forEach(ev=>document.addEventListener(ev,openKate,{capture:true,passive:true}));
 function playFile(u,onFail){PLAYTOK++;try{KATE.pause()}catch(e){}try{speechSynthesis.cancel()}catch(e){}
- KATE.src=u;curAudio=KATE;try{KATE.currentTime=0}catch(e){}const p=KATE.play();if(p&&p.catch)p.catch(err=>{if(err&&err.name==='AbortError')return;if(onFail)onFail(err)});return PLAYTOK}
+ KATE.src=u;curAudio=KATE;try{KATE.currentTime=0}catch(e){}try{KATE.preservesPitch=true;KATE.webkitPreservesPitch=true;KATE.defaultPlaybackRate=KATE.playbackRate=kRate()}catch(e){}const p=KATE.play();if(p&&p.catch)p.catch(err=>{if(err&&err.name==='AbortError')return;if(onFail)onFail(err)});return PLAYTOK}
 function playClip(t){const n=CLIP[t];if(!n||!HAVE.has(n))return false;
  try{playFile('audio/'+n+'.m4a',err=>{if(err&&err.name==='NotAllowedError'){note('Tap 🔊 to hear Kate.');return}HAVE.delete(n);say(t)});return true}catch(e){return false}}
 let lastU=null; /* keep a reference so Safari/Chrome don't cut the word off */
@@ -394,12 +396,12 @@ function say(t,el,opts){if(!t)return;opts=opts||{};if(!CLIP[t]&&!Object.keys(CLI
  if(!HAVE_LOADED&&!opts.noclip){HAVE_P.then(()=>say(t,el,opts));return}
  if(el){el.classList.add('talking');setTimeout(()=>el.classList.remove('talking'),1400)}
  if(!opts.noclip&&playClip(t))return;
- if(tts){tts.speak(t,{language:'en',rate:opts.rate||0.8}).catch(e=>{if(e&&e.code==='not_granted'){tts=null;say(t)}});return}
+ if(tts){tts.speak(t,{language:'en',rate:(opts.rate||0.8)*kRate()}).catch(e=>{if(e&&e.code==='not_granted'){tts=null;say(t)}});return}
  if(!HAS_SPEECH){note('Sound isn’t available in this browser. Try Chrome or Safari.');return}
  try{const s=window.speechSynthesis;
   if(s.speaking||s.pending)s.cancel();
   if(!voice)pv();
-  const u=new SpeechSynthesisUtterance(t);u.lang='en-GB';u.rate=opts.rate||0.9;u.pitch=opts.pitch||1;u.volume=1;if(voice){try{u.voice=voice}catch(e){}}
+  const u=new SpeechSynthesisUtterance(t);u.lang='en-GB';u.rate=(opts.rate||0.9)*kRate();u.pitch=opts.pitch||1;u.volume=1;if(voice){try{u.voice=voice}catch(e){}}
   lastU=u;s.resume();s.speak(u);
  }catch(e){note('Sound didn’t play — check the volume is turned up.')}}
 let noteT;function note(m){let n=document.getElementById('note');if(!n){n=document.createElement('div');n.id='note';n.style.cssText='position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1F2A44;color:#fff;padding:12px 18px;border-radius:14px;font-weight:800;z-index:20;max-width:90vw;text-align:center';document.body.appendChild(n)}n.textContent=m;n.style.display='block';clearTimeout(noteT);noteT=setTimeout(()=>n.style.display='none',3500)}
@@ -465,7 +467,7 @@ function burst(){const b=document.createElement('div');b.className='burst';for(l
 
 /* ---------- views ---------- */
 let V={screen:'home',team:null};
-function top(){return `<div class="top"><div style="width:40px;height:40px">${BEE}</div><div><div class="t">Spelling Bee</div><div class="s">${ME?'Hi '+esc(ME.first_name)+'! 🐝':'Practice Zone'}</div></div>${ME?`<button class="topav" data-go="avatar" title="My avatar">${avatarSVG(myP().avatar,44)}</button>`:''}${ME&&streakNow(ME.team)?`<div class="stars flamechip">${flameBadge(streakNow(ME.team))} ${streakNow(ME.team)}</div>`:''}<div class="stars">⭐ ${totalStars()}</div>${HAVE.size?'':'<button data-voice="1">🔊 Voice</button>'}</div>`}
+function top(){return `<div class="top"><div style="width:40px;height:40px">${BEE}</div><div><div class="t">Spelling Bee</div><div class="s">${ME?'Hi '+esc(ME.first_name)+'! 🐝':'Practice Zone'}</div></div>${ME?`<button class="topav" data-go="avatar" title="My avatar">${avatarSVG(myP().avatar,44)}</button>`:''}${ME&&streakNow(ME.team)?`<div class="stars flamechip">${flameBadge(streakNow(ME.team))} ${streakNow(ME.team)}</div>`:''}<div class="stars">⭐ ${totalStars()}</div><button class="kspdb" data-kspd="1" title="How Kate reads">${{fast:'🐇',slow:'🐢',vslow:'🐌'}[kSpeed()]||'🐢'}</button>${HAVE.size?'':'<button data-voice="1">🔊 Voice</button>'}</div>`}
 function voicePanel(){pv();const g=goodVoices();const cur=voice&&voice.name;
  let m=document.getElementById('vmodal');if(!m){m=document.createElement('div');m.id='vmodal';document.body.appendChild(m)}
  m.innerHTML=`<div class="vback" data-vclose="1"><div class="vcard"><h2 style="font-size:26px">🔊 Choose a voice</h2><p class="muted" style="margin:6px 0 14px">All voices here speak <b>UK English</b>. Tap <b>Try</b> to listen, then pick the one that sounds nicest. It’s remembered on this device.</p>
@@ -1271,6 +1273,13 @@ async function loadWords(){const c=db();if(!c||!ME)return;try{const {data,error}
  const slim=data.map(r=>({team:r.team,word:r.word,sentence:r.sentence,w_clip:r.w_clip,s_clip:r.s_clip,ws_clip:r.ws_clip,meaning:r.meaning||'',m_clip:r.m_clip||''}));
  const changed=JSON.stringify(slim)!==JSON.stringify(DBROWS);applyRows(slim);try{localStorage.setItem(WKEY,JSON.stringify(slim))}catch(e){}
  if(changed&&['home','team','learn'].includes(V.screen))render()}catch(e){}}
+/* how Kate reads: fast, slow or very slow (saved on this device) */
+document.addEventListener('click',e=>{const b=e.target.closest('[data-kspd]');if(!b)return;e.preventDefault();e.stopPropagation();
+ const ov=document.createElement('div');ov.className='kspov';const cur=kSpeed();
+ ov.innerHTML=`<div class="kspcard"><div style="display:flex;align-items:center"><b style="font-family:Fredoka,Arial;font-size:24px;color:#1F2A44;flex:1">How Kate reads</b><button class="ksp" data-kx="1" style="flex:0;padding:6px 12px">✕</button></div><div style="color:#6B7280;font-weight:700;margin-top:4px">Choose how fast Kate speaks.</div><div class="ksprow">${[['fast','🐇 Fast'],['slow','🐢 Slow'],['vslow','🐌 Very slow']].map(([k,l])=>`<button class="ksp ${cur===k?'on':''}" data-kv="${k}">${l}</button>`).join('')}</div></div>`;
+ document.body.appendChild(ov);
+ ov.addEventListener('click',ev=>{if(ev.target===ov||ev.target.closest('[data-kx]')){ov.remove();try{render()}catch(err){}return}const o=ev.target.closest('[data-kv]');if(!o)return;
+  try{localStorage.setItem('kate-speed',o.dataset.kv)}catch(err){}ov.querySelectorAll('[data-kv]').forEach(x=>x.classList.toggle('on',x===o));say('Hello! This is how I will read your words.')})},true);
 buildClips();
 render();
 loadWords();loadSchoolPage();
