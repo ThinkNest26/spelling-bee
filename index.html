@@ -375,7 +375,7 @@ const CLIP={};
 let DBROWS=null;
 function buildClips(){if(DBROWS){DBROWS.forEach(r=>{CLIP[r.word]=r.w_clip;if(r.meaning&&r.m_clip)CLIP[r.meaning]=r.m_clip;if(r.sentence){CLIP[r.sentence]=r.s_clip;CLIP[r.word+'. '+r.sentence+' '+r.word+'.']=r.ws_clip}})}
  else{for(const t of TEAMS)for(const w of WORDS[t.id])CLIP[w]='w-'+slugW(w);for(const w in SENT){CLIP[SENT[w]]='s-'+slugW(w);CLIP[w+'. '+SENT[w]+' '+w+'.']='ws-'+slugW(w)}}
- CLIP["Hello! Let's practise your spellings!"]='g-start';
+ CLIP["Hello! Let's practise your spellings!"]='g-start';CLIP['Hello! This is how I will read your words.']='g-speed';
  CHEERS.forEach((c,i)=>CLIP[c[1]]='p-'+(i+1));ENCOURAGE.forEach((t,i)=>CLIP[t]='e-'+(i+1));for(const k in STREAK_SAY)CLIP[STREAK_SAY[k]]='k-'+k;CLIP[PERFECT_SAY]='perfect'}
 let HAVE=new Set(),curAudio=null,HAVE_LOADED=false,PLAYTOK=0;
 const HAVE_P=(function(){if(location.protocol.indexOf('http')!==0){HAVE_LOADED=true;return Promise.resolve()}

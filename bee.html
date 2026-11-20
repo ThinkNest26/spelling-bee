@@ -288,7 +288,7 @@ function sendScreen(extra){if(!CH)return;let view={type:'idle',school:SCH?SCH.na
  if(extra)view.flash=extra;CH.postMessage(view)}
 if(CH)CH.onmessage=e=>{if(e.data&&e.data.hello)sendScreen()};
 start();
-(()=>{const k=document.getElementById('kspd');if(!k)return;k.value=kSpeed();k.onchange=()=>{try{localStorage.setItem('kate-speed',k.value)}catch(e){}tts('This is how I will read the words.')}})()
+(()=>{const k=document.getElementById('kspd');if(!k)return;k.value=kSpeed();k.onchange=()=>{try{localStorage.setItem('kate-speed',k.value)}catch(e){}speak('Hello! This is how I will read your words.','g-speed')}})()
 })();
 </script>
 </body>

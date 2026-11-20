@@ -51,6 +51,7 @@ k-5	Five in a row! Amazing!
 k-8	Eight in a row! You're a spelling superstar!
 k-10	Ten in a row! You're a champion bee!
 perfect	Wow! A perfect score! Well done!
+g-speed	Hello! This is how I will read your words.
 FIXED
 # 2. the latest word lists from the teacher page
 echo ""
