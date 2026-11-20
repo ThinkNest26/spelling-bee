@@ -244,11 +244,46 @@ function shrinkLogo(file){return new Promise((res,rej)=>{const r=new FileReader(
  let out=make(480);if(out.length>350000)out=make(320);if(out.length>350000)out=make(220);res(out)};img.src=r.result};r.readAsDataURL(file)})}
 function bindTabs(){document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{if(TAB==='invites'&&DIRTY&&b.dataset.tab!=='invites'){confirmBox('Leave without saving?','Your invitation changes haven’t been saved.','Leave',()=>{DIRTY=false;TAB=b.dataset.tab;render()});return}TAB=b.dataset.tab;render()})}
 function hasWord(w,s){return new RegExp('\\b'+String(w).replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','i').test(s)}
+/* ---------- ⬇ download word lists (print / PDF, Word, Excel) ---------- */
+const TEAMLEVEL={buz:'KG2 · Year 1',hon:'Grade 1 · Year 2',bum:'Grades 2–3 · Years 3–4',cha:'Grades 4–5 · Years 5–6'};
+function downloadWordsModal(){
+ $('#modal').innerHTML=`<div class="modal"><div class="card"><h2 style="font-size:21px">⬇ Download word lists</h2>
+  <p class="small muted">Make a copy to print, send home, or edit. Changes to the download don’t change the website.</p>
+  <label style="display:block;font-weight:800;margin-top:10px">Which list?</label>
+  <div class="row" style="flex-wrap:wrap;gap:8px;margin-top:6px"><label><input type="radio" name="dlt" value="one" checked> ${TEAMS[WTEAM][1]} ${esc(TEAMS[WTEAM][0])} only</label><label><input type="radio" name="dlt" value="all"> All four lists</label></div>
+  <label style="display:block;font-weight:800;margin-top:12px">Include</label>
+  <div class="row" style="flex-wrap:wrap;gap:12px;margin-top:6px"><label><input type="checkbox" id="dls" checked> Example sentences</label><label><input type="checkbox" id="dlm" checked> Meanings</label><label><input type="checkbox" id="dlx"> A “Practised ✓” column</label></div>
+  <div style="display:grid;gap:8px;margin-top:16px">
+   <button class="y" data-dl="print">🖨 Print or save as PDF</button>
+   <button class="w" data-dl="word">📄 Word document (you can edit it)</button>
+   <button class="w" data-dl="csv">📊 Excel spreadsheet</button></div>
+  <div class="row" style="margin-top:12px"><div class="spacer"></div><button class="w" id="dlc">Close</button></div></div></div>`;
+ $('#dlc').onclick=()=>$('#modal').innerHTML='';
+ document.querySelectorAll('[data-dl]').forEach(b=>b.onclick=()=>{const all=(document.querySelector('[name=dlt]:checked')||{}).value==='all';
+  const o={teams:all?Object.keys(TEAMS):[WTEAM],sent:$('#dls').checked,mean:$('#dlm').checked,tick:$('#dlx').checked};downloadWords(b.dataset.dl,o)})}
+function wordListHTML(o,forWord){const sch=SCHOOL&&SCHOOL.name?esc(SCHOOL.name):'';const logo=SCHOOL&&SCHOOL.logo&&!forWord?`<img src="${SCHOOL.logo}" alt="" style="height:56px;max-width:140px;object-fit:contain">`:'';
+ return o.teams.map((t,ti)=>{const rows=WROWS.filter(w=>w.team===t);
+  return `<div class="wl" style="${ti?'page-break-before:always;':''}"><table class="hd" style="width:100%;border:0;margin-bottom:10px"><tr><td style="border:0;width:150px">${logo}</td><td style="border:0;text-align:center"><div style="font-size:13px;color:#6B7280;letter-spacing:.12em;text-transform:uppercase">${sch}</div><div style="font-size:26px;font-weight:bold;color:#1B3A6B">${TEAMS[t][1]} ${esc(TEAMS[t][0])} word list</div><div style="font-size:14px;color:#46506B">${TEAMLEVEL[t]} · ${rows.length} words</div></td><td style="border:0;width:150px"></td></tr></table>
+  ${(()=>{const W={n:6,w:o.sent&&o.mean?20:o.sent||o.mean?28:80,t:o.tick?12:0};const rest=100-W.n-W.w-W.t,sw=o.sent&&o.mean?Math.round(rest*.58):rest,mw=rest-(o.sent?sw:0);
+ return `<table class="wt" width="100%" style="width:100%;border-collapse:collapse;font-size:15px;table-layout:fixed"><colgroup><col width="${W.n}%"><col width="${W.w}%">${o.sent?`<col width="${sw}%">`:''}${o.mean?`<col width="${o.sent?mw:rest}%">`:''}${o.tick?`<col width="${W.t}%">`:''}</colgroup><thead><tr><th width="${W.n}%">#</th><th width="${W.w}%">Word</th>${o.sent?`<th width="${sw}%">Example sentence</th>`:''}${o.mean?`<th width="${o.sent?mw:rest}%">Meaning</th>`:''}${o.tick?`<th width="${W.t}%">Practised ✓</th>`:''}</tr></thead>`})()}
+  <tbody>${rows.map((w,i)=>`<tr><td style="color:#6B7280">${i+1}</td><td style="font-weight:bold;font-size:17px">${esc(w.word)}</td>${o.sent?`<td>${esc(w.sentence||'')}</td>`:''}${o.mean?`<td>${esc(w.meaning||'')}</td>`:''}${o.tick?'<td></td>':''}</tr>`).join('')}</tbody></table>
+  <p style="font-size:12px;color:#6B7280;margin-top:10px">Practise these words with Kate’s voice at school-spellingbee.com</p></div>`}).join('')}
+function downloadWords(kind,o){const name=(o.teams.length>1?'Spelling Bee word lists':`${TEAMS[o.teams[0]][0]} word list`);
+ const css=`body{font-family:Arial,Helvetica,sans-serif;color:#1F2A44;margin:24px}th{background:#FFF3C4;color:#1B3A6B;text-align:left;font-size:13px}th,td{border:1px solid #E5D9B6;padding:6px 8px;vertical-align:top}tr:nth-child(even) td{background:#FFFBEF}@page{size:A4;margin:14mm}`;
+ if(kind==='csv'){const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';const head=['List','Level','#','Word'].concat(o.sent?['Example sentence']:[]).concat(o.mean?['Meaning']:[]);
+  const L=[head.map(q).join(',')];o.teams.forEach(t=>WROWS.filter(w=>w.team===t).forEach((w,i)=>L.push([TEAMS[t][0],TEAMLEVEL[t],i+1,w.word].concat(o.sent?[w.sentence||'']:[]).concat(o.mean?[w.meaning||'']:[]).map(q).join(','))));
+  saveBlob(new Blob(['﻿'+L.join('\r\n')],{type:'text/csv;charset=utf-8'}),name+'.csv');toast('Downloaded ✓');return}
+ if(kind==='word'){const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>${esc(name)}</title><!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]--><style>${css}.wl{page-break-after:always}</style></head><body>${wordListHTML(o,true)}</body></html>`;
+  saveBlob(new Blob(['﻿'+html],{type:'application/msword'}),name+'.doc');toast('Downloaded ✓');return}
+ const w=window.open('','_blank');if(!w){toast('Please allow pop-ups to print');return}
+ w.document.write(`<!DOCTYPE html><html lang="en-GB"><head><meta charset="utf-8"><title>${esc(name)}</title><style>${css}.wl{break-inside:auto}tr{break-inside:avoid}.bar{position:sticky;top:0;background:#fff;padding:10px 0;margin-bottom:10px;border-bottom:1px solid #eee}@media print{.bar{display:none}body{margin:0}}</style></head><body><div class="bar"><button onclick="print()" style="font-size:16px;padding:8px 16px;border-radius:10px;border:0;background:#F5B700;font-weight:bold;cursor:pointer">🖨 Print or save as PDF</button> <span style="color:#6B7280;font-size:14px">To save as a PDF, choose “Save as PDF” in the print window.</span></div>${wordListHTML(o,false)}</body></html>`);
+ w.document.close();setTimeout(()=>{try{w.focus();w.print()}catch(e){}},500)}
+function saveBlob(b,fn){const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=fn;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
 function renderWords(){
  const rows=WROWS.filter(w=>w.team===WTEAM),missing=WROWS.filter(w=>needs(w).length).length;
  $('#app').innerHTML=tabs()+`
  ${missing?`<div class="card warn"><b>🎙 ${missing} word${missing>1?'s':''} need${missing>1?'':'s'} Kate’s voice recorded.</b> Until then, children hear their device’s own voice for ${missing>1?'these':'this one'}. To record: on the Mac, open Terminal, type <code>cd ~/Documents/GitHub/spelling-bee</code> then <code>bash make-audio.sh</code>, then commit and Push origin in GitHub Desktop.</div>`:`<div class="card okc">✅ Every word has Kate’s recording.</div>`}
- <div class="card" style="margin-top:14px"><div class="row"><h2 style="font-size:20px">Word lists</h2><div class="spacer"></div><button class="y" id="addw">+ Add words</button></div>
+ <div class="card" style="margin-top:14px"><div class="row"><h2 style="font-size:20px">Word lists</h2><div class="spacer"></div><button class="w" id="dlw">⬇ Download</button><button class="y" id="addw">+ Add words</button></div>
  <div class="row teams" style="margin-top:12px">${Object.entries(TEAMS).map(([t,v])=>`<button class="${WTEAM===t?'on':''} ${t}" data-wteam="${t}">${v[1]} ${v[0]} <span class="muted">(${WROWS.filter(w=>w.team===t).length})</span></button>`).join('')}</div>
  <p class="small muted">${{buz:'KG2 · Year 1',hon:'Grade 1 · Year 2',bum:'Grades 2–3 · Years 3–4',cha:'Grades 4–5 · Years 5–6'}[WTEAM]}. Changes appear on the children’s practice pages straight away (they may need to refresh). Sentences are used in <b>📝 Fill the gap</b> and must include the word. A word without a sentence is left out of Fill the gap.</p>
  <div class="tablewrap"><table><thead><tr><th style="width:40px">#</th><th>Word</th><th>Example sentence (for Fill the gap)</th><th>Meaning (for Real Bee &amp; Bee rounds)</th><th>Kate’s voice</th><th></th></tr></thead><tbody>
@@ -261,7 +296,7 @@ function renderWords(){
  </tbody></table></div></div>`;
  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{TAB=b.dataset.tab;render()});
  document.querySelectorAll('[data-wteam]').forEach(b=>b.onclick=()=>{WTEAM=b.dataset.wteam;render()});
- $('#addw').onclick=addWordsModal;
+ $('#addw').onclick=addWordsModal;$('#dlw').onclick=downloadWordsModal;
  document.querySelectorAll('[data-wid]').forEach(x=>x.onchange=async()=>{const id=+x.dataset.wid,f=x.dataset.wf,v=x.value.trim().replace(/\s+/g,' ');const w=WROWS.find(r=>r.id===id);
   if(f==='word'&&!/^[\p{L}'’-]{1,40}$/u.test(v)){toast('A word can only have letters (no spaces).');x.value=w.word;return}
   if(f==='sentence'&&v&&!hasWord(w.word,v)){toast('The sentence must include the word “'+w.word+'” (for Fill the gap).');x.value=w.sentence;return}
