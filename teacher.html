@@ -49,6 +49,7 @@ td input,td select{padding:5px 7px}
 .invgrid{display:grid;grid-template-columns:230px minmax(280px,1fr) minmax(300px,1.1fr);gap:14px;align-items:start}
 @media (max-width:1050px){.invgrid{grid-template-columns:1fr}}
 .invitem{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;background:#fff;color:var(--ink);border:1.5px solid var(--line);margin-bottom:6px}
+.sizegrid{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;margin-bottom:6px}.sizegrid label{display:flex;align-items:center;gap:6px}.sizegrid input{flex:1;width:auto}
 .invitem.on{border-color:var(--honey);background:var(--honeyL)}
 .invform textarea{resize:vertical}
 .logobox{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border:1.5px dashed var(--line);border-radius:12px;padding:10px}.logobox img{max-height:56px;max-width:160px;object-fit:contain;background:#fff;border-radius:8px;padding:4px;border:1px solid var(--line)}
@@ -170,7 +171,7 @@ async function loadWords(){
 function tabs(){return `<div class="tabs">${[['dash','📊 Dashboard'],['spellers','👧 Spellers & progress'],['words','📚 Word lists'],['invites','✉️ Invitations'],['rounds','🎤 Bee rounds & Grand Final'],['certs','🎓 Certificates'],['reports','📄 Parent reports'],['settings','⚙️ School settings']].map(([k,l])=>`<button class="${TAB===k?'on':''}" data-tab="${k}">${l}</button>`).join('')}</div>`}
 function needs(w){const n=[];if(!HAVE.has(w.w_clip))n.push('word');if(w.sentence&&(!HAVE.has(w.s_clip)||!HAVE.has(w.ws_clip)))n.push('sentence');if(w.meaning&&w.m_clip&&!HAVE.has(w.m_clip))n.push('meaning');return n}
 /* ---------- invitations ---------- */
-let INVS=null,INVSEL=null,DRAFT=null,DIRTY=false;
+let INVS=null,INVSEL=null,DRAFT=null,DIRTY=false,INVEDIT=false;
 async function loadInvites(){const {data,error}=await sb.from('invitations').select('*').order('created_at');if(error){INVS=[];toast('Couldn’t load invitations');return}INVS=data||[];
  if(!INVSEL||!INVS.find(i=>i.id===INVSEL))INVSEL=INVS[0]?INVS[0].id:null;pickInvite(INVSEL)}
 function pickInvite(id){INVSEL=id;const i=INVS.find(x=>x.id===id);DRAFT=i?{name:i.name,published:i.published,data:Object.assign({theme:'honey'},i.data)}:null;DIRTY=false}
@@ -194,8 +195,11 @@ async function renderInvites(){
    <label style="margin-top:12px;display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" id="ipub" style="width:auto" ${DRAFT.published?'checked':''}> Published — families with the link can see it</label>
    <div class="row" style="margin-top:14px"><button class="y" id="isave">💾 Save</button><button class="w" id="idup">Duplicate</button><div class="spacer"></div><button class="w" id="idel">🗑 Delete</button></div>
   </div>
-  <div class="card"><div class="row" style="margin-bottom:10px"><h2 style="font-size:18px">Preview</h2><div class="spacer"></div></div>
-   <div id="ipreview">${SBInvite.card(DRAFT.data)}</div>
+  <div class="card"><div class="row" style="margin-bottom:10px"><h2 style="font-size:18px">Preview</h2><div class="spacer"></div><button class="${INVEDIT?'y':'w'} sm" id="imove">${INVEDIT?'✓ Done moving':'✋ Move things'}</button></div>
+   ${INVEDIT?`<div class="small" style="background:#FFF3C4;border-radius:12px;padding:8px 12px;margin-bottom:10px">Drag anything with a dotted line to move it. Use the sliders to make things bigger or smaller.</div>
+   <div class="sizegrid">${SBInvite.SIZES.map(([k,l])=>`<label class="small">${l} <input type="range" min="50" max="200" step="5" data-isz="${k}" value="${Math.round(((DRAFT.data.size||{})[k]||1)*100)}"><span data-iszv="${k}">${Math.round(((DRAFT.data.size||{})[k]||1)*100)}%</span></label>`).join('')}</div>
+   <div class="row" style="justify-content:flex-end;margin:6px 0 10px"><button class="w sm" id="ireset">↺ Put everything back</button></div>`:''}
+   <div id="ipreview" class="${INVEDIT?'inv-editing':''}">${SBInvite.card(DRAFT.data)}</div>
    <div class="row" style="margin-top:14px;justify-content:center">
     <select id="ilay" style="max-width:170px"><option value="one">1 per page (A4)</option><option value="two">2 per page (A5)</option></select>
     <input type="number" id="icopies" min="1" max="200" value="1" style="width:80px" title="Copies"> <span class="small muted">copies</span>
@@ -223,6 +227,15 @@ async function renderInvites(){
  $('#idup').onclick=async()=>{const {data,error}=await sb.from('invitations').insert([{name:DRAFT.name+' (copy)',data:DRAFT.data,published:false}]).select();if(error||!data){toast('Couldn’t duplicate');return}INVS.push(data[0]);pickInvite(data[0].id);renderInvites();toast('Copy made')};
  $('#idel').onclick=()=>confirmBox('Delete “'+DRAFT.name+'”?','The family link will stop working.','Delete',async()=>{const {error}=await sb.from('invitations').delete().eq('id',INVSEL);if(error){toast('Couldn’t delete');return}INVS=INVS.filter(x=>x.id!==INVSEL);INVSEL=null;pickInvite(INVS[0]?INVS[0].id:null);renderInvites();toast('Deleted')},true);
  $('#iprint').onclick=()=>SBInvite.print(DRAFT.data,$('#ilay').value,$('#icopies').value);
+ $('#imove').onclick=()=>{INVEDIT=!INVEDIT;renderInvites()};
+ if(INVEDIT){
+  document.querySelectorAll('[data-isz]').forEach(r=>r.oninput=()=>{DRAFT.data.size=Object.assign({},DRAFT.data.size||{},{[r.dataset.isz]:+r.value/100});document.querySelector(`[data-iszv="${r.dataset.isz}"]`).textContent=r.value+'%';upd()});
+  $('#ireset').onclick=()=>{delete DRAFT.data.pos;delete DRAFT.data.size;DIRTY=true;renderInvites();toast('Everything is back in its place — remember to Save')};
+  const pv=$('#ipreview');let drag=null;
+  pv.onpointerdown=e=>{const el=e.target.closest('[data-mv]');if(!el||!pv.contains(el))return;e.preventDefault();const box=pv.querySelector('.inv').getBoundingClientRect();
+   const p=((DRAFT.data.pos||{})[el.dataset.mv])||[0,0];drag={el,n:el.dataset.mv,sx:e.clientX,sy:e.clientY,ox:+p[0]||0,oy:+p[1]||0,w:box.width};el.classList.add('dragging');try{el.setPointerCapture(e.pointerId)}catch(_){}};
+  pv.onpointermove=e=>{if(!drag)return;const x=Math.max(-100,Math.min(100,drag.ox+(e.clientX-drag.sx)/drag.w*100)),y=Math.max(-150,Math.min(150,drag.oy+(e.clientY-drag.sy)/drag.w*100));drag.x=x;drag.y=y;drag.el.style.translate=x.toFixed(2)+'cqw '+y.toFixed(2)+'cqw'};
+  pv.onpointerup=pv.onpointercancel=()=>{if(!drag)return;drag.el.classList.remove('dragging');if(drag.x!=null){DRAFT.data.pos=Object.assign({},DRAFT.data.pos||{},{[drag.n]:[+drag.x.toFixed(2),+drag.y.toFixed(2)]});DIRTY=true;$('#dirty').textContent='Unsaved changes'}drag=null}}
  const L=$('#ilink');if(L)L.onclick=async()=>{const url=inviteLink(INVSEL);try{await navigator.clipboard.writeText(url);toast('Link copied ✓ — paste it into a message to families')}catch(e){prompt('Copy this link:',url)}if(DIRTY)toast('Remember to Save first, so families see your changes')};
 }
 /* resize a logo so it is small enough to save (max 480px, keeps transparency) */
