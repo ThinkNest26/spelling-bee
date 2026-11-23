@@ -884,10 +884,9 @@ async function xHomeAct(a,b){const h=XS.home;const t=V.team;
  if(a==='peek'){const el=$('#xhpeek');if(!el)return;if(el.textContent){el.textContent='';return}const g=await xRun('sb_home_grownup',{p_code:ME.code});const w=g&&g.words&&g.words[XH.i];if(!w)return;el.textContent=w;setTimeout(()=>{if(el)el.textContent=''},2500);return}
  if(a==='prac'){const miss=Object.keys(h.answers||{}).filter(w=>!same(String(h.answers[w]||''),w));xStart('family',miss,{title:'🔓 Learn from my mistakes'});return}}
 /* 💡 family idea of the week */
-function xIdeaCard(){const wk=SX.weekStart(dubaiDay()),ch=SX.familyFor(wk);const done=XS.fam.find(f=>String(f.week).slice(0,10)===wk);const n=XS.fam.length;const ws=xFamWords();
+function xIdeaCard(){const wk=SX.weekStart(dubaiDay()),ch=SX.familyFor(wk);const done=XS.fam.find(f=>String(f.week).slice(0,10)===wk);const n=XS.fam.length;
  return `<div class="panel sxfc"><div class="muted">💡 Family idea of the week</div><div style="font-size:52px">${ch.e}</div><h2 style="font-size:28px;margin:4px 0 12px">${esc(ch.t)}</h2>
   <ol class="sxsteps">${ch.steps.map(s=>`<li>${esc(s)}</li>`).join('')}</ol>
-  <div class="muted" style="margin-top:6px">Words you could use:</div><div class="sxex" style="justify-content:center">${ws.map(w=>`<span class="sxword" data-say="${esc(w)}">🔊 ${esc(w)}</span>`).join('')}</div>
   <div class="sxgrown">👪 <b>Grown-up corner:</b> ${esc(ch.tip)}</div>
   ${done?`<div class="fb ok">✅ You did this week’s family idea together!</div>`
    :`<div class="sxform"><label>What did you do? <span class="muted">(optional)</span><textarea id="fnote" rows="2" maxlength="300" placeholder="We found 3 words with igh in my book…"></textarea></label>
