@@ -97,10 +97,16 @@ td svg{border-radius:50%;flex:none}
 .inssents{display:grid;gap:8px;max-height:520px;overflow:auto}
 .inss{background:#FFFDF6;border:1px solid var(--line);border-radius:12px;padding:8px 10px;margin-bottom:6px}
 .insw{display:flex;gap:6px;align-items:center;margin:0;font-size:13px;cursor:pointer}.insw input{width:auto}
+.smfmt{display:grid;gap:8px}.smf{display:grid;grid-template-columns:auto 1fr;gap:2px 8px;border:1.5px solid var(--line);border-radius:12px;padding:8px 10px;cursor:pointer;margin:0;font-size:14px;color:var(--ink)}.smf input{width:auto;grid-row:span 2;margin-top:3px}.smf.on{border-color:var(--honey);background:var(--honeyL)}
+.smcls{border-bottom:1px solid #F4EEDC;padding:8px 0}.smkid{display:inline-flex;align-items:center;gap:4px;background:#DBEAFE;color:#1E40AF;border-radius:999px;padding:3px 4px 3px 10px;font-weight:800;font-size:13px}
+.smx{background:transparent;color:#1E40AF;padding:0 6px;font-size:12px}
+.hnav{display:flex;gap:6px;margin-left:18px;flex-wrap:wrap}.hnav a{color:#fff;text-decoration:none;font-weight:800;font-size:14px;padding:7px 12px;border-radius:999px;background:rgba(255,255,255,.12)}.hnav a:hover{background:rgba(255,255,255,.22)}.hnav a.on{background:var(--honey);color:var(--ink)}
+.tokids{display:block;text-align:center;margin-top:14px;padding:12px;border-radius:12px;background:var(--honeyL);color:var(--ink);font-weight:800;text-decoration:none}.tokids:hover{background:#FFE9A3}
+@media(max-width:640px){.hnav{margin-left:0;width:100%;order:3}}
 </style>
 </head>
 <body>
-<header><div style="font-size:30px">🐝</div><div><div class="t">Spelling Bee — Teachers</div><div class="s">Bee codes and progress</div></div><div class="right" id="who"></div></header>
+<header><div style="font-size:30px">🐝</div><div><div class="t">Spelling Bee — Teachers</div><div class="s">Bee codes and progress</div></div><nav class="hnav"><a href="./" id="toKids">👧 Students’ page</a><a href="teacher.html" class="on">👩‍🏫 Teachers’ page</a></nav><div class="right" id="who"></div></header>
 <main id="app"></main>
 <footer style="text-align:center;padding:24px;font-size:13px;color:#6B7280;font-weight:700">Powered by <a href="https://thinknestonline.com" target="_blank" rel="noopener" style="color:#1B3A6B">ThinkNest</a></footer>
 <div id="cards"></div>
@@ -131,7 +137,7 @@ let TAB='dash',WROWS=[],HAVE=new Set(),WTEAM='buz',sb=null,USER=null,KIDS=[],PRO
 if(READY){try{sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY)}catch(e){}}
 let RECOVERY=false;try{sb&&sb.auth.onAuthStateChange(ev=>{if(ev==='PASSWORD_RECOVERY'){RECOVERY=true;start()}})}catch(e){}
 
-function renderLogin(msg,mode){mode=mode||'in';
+function renderLogin(msg,mode){mode=mode||'in';setTimeout(kidsLink,0);
  $('#who').innerHTML='';
  const up=mode==='up';
  $('#app').innerHTML=`<div class="login card"><h2 style="font-size:26px">${up?'Create your teacher password':'Teacher sign in'}</h2>
@@ -141,7 +147,7 @@ function renderLogin(msg,mode){mode=mode||'in';
  <div style="margin-top:10px"><label>${up?'Choose a password (at least 8 characters)':'Password'}</label><input id="pw" type="password" autocomplete="${up?'new-password':'current-password'}"></div>
  <button class="y" style="margin-top:14px;width:100%;font-size:16px;padding:12px" ${READY?'':'disabled'}>${up?'Create password':'Sign in'}</button></form>
  <div class="msg ${msg&&msg.ok?'ok':'bad'} ${msg?'show':''}" id="lmsg">${esc(msg&&msg.t||msg||'')}</div>
- <div style="margin-top:14px;text-align:center;font-size:14px">${up?'<a href="#" id="toin">Already have a password? Sign in</a>':'<a href="#" id="toup">First time? Create your password</a> · <a href="#" id="forgot">Forgot password?</a>'}</div>
+ <div style="margin-top:14px;text-align:center;font-size:14px">${up?'<a href="#" id="toin">Already have a password? Sign in</a>':'<a href="#" id="toup">First time? Create your password</a> · <a href="#" id="forgot">Forgot password?</a>'}</div><a class="tokids toKids" href="./">👧 Student? Go to the students’ page →</a>
  <div style="margin-top:12px;text-align:center;font-size:14px;border-top:1px solid var(--line);padding-top:12px">New school? <a href="signup.html"><b>Start a free 7-day trial →</b></a></div></div>`;
  const ti=$('#toin');if(ti)ti.onclick=e=>{e.preventDefault();renderLogin('', 'in')};
  const tu=$('#toup');if(tu)tu.onclick=e=>{e.preventDefault();renderLogin('', 'up')};
@@ -177,13 +183,13 @@ async function load(){
  $('#app').innerHTML='<p class="muted">Loading…</p>';
  const [{data:k,error:e1},{data:p,error:e2}]=await Promise.all([sb.from('students').select('*').order('grade').order('class_name').order('first_name'),sb.from('progress').select('*')]);
  if(e1||e2){$('#app').innerHTML='<div class="card"><b>Couldn’t load the data.</b> Please refresh the page.</div>';return}
- KIDS=k||[];PROG={};(p||[]).forEach(x=>PROG[x.student_id]=x);await Promise.all([loadWords(),loadSchool()]);setHeader();render();
+ KIDS=k||[];PROG={};(p||[]).forEach(x=>PROG[x.student_id]=x);await Promise.all([loadWords(),loadSchool(),semiCheck()]);setHeader();render();
 }
 async function loadWords(){
  try{const {data,error}=await sb.rpc('teacher_words');if(!error&&Array.isArray(data)){WROWS=data;for(const t in TEAMS)TEAMS[t][2]=WROWS.filter(w=>w.team===t).length}}catch(e){}
  try{const r=await fetch('audio/manifest.json',{cache:'no-cache'});if(r.ok){const a=await r.json();if(Array.isArray(a))HAVE=new Set(a)}}catch(e){}
 }
-function tabs(){return `<div class="tabs">${[['dash','📊 Dashboard'],['spellers','👧 Spellers & progress'],['words','📚 Word lists'],['weekly','🗓 Weekly words'],['insights','🔎 Spelling insights'],['invites','✉️ Invitations'],['rounds','🎤 Bee rounds & Grand Final'],['certs','🎓 Certificates'],['gl','📋 GL Practice'],['reports','📄 Parent reports'],['settings','⚙️ School settings']].map(([k,l])=>`<button class="${TAB===k?'on':''}" data-tab="${k}">${l}</button>`).join('')}</div>`}
+function tabs(){return `<div class="tabs">${[['dash','📊 Dashboard'],['spellers','👧 Spellers & progress'],['words','📚 Word lists'],['weekly','🗓 Weekly words'],['insights','🔎 Spelling insights'],['invites','✉️ Invitations'],['rounds','🎤 Bee rounds & Grand Final'],['certs','🎓 Certificates'],...(SEMIORG?[['semi','🏅 Semi-finals']]:[]),['gl','📋 GL Practice'],['reports','📄 Parent reports'],['settings','⚙️ School settings']].map(([k,l])=>`<button class="${TAB===k?'on':''}" data-tab="${k}">${l}</button>`).join('')}</div>`}
 function needs(w){const n=[];if(!HAVE.has(w.w_clip))n.push('word');if(w.sentence&&(!HAVE.has(w.s_clip)||!HAVE.has(w.ws_clip)))n.push('sentence');if(w.meaning&&w.m_clip&&!HAVE.has(w.m_clip))n.push('meaning');return n}
 /* ---------- invitations ---------- */
 let INVS=null,INVSEL=null,DRAFT=null,DIRTY=false,INVEDIT=false;
@@ -393,7 +399,8 @@ async function renderDash(){if(!DAILY){$('#app').innerHTML=tabs()+'<p class="mut
 
 /* ---------- school settings, teachers, plan ---------- */
 let SCHOOL=null,PLANS=[],SDRAFT=null,TEACH=[];
-async function loadSchool(){try{const [{data:s},{data:p},{data:t}]=await Promise.all([sb.rpc('my_school_info'),sb.from('plans').select('*').order('sort'),sb.from('teachers').select('email')]);SCHOOL=s||null;PLANS=p||[];TEACH=(t||[]).map(x=>x.email).sort()}catch(e){}}
+async function loadSchool(){try{const [{data:s},{data:p},{data:t}]=await Promise.all([sb.rpc('my_school_info'),sb.from('plans').select('*').order('sort'),sb.from('teachers').select('email')]);SCHOOL=s||null;PLANS=p||[];TEACH=(t||[]).map(x=>x.email).sort();if(SCHOOL&&SCHOOL.slug){try{localStorage.setItem('sb-teacher-slug',SCHOOL.slug)}catch(e){}}kidsLink()}catch(e){}}
+function kidsLink(){let sl=SCHOOL&&SCHOOL.slug;if(!sl){try{sl=localStorage.getItem('sb-teacher-slug')}catch(e){}}const u=sl?'./?s='+encodeURIComponent(sl):'./';document.querySelectorAll('#toKids,.toKids').forEach(a=>a.href=u)}
 function schoolBanner(){if(!SCHOOL)return '';const d=SCHOOL.days_left;
  if(!SCHOOL.active)return `<div class="card warn" style="margin-bottom:14px"><b>⏸ Your Spelling Bee plan has ended.</b> Children can’t practise until it’s renewed. <button class="y sm" data-goplan="1">Choose a plan</button></div>`;
  if(SCHOOL.plan==='trial')return `<div class="card" style="margin-bottom:14px;background:#E8F0FF;border-color:#B9CDF5"><b>🎉 Free trial:</b> ${d} day${d===1?'':'s'} left. Everything is unlocked. <button class="y sm" data-goplan="1">See plans</button></div>`;
@@ -638,7 +645,78 @@ async function renderIns(){if(INS===null||Date.now()-(renderIns.t||0)>60000){ren
   if(error&&!/duplicate/i.test(error.message||'')){c.checked=!on;toast('Couldn’t change — please try again');return}if(on)INS.sup.add(id);else INS.sup.delete(id);c.parentElement.lastChild.textContent=on?' On':' Off';toast(on?'Reading support on ✓':'Reading support off')});
  document.querySelectorAll('[data-sdel]').forEach(b=>b.onclick=()=>confirmBox('Remove this sentence?','The child won’t lose any stars.','Remove',async()=>{const {error}=await sb.from('sb_sentences').delete().eq('id',+b.dataset.sdel);if(error){toast('Couldn’t remove');return}INS.sent=INS.sent.filter(s=>s.id!==+b.dataset.sdel);renderIns()},true))}
 
+/* ================= 🏅 GRADE SEMI-FINALS (organisers only) ================= */
+let SEMIORG=null,SM=null,SMG=null,SMD=null;
+const SFMT={out:{e:'🎤',t:'Rounds — a mistake means out',d:'Spellers take turns to spell a word out loud. Spell it right and you stay in; a mistake means you’re out. The last spellers standing go to the Grand Final.'},
+ written:{e:'📝',t:'Written round, then out loud',d:'First everyone writes a set of words. The highest scores then spell out loud on stage, and the best spellers go to the Grand Final.'},
+ points:{e:'⭐',t:'Points rounds',d:'Everyone spells the same number of words out loud and gets a point for each word spelt correctly. The highest scores go to the Grand Final.'}};
+async function semiCheck(){try{const {data,error}=await sb.rpc('sb_is_organiser');SEMIORG=!error&&data===true}catch(e){SEMIORG=false}}
+async function semiLoad(){const q=await Promise.all([sb.from('sb_organisers').select('*').order('added_at'),sb.from('sb_semis').select('*'),sb.from('bee_rounds').select('*').eq('kind','class').order('created_at',{ascending:false})]);
+ if(q[0].error||q[1].error){SM=false;return}SM={org:q[0].data||[],semis:q[1].data||[],rounds:(q[2].data||[]).filter(r=>r.status==='done'&&r.state&&Array.isArray(r.state.spellers))}}
+function semiRank(st){const ok=id=>(st.log||[]).filter(l=>l.id===id&&l.ok).length;const r=x=>x.id===st.winner?1e6:(st.through||[]).includes(x.id)?1e5:(x.out==null?5e4:x.out*100+ok(x.id));
+ return st.spellers.slice().sort((a,b)=>r(b)-r(a))}
+function semiSuggest(g,n){const kids=KIDS.filter(k=>k.active!==false&&+k.grade===+g);const byId={};kids.forEach(k=>byId[k.id]=k);
+ const classes=[...new Set(kids.map(k=>k.class_name||GL(g)))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+ return classes.map(c=>{const ids=new Set(kids.filter(k=>(k.class_name||GL(g))===c).map(k=>k.id));const rd=SM.rounds.find(r=>r.state.spellers.some(s=>ids.has(s.id)));
+  if(!rd)return {cls:c,round:null,picks:[]};return {cls:c,round:rd,picks:semiRank(rd.state).filter(s=>ids.has(s.id)).slice(0,n).map(s=>s.id)}})}
+function semiDraft(g){const m=SM.semis.find(x=>+x.grade===+g);if(m)return JSON.parse(JSON.stringify(m));
+ const d={grade:+g,day:'',place:'',format:'out',per_class:5,finalists:3,notes:'',status:'draft',qualifiers:[]};d.qualifiers=semiSuggest(g,5).flatMap(c=>c.picks);d._auto=true;return d}
+async function renderSemi(){if(SEMIORG===false){TAB='dash';render();return}
+ if(SM===null||Date.now()-(renderSemi.t||0)>60000){renderSemi.t=Date.now();$('#app').innerHTML=tabs()+'<p class="muted">Loading the semi-finals…</p>';await semiLoad()}
+ if(SM===false){$('#app').innerHTML=tabs()+`<div class="card" style="text-align:center;padding:30px"><div style="font-size:44px">🛠️</div><h2>One quick step first</h2><p class="muted">Run <b>setup-sb-semi.sql</b> in Supabase to switch on the semi-finals.</p></div>`;bindTabs();return}
+ const gs=[...new Set(KIDS.map(k=>+k.grade))].sort((a,b)=>a-b);if(SMG===null||!gs.includes(+SMG))SMG=gs[0]??3;if(!SMD||+SMD.grade!==+SMG)SMD=semiDraft(SMG);const d=SMD;
+ const sugg=semiSuggest(SMG,d.per_class);const q=new Set(d.qualifiers);const KN={};KIDS.forEach(k=>KN[k.id]=k);
+ const inGrade=KIDS.filter(k=>k.active!==false&&+k.grade===+SMG);const others=inGrade.filter(k=>!q.has(k.id)).sort((a,b)=>(a.class_name||'').localeCompare(b.class_name||'')||a.first_name.localeCompare(b.first_name));
+ const byCls={};d.qualifiers.forEach(id=>{const k=KN[id];if(!k)return;const c=k.class_name||GL(k.grade);(byCls[c]=byCls[c]||[]).push(k)});
+ const clsList=[...new Set([...sugg.map(s=>s.cls),...Object.keys(byCls)])];
+ const me=(USER&&USER.email||'').toLowerCase();const daysTo=d.day?Math.round((Date.parse(d.day+'T12:00:00Z')-Date.parse(xToday()+'T12:00:00Z'))/864e5):null;
+ $('#app').innerHTML=tabs()+`<div class="card" style="margin-bottom:14px"><div class="row"><h2 style="margin:0">🏅 Grade semi-finals</h2><div class="spacer"></div>
+   <label style="margin:0">Grade</label><select id="smg" style="width:auto">${gs.map(g=>`<option value="${g}" ${+g===+SMG?'selected':''}>${GL(g)}</option>`).join('')}</select>
+   <span class="pill ${d.status==='confirmed'?'bum':'hon'}">${d.status==='confirmed'?'✅ Confirmed — children can see it':'✏️ Draft — children can’t see it yet'}</span></div>
+   <p class="muted small" style="margin:8px 0 0">The top spellers from each <b>class round</b> go through automatically. Check the list, add or remove a child, then confirm. Qualifiers then see “🏅 You’re in the semi-final!” on their page, with a countdown and semi-final practice.</p></div>
+ <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr));margin-bottom:14px">
+  <div class="card"><h3 style="margin:0 0 10px">📅 Details</h3>
+   <div class="grid" style="grid-template-columns:1fr 1fr"><div><label>Date</label><input type="date" id="sm-day" value="${esc(d.day||'')}"></div><div><label>Place</label><input id="sm-place" value="${esc(d.place)}" placeholder="e.g. School hall"></div>
+    <div><label>Top spellers from each class</label><input type="number" min="1" max="30" id="sm-per" value="${d.per_class}"></div><div><label>Go through to the Grand Final</label><input type="number" min="1" max="30" id="sm-fin" value="${d.finalists}"></div></div>
+   <label style="margin-top:10px">How the semi-final works</label><div class="smfmt">${Object.entries(SFMT).map(([k,f])=>`<label class="smf ${d.format===k?'on':''}"><input type="radio" name="smf" value="${k}" ${d.format===k?'checked':''}><b>${f.e} ${f.t}</b><span class="small muted">${f.d}</span></label>`).join('')}</div>
+   <label style="margin-top:10px">Message for the qualifiers <span class="muted">(optional)</span></label><textarea id="sm-notes" rows="2" placeholder="e.g. Wear your school uniform and arrive by 8:15.">${esc(d.notes)}</textarea>
+   ${daysTo!==null?`<p class="small muted" style="margin:8px 0 0">${daysTo>0?`${daysTo} day${daysTo>1?'s':''} to go.`:daysTo===0?'It’s today!':'This date has passed.'}</p>`:''}</div>
+  <div class="card"><div class="row" style="margin-bottom:6px"><h3 style="margin:0">👧 Qualifiers <span class="pill bum">${d.qualifiers.length}</span></h3><div class="spacer"></div><button class="w sm" id="sm-fill">↻ Fill with the top ${d.per_class} from each class round</button></div>
+   ${d._auto?'<p class="small" style="background:var(--honeyL);border-radius:10px;padding:6px 10px">✨ Filled in automatically from the class rounds. Check it, then save.</p>':''}
+   ${clsList.map(c=>{const s=sugg.find(x=>x.cls===c);const ks=byCls[c]||[];return `<div class="smcls"><div class="row"><b>${esc(c)}</b><span class="small muted">${s&&s.round?`from “${esc(s.round.name)}”`:'no class round finished yet'}</span></div>
+     <div class="row" style="margin-top:4px">${ks.map(k=>`<span class="smkid">${esc(k.first_name)}<button class="smx" data-smx="${k.id}" title="Remove">✕</button></span>`).join('')||'<span class="small muted">Nobody yet</span>'}</div></div>`}).join('')}
+   <div class="row" style="margin-top:10px"><select id="sm-add" style="flex:1"><option value="">➕ Add a child…</option>${others.map(k=>`<option value="${k.id}">${esc(k.first_name)} (${esc(k.class_name||GL(k.grade))})</option>`).join('')}</select><button class="w" id="sm-addb">Add</button></div></div></div>
+ <div class="card" style="margin-bottom:14px"><div class="row">${d.status==='confirmed'?'':'<button class="w" id="sm-save">💾 Save draft</button>'}${d.status==='confirmed'?'<button class="w" id="sm-hide">Hide from children</button><button class="y" id="sm-conf">💾 Save changes</button>':'<button class="y" id="sm-conf">✅ Confirm and tell the children</button>'}<div class="spacer"></div><button class="w" id="sm-live" ${d.qualifiers.length<2?'disabled':''}>🎤 Set up the live semi-final in Bee rounds</button></div></div>
+ <div class="card"><h3 style="margin:0 0 6px">🔑 Semi-final organisers</h3><p class="small muted" style="margin:0 0 8px">Only these teachers see this tab. Use the same email they sign in with.</p>
+  ${SM.org.length?SM.org.map(o=>`<div class="row" style="padding:4px 0"><b style="flex:1">${esc(o.email)}</b>${o.email.toLowerCase()===me?'<span class="small muted">you</span>':''}<button class="w sm" data-smorg="${esc(o.email)}">Remove</button></div>`).join(''):'<p class="small" style="background:var(--honeyL);border-radius:10px;padding:8px 10px">⚠️ No organisers yet, so every teacher can see this tab. Add your email and the other organiser’s email.</p>'}
+  <div class="row" style="margin-top:8px"><input id="sm-oe" placeholder="teacher@school.com" style="flex:1" value="${SM.org.length?'':esc(me)}"><button class="y" id="sm-oadd">Add organiser</button></div></div>`;
+ bindTabs();semiBind()}
+function semiKeep(){const d=SMD;d.day=$('#sm-day').value||'';d.place=$('#sm-place').value.trim();d.per_class=Math.max(1,Math.min(30,+$('#sm-per').value||5));d.finalists=Math.max(1,Math.min(30,+$('#sm-fin').value||3));d.notes=$('#sm-notes').value.trim();const f=document.querySelector('input[name=smf]:checked');if(f)d.format=f.value}
+async function semiSave(status){semiKeep();const d=SMD;const row={grade:d.grade,day:d.day||null,place:d.place,format:d.format,per_class:d.per_class,finalists:d.finalists,notes:d.notes,status:status||d.status,qualifiers:d.qualifiers,updated_at:new Date().toISOString()};
+ const r=d.id?await sb.from('sb_semis').update(row).eq('id',d.id).select().single():await sb.from('sb_semis').insert(row).select().single();
+ if(r.error){toast('Couldn’t save — please try again');return false}SM.semis=SM.semis.filter(x=>x.id!==r.data.id).concat([r.data]);SMD=JSON.parse(JSON.stringify(r.data));return true}
+function semiBind(){$('#smg').onchange=e=>{semiKeep();SMG=+e.target.value;SMD=null;renderSemi()};
+ document.querySelectorAll('input[name=smf]').forEach(r=>r.onchange=()=>{semiKeep();renderSemi()});
+ $('#sm-per').onchange=()=>{semiKeep();renderSemi()};
+ $('#sm-fill').onclick=()=>{semiKeep();SMD.qualifiers=semiSuggest(SMG,SMD.per_class).flatMap(c=>c.picks);SMD._auto=true;renderSemi()};
+ document.querySelectorAll('[data-smx]').forEach(b=>b.onclick=()=>{semiKeep();SMD.qualifiers=SMD.qualifiers.filter(x=>x!==b.dataset.smx);renderSemi()});
+ $('#sm-addb').onclick=()=>{const v=$('#sm-add').value;if(!v)return;semiKeep();SMD.qualifiers=[...SMD.qualifiers,v];renderSemi()};
+ if($('#sm-save'))$('#sm-save').onclick=async()=>{if(await semiSave()){toast('Saved ✓');renderSemi()}};
+ $('#sm-conf').onclick=()=>{semiKeep();if(SMD.qualifiers.length<2){toast('Add at least 2 qualifiers');return}
+  if(SMD.status==='confirmed'){semiSave('confirmed').then(ok=>{if(ok){toast('Saved ✓');renderSemi()}});return}
+  confirmBox('Confirm the qualifiers?',`${SMD.qualifiers.length} children in ${GL(SMG)} will see “You’re in the semi-final!” on their Spelling Bee page.`,'Confirm',async()=>{if(await semiSave('confirmed')){toast('Confirmed — the children can see it ✓');renderSemi()}})};
+ const h=$('#sm-hide');if(h)h.onclick=async()=>{if(await semiSave('draft')){toast('Hidden from the children');renderSemi()}};
+ $('#sm-live').onclick=async()=>{semiKeep();const d=SMD;const KN={};KIDS.forEach(k=>KN[k.id]=k);const sp=d.qualifiers.map(id=>KN[id]).filter(Boolean).map(k=>({id:k.id,name:k.first_name,cls:k.class_name||GL(k.grade),avatar:(PROG[k.id]||{}).avatar||{},out:null}));
+  if(sp.length<2){toast('Add at least 2 qualifiers');return}const state={spellers:sp.sort(()=>Math.random()-.5),round:0,order:[],idx:0,used:[],cur:null,phase:'ready',roundOut:[],log:[],winner:null,msg:null,through:[]};
+  const {data,error}=await sb.from('bee_rounds').insert({name:`${GL(d.grade)} semi-final`,kind:'grade',team:teamOf(d.grade),settings:{time:60,through:d.finalists},state,status:'ready',created_by:USER&&USER.email}).select().single();
+  if(error){toast('Couldn’t create the round');return}location.href='bee.html?r='+data.id};
+ $('#sm-oadd').onclick=async()=>{const e=$('#sm-oe').value.trim().toLowerCase();if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)){toast('Type an email address');return}
+  const {error}=await sb.from('sb_organisers').insert({email:e});if(error){toast(/duplicate/i.test(error.message||'')?'Already an organiser':'Couldn’t add — please try again');return}await semiLoad();await semiCheck();renderSemi();toast('Organiser added ✓')};
+ document.querySelectorAll('[data-smorg]').forEach(b=>b.onclick=()=>{const e=b.dataset.smorg;const me=(USER&&USER.email||'').toLowerCase();
+  if(e.toLowerCase()===me&&SM.org.length>1){toast('Ask the other organiser to remove you');return}
+  confirmBox('Remove this organiser?',`${e} won’t see the Semi-finals tab any more.`,'Remove',async()=>{const {error}=await sb.from('sb_organisers').delete().eq('email',e);if(error){toast('Couldn’t remove');return}await semiLoad();await semiCheck();renderSemi()},true)})}
 function render(){
+ if(TAB==='semi'){renderSemi();return}
  if(TAB==='weekly'){renderWeekly();return}
  if(TAB==='insights'){renderIns();return}
  if(TAB==='gl'){renderGLT();return}

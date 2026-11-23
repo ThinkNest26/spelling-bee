@@ -342,6 +342,8 @@ body.easyread .panel,body.easyread .act,body.easyread .sxfam{background:#FFFDF6}
 .sxpick select{font-family:Fredoka;font-size:22px;padding:8px 14px;border:3px solid var(--honey);border-radius:16px;background:var(--honeyL);color:var(--ink);min-width:220px}
 .sxprev{font-size:22px;margin-top:10px;line-height:1.6}.sxbadw{color:var(--bad);text-decoration:underline wavy var(--bad);text-underline-offset:5px;font-weight:800}
 .sxsugg{background:#FAF5FF;border:2px solid #E9D5FF;border-radius:16px;padding:10px 14px;margin-top:10px;text-align:left;line-height:1.7}.sxsw{font-family:Fredoka;font-size:20px;color:#7C3AED}
+.xban.semi{background:linear-gradient(135deg,#FFE08A,#FFF3C4 60%,#FDE68A);border-color:#F5B700;box-shadow:0 6px 0 #F1D27A}
+.semip{background:linear-gradient(180deg,#FFFBEB,#fff 40%)}
 </style>
 </head>
 <body>
@@ -680,7 +682,7 @@ document.addEventListener('keydown',e=>{if(V.screen!=='gl'||e.key!=='Enter'||e.t
    weekly words (pre-test and post-test) · family challenge · reading support */
 const SX=window.SPELL;
 let LASTANS='',LASTANST=0,SUPPORT=false;
-const XS={code:null,loading:false,sent:[],weekly:[],fam:[],support:null,home:null};
+const XS={code:null,loading:false,sent:[],weekly:[],fam:[],support:null,home:null,semi:null};
 let XH=null,XHSEL=null;
 let XD=null,XW=null,XF=null;
 try{SUPPORT=!!(ME&&localStorage.getItem('sb-support-'+ME.code)==='1')}catch(e){}
@@ -701,17 +703,17 @@ function xHook(team,w,ok){if(!ME||team!==ME.team||!w)return;const r=xRev(),td=du
 function xApplySupport(){document.body.classList.toggle('easyread',!!SUPPORT);
  if(SUPPORT&&!document.getElementById('lexend')){const l=document.createElement('link');l.id='lexend';l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&display=swap';document.head.appendChild(l)}}
 xApplySupport();
-async function xLoad(force){if(!ME||!db()||XS.loading)return;if(XS.code===ME.code&&!force)return;if(XS.code&&XS.code!==ME.code){XS.sent=[];XS.weekly=[];XS.fam=[];XS.home=null}XS.loading=true;const code=ME.code;
- try{const [rv,wk,st,fm,sp,hm]=await Promise.all([xRun('sb_review_mine',{p_code:code}),xRun('sb_weekly_mine',{p_code:code}),xRun('sb_sentence_mine',{p_code:code}),xRun('sb_family_mine',{p_code:code}),xRun('sb_support_mine',{p_code:code}),xRun('sb_home_mine',{p_code:code})]);
+async function xLoad(force){if(!ME||!db()||XS.loading)return;if(XS.code===ME.code&&!force)return;if(XS.code&&XS.code!==ME.code){XS.sent=[];XS.weekly=[];XS.fam=[];XS.home=null;XS.semi=null}XS.loading=true;const code=ME.code;
+ try{const [rv,wk,st,fm,sp,hm,smi]=await Promise.all([xRun('sb_review_mine',{p_code:code}),xRun('sb_weekly_mine',{p_code:code}),xRun('sb_sentence_mine',{p_code:code}),xRun('sb_family_mine',{p_code:code}),xRun('sb_support_mine',{p_code:code}),xRun('sb_home_mine',{p_code:code}),xRun('sb_semi_mine',{p_code:code})]);
   if(!ME||ME.code!==code)return;XS.code=code;
   const p=prog(ME.team),r=xRev();
   if(Array.isArray(rv)){rv.forEach(x=>{const l=r[x.w];if(!l||(l.u||0)<(x.u||0))r[x.w]={b:x.b,s:x.s,due:String(x.due).slice(0,10),m:!!x.m,u:x.u||0}});
    if(!p.revSeeded){const tr=(WORDS[ME.team]||[]).filter(w=>wordLevel(ME.team,w)==='tricky'&&!r[w]);const td=dubaiDay();tr.slice(0,60).forEach(w=>r[w]={b:1,s:0,due:td,m:false,u:Date.now()});
     if(tr.length)xRun('sb_review_seed',{p_code:code,p_words:tr.slice(0,60)});p.revSeeded=true}
    savePR()}
-  if(Array.isArray(wk))XS.weekly=wk;if(Array.isArray(st))XS.sent=st;if(Array.isArray(fm))XS.fam=fm;if(hm&&hm.state)XS.home=hm;
+  if(Array.isArray(wk))XS.weekly=wk;if(Array.isArray(st))XS.sent=st;if(Array.isArray(fm))XS.fam=fm;if(hm&&hm.state)XS.home=hm;XS.semi=smi&&smi.grade!==undefined?smi:null;
   if(sp&&typeof sp.on==='boolean'){SUPPORT=sp.on;try{localStorage.setItem('sb-support-'+code,SUPPORT?'1':'0')}catch(e){}xApplySupport()}
-  if(['team','xrules','xsent','xweekly','xfamily'].includes(V.screen))render()}
+  if(['team','xrules','xsent','xweekly','xfamily','xsemi'].includes(V.screen))render()}
  finally{XS.loading=false}}
 
 /* ---------- shared pieces ---------- */
@@ -727,7 +729,7 @@ function xHead(t){return `<div class="row" style="justify-content:space-between;
 
 /* ---------- team page: review banner, weekly banner and new activities ---------- */
 function xTeamPanel(t){if(!ME||t.id!==ME.team)return '';if(XS.code!==ME.code)setTimeout(()=>xLoad(),0);
- const due=xDue(),lr=xLearning(),ms=xMastered();let h='';
+ const due=xDue(),lr=xLearning(),ms=xMastered();let h=xSemiBanner();
  if(due.length)h+=`<div class="xban rev"><div class="e">🧠</div><div style="flex:1"><b class="f" style="font-size:22px">My tricky words</b><div>${due.length} word${due.length>1?'s':''} to review today. Spell a word right on 3 different days to master it!</div></div><button class="y" data-x="review">Review now →</button></div>`;
  else if(lr.length){const nx=lr.map(w=>xRev()[w].due).sort()[0];h+=`<div class="xban rev quiet"><div class="e">🧠</div><div style="flex:1"><b class="f" style="font-size:20px">My tricky words: all done for today ✅</b><div class="muted">${lr.length} word${lr.length>1?'s':''} learning${ms.length?` · ${ms.length} mastered 🎓`:''}. Next review: ${xDay(nx)}.</div></div></div>`}
  const hm=XS.home;if(hm&&hm.state==='locked')h+=`<div class="xban wk"><div class="e">🔒</div><div style="flex:1"><b class="f" style="font-size:20px">Test me at home</b><div>Your 5 words are locked. Ask a grown-up to test you!</div></div><button class="y" data-x="family">Open →</button></div>`;
@@ -774,7 +776,7 @@ function xDrillEnd(){const d=XD,n=d.list.length,s=d.score;const wl=a=>`<div clas
   extra=`${pre&&!d.challenge?`<div class="sxcmp"><div><span>Monday</span><b>${pre.score}/${pre.total}</b></div><div class="sxarr">→</div><div><span>Friday</span><b>${s}/${n}</b></div></div><p class="f" style="font-size:22px">${up>0?`You learnt ${up} more word${up>1?'s':''} this week! 🎉`:up===0&&s===n?'Perfect both times! 🌟':'Well done for working hard this week! 💛'}</p>`:''}${d.missed.length?`<p class="muted">Keep practising:</p>${wl(d.missed)}`:''}`;
   return `<div class="panel result"><div class="e">🏁</div><h2 style="font-size:32px">Friday test done!</h2><div class="big">${s} / ${n}</div>${extra}<div class="row" style="margin-top:20px"><button class="y" data-x="weekly">Back to this week’s words</button><button class="w" data-go="team">Back to my bee</button></div></div>`}
  return `<div class="panel result"><div class="e">${s===n?'🏆':'🐝'}</div><h2 style="font-size:32px">${s===n?'Perfect!':s>=n*0.7?'Great spelling!':'Well done for practising!'}</h2><div class="big">${s} / ${n}</div>${d.missed.length?`<p class="muted">Practise these again:</p>${wl(d.missed)}`:''}${extra}
-  <div class="row" style="margin-top:20px">${d.mode==='family'?'<button class="y" data-x="rules">More spelling rules 💡</button>':''}${d.mode==='wprac'?'<button class="y" data-x="weekly">Back to this week’s words</button>':''}<button class="w" data-go="team">Back to my bee</button></div></div>`}
+  <div class="row" style="margin-top:20px">${d.mode==='semi'?'<button class="y" data-x="semiprac">Practise again 🏅</button><button class="w" data-x="semi">Back to my semi-final</button>':''}${d.mode==='family'?'<button class="y" data-x="rules">More spelling rules 💡</button>':''}${d.mode==='wprac'?'<button class="y" data-x="weekly">Back to this week’s words</button>':''}<button class="w" data-go="team">Back to my bee</button></div></div>`}
 
 /* ---------- spelling rules and word families ---------- */
 function xRulesView(){const list=WORDS[V.team]||[];const fam=SX?SX.families(list):[];const big=fam.filter(f=>f.words.length>=2),small=fam.filter(f=>f.words.length<2);
@@ -817,6 +819,28 @@ async function xSentSave(force){const v=readAns().replace(/\s+/g,' ').trim();XW.
  const r=await xRun('sb_sentence_save',{p_code:ME.code,p_word:w,p_text:v});if(r&&r.give){XW.give=r.give;const p=prog(ME.team);p.stars=(p.stars||0)+r.give;savePR()}if(V.screen==='xsent')render()}
 function xSentHint(){if(!XW||!XW.bad.length)return;const extra=Object.values(WORDS).flat();XW.sugg='💡 '+XW.bad.map(b=>{const s=SX.suggest(b.w,extra,2);return `<b>${esc(b.w)}</b>: did you mean ${s.length?s.map(x=>`<span class="sxsw">${esc(x)}</span>`).join(' or '):'…? Try sounding it out'}`}).join('<br>');render()}
 
+/* ---------- 🏅 semi-final (only for children on the confirmed list) ---------- */
+const XSF={out:{e:'🎤',t:'Spelling rounds',d:'You take turns to spell a word out loud. Spell it right and you stay in. A mistake means you’re out. The last spellers standing go to the Grand Final!'},
+ written:{e:'📝',t:'Written round, then out loud',d:'First, everyone writes some words. The spellers with the best scores then spell out loud on stage, and the best go to the Grand Final!'},
+ points:{e:'⭐',t:'Points rounds',d:'Everyone spells the same number of words out loud. You get a point for each word you spell right. The highest scores go to the Grand Final!'}};
+function xSemiDays(){const m=XS.semi;if(!m||!m.day)return null;return Math.round((Date.parse(String(m.day).slice(0,10)+'T12:00:00Z')-Date.parse(dubaiDay()+'T12:00:00Z'))/864e5)}
+function xSemiWhen(){const m=XS.semi,n=xSemiDays();if(n===null)return 'Your teacher will tell you the date soon.';const d=xDay(String(m.day).slice(0,10));return n>1?`${d} · in ${n} days`:n===1?`${d} · tomorrow!`:n===0?'Today! 🎉':`${d}`}
+function xSemiBanner(){const m=XS.semi;if(!m)return '';const n=xSemiDays();if(n!==null&&n<-3)return '';
+ return `<div class="xban semi"><div class="e">🏅</div><div style="flex:1"><b class="f" style="font-size:24px">You’re in the ${m.grade===0?'KG2':'Grade '+m.grade} semi-final!</b><div>${esc(xSemiWhen())}${m.place?' · '+esc(m.place):''}</div></div><button class="y" data-x="semi">Get ready →</button></div>`}
+function xSemiWords(){const t=V.team;const own=(WORDS[t]||[]).slice();const order=['buz','hon','bum','cha'];const nx=order[order.indexOf(t)+1];
+ const score=w=>w.length+(SX.TRICKY.has(SX.low(w))?4:0)+(/([a-z])\1/.test(w)?1:0)+(/(ph|gh|kn|wr|mb|ough|tion|sion|ous|cious|ture)/.test(w)?2:0)+(wordLevel(t,w)==='secure'?-2:0);
+ const hard=own.sort((a,b)=>score(b)-score(a)).slice(0,14);const extra=nx?(WORDS[nx]||[]).slice().sort((a,b)=>score(b)-score(a)).slice(0,10):[];
+ return shuffle(shuffle(hard).slice(0,7).concat(shuffle(extra).slice(0,3)))}
+function xSemiView(){const m=XS.semi;if(!m)return xHead('🏅 Semi-final')+'<div class="panel">Keep practising! Your teacher will tell you about the semi-finals.</div>';const f=XSF[m.format]||XSF.out;
+ return xHead('🏅 Semi-final')+`<div class="panel semip"><div style="font-size:72px">🏅</div><h2 style="font-size:34px;margin:4px 0">You’re in the semi-final, ${esc(ME.first_name)}!</h2>
+  <p class="f" style="font-size:22px;margin:6px 0">📅 ${esc(xSemiWhen())}${m.place?`<br>📍 ${esc(m.place)}`:''}</p>
+  <p class="muted">${m.count} spellers from ${m.grade===0?'KG2':'Grade '+m.grade} · the best ${m.finalists} go to the Grand Final 🏆</p>
+  <div class="sxrule" style="text-align:left"><div class="sxrt"><span>${f.e}</span><b>How your semi-final works: ${esc(f.t)}</b><button class="w sm" data-say="${esc(f.d)}">🔊</button></div><div class="sxtip">${esc(f.d)}</div></div>
+  ${m.notes?`<div class="sxgrown" style="text-align:left">📣 <b>From your teacher:</b> ${esc(m.notes)}</div>`:''}
+  <div class="sxrule" style="text-align:left;background:#F0FDF4;border-color:#BBF7D0"><div class="sxrt"><span>🌟</span><b>Top tips on the day</b></div><ol class="sxsteps" style="font-size:17px;margin:4px 0 0">
+   <li>Listen carefully to the word.</li><li>You can ask to hear it again, or ask for a sentence or its meaning.</li><li>Say the word, spell it slowly letter by letter, then say the word again.</li><li>Take a deep breath — you’ve practised for this! 💪</li></ol></div>
+  <div class="row" style="margin-top:18px"><button class="y" data-x="semiprac" style="font-size:21px">🏅 Semi-final practice</button>${ME.school&&ME.school.premium===false?'':'<button class="w" data-go="realbee">🏆 Real Bee practice</button>'}</div>
+  <p class="muted small" style="margin-top:10px">Semi-final practice gives you 10 harder words, including some challenge words.</p></div>`}
 /* ---------- this week's words ---------- */
 function xWeeklyView(){if(!XS.weekly.length)return xHead('🗓️ This week’s words')+'<div class="panel">Your teacher hasn’t set any weekly words yet.</div>';
  return xHead('🗓️ This week’s words')+XS.weekly.map((w,ix)=>xWeekCard(w,ix===0)).join('')}
@@ -913,8 +937,9 @@ document.addEventListener('click',e=>{if(!ME)return;
  const b=e.target.closest('[data-x],[data-xn],[data-xfam],[data-xw],[data-xs],[data-xwk],[data-xf],[data-xh]');if(!b)return;const d=b.dataset;
  if(d.xh){xHomeAct(d.xh,b);return}
  if(d.x){if(!V.team)V.team=ME.team;
+  if(d.x==='semiprac'){V.team=ME.team;xStart('semi',xSemiWords(),{title:'🏅 Semi-final practice'});return}
   if(d.x==='review'){V.team=ME.team;const due=shuffle(xDue()).slice(0,10);xStart('review',due,{title:'🧠 My tricky words'});return}
-  V.screen={rules:'xrules',sent:'xsent',weekly:'xweekly',family:'xfamily'}[d.x]||'team';if(d.x==='sent')XW=null;if(['sent','weekly','family'].includes(d.x)){V.team=ME.team;xLoad(true)}render();window.scrollTo(0,0);return}
+  V.screen={rules:'xrules',sent:'xsent',weekly:'xweekly',family:'xfamily',semi:'xsemi'}[d.x]||'team';if(d.x==='sent')XW=null;if(['sent','weekly','family'].includes(d.x)){V.team=ME.team;xLoad(true)}render();window.scrollTo(0,0);return}
  if(d.xn){if(!XD)return;if(d.xn==='hear'){xSayW(XD.list[XD.i]);$('#ans')?.focus();return}if(d.xn==='check'){xCheck();return}if(d.xn==='next'){xNext();return}}
  if(d.xfam){xFamStart(d.xfam);return}
  if(d.xw){XW={w:d.xw,val:'',hint:'',saved:false};render();setTimeout(()=>say(d.xw),200);return}
@@ -932,7 +957,7 @@ function render(){
  const a=$('#app');
  if(V.screen==='home')a.innerHTML=home();
  else if(!ME){V={screen:'home',team:null};a.innerHTML=home()}
- else a.innerHTML=top()+`<main>${({team:teamView,learn:learnView,lcwc:lcwcView,test:testView,miss:missView,done:doneView,gap:gapView,games:gamesView,avatar:avatarView,realbee:rbView,wod:wodView,gballoon:balloonView,gfriend:friendView,ghive:hiveView,gcatch:catchView,ggarden:gardenView,grace:raceView,gl:glView,xdrill:xDrillView,xrules:xRulesView,xsent:xSentView,xweekly:xWeeklyView,xfamily:xFamilyView,xhtest:xHomeTestView})[V.screen]()}</main>`;
+ else a.innerHTML=top()+`<main>${({team:teamView,learn:learnView,lcwc:lcwcView,test:testView,miss:missView,done:doneView,gap:gapView,games:gamesView,avatar:avatarView,realbee:rbView,wod:wodView,gballoon:balloonView,gfriend:friendView,ghive:hiveView,gcatch:catchView,ggarden:gardenView,grace:raceView,gl:glView,xdrill:xDrillView,xrules:xRulesView,xsent:xSentView,xweekly:xWeeklyView,xfamily:xFamilyView,xhtest:xHomeTestView,xsemi:xSemiView})[V.screen]()}</main>`;
  after();if(V.screen==='ghive')hiveAfter();if(V.screen==='grace')raceAfter();
 }
 /* ---------- schools: product page + each school's page ---------- */
