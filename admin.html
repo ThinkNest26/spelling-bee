@@ -42,10 +42,11 @@ let D=null,Q='';
 const today=new Date(Date.now()+4*3600e3).toISOString().slice(0,10);
 const fd=d=>d?new Date(String(d).slice(0,10)+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'—';
 function plusYear(){const d=new Date(today+'T12:00:00');d.setFullYear(d.getFullYear()+1);return d.toISOString().slice(0,10)}
+let GLX=null;function glIs(id){const r=(GLX||[]).find(x=>x.id===id);return r?r.bee!==false:true}
 async function load(){if(!sb){$('#app').innerHTML='<div class="card">Can’t connect.</div>';return}
  const {data:{session}}=await sb.auth.getSession();
  if(!session){$('#app').innerHTML=`<div class="card" style="max-width:480px;margin:40px auto;text-align:center"><h2>Please sign in first</h2><p class="muted">Sign in with your admin email and you’ll come straight back here.</p><a href="teacher.html?next=admin"><button class="y">Sign in</button></a></div>`;return}
- const {data}=await sb.rpc('admin_overview');if(!data||data.error){$('#app').innerHTML='<div class="card">This page is only for the Spelling Bee admin.</div>';return}D=data;render()}
+ try{const g=await sb.rpc('admin_gl_list');GLX=Array.isArray(g.data)?g.data:null}catch(e){GLX=null}const {data}=await sb.rpc('admin_overview');if(!data||data.error){$('#app').innerHTML='<div class="card">This page is only for the Spelling Bee admin.</div>';return}D=data;render()}
 function render(){const S=D.schools||[],R=D.requests||[],P=D.plans||[];const newR=R.filter(r=>r.status==='new');
  const active=S.filter(s=>s.plan_until>=today),paid=active.filter(s=>s.plan!=='trial'),trials=active.filter(s=>s.plan==='trial');
  const income=paid.reduce((n,s)=>n+((P.find(p=>p.id===s.plan)||{}).price||0),0);
@@ -54,7 +55,7 @@ function render(){const S=D.schools||[],R=D.requests||[],P=D.plans||[];const new
   <div class="card"><div class="stat">${S.length}</div><div class="small muted">schools</div></div>
   <div class="card"><div class="stat">${trials.length}</div><div class="small muted">on free trial</div></div>
   <div class="card"><div class="stat">${paid.length}</div><div class="small muted">paying schools</div></div>
-  <div class="card"><div class="stat">USD ${income.toLocaleString()}</div><div class="small muted">yearly value of active plans</div></div>
+  <div class="card"><div class="stat">AED ${income.toLocaleString()}</div><div class="small muted">yearly value of active plans</div></div>
   <div class="card"><div class="stat">${newR.length}</div><div class="small muted">plan requests waiting</div></div></div>
  <div class="card"><h2 style="font-size:20px">🎉 Free trials</h2><p class="small muted">Schools trying the Spelling Bee now. A good time to email them is a day or two before their trial ends.</p>
   <div class="tablewrap"><table><thead><tr><th>School</th><th>Started</th><th>Days left</th><th>Children</th><th>Last active</th><th>Contact</th></tr></thead><tbody>
@@ -63,22 +64,24 @@ function render(){const S=D.schools||[],R=D.requests||[],P=D.plans||[];const new
    <td class="small">${esc(s.contact_name)}<br><a href="mailto:${esc(s.contact_email)}">${esc(s.contact_email)}</a><br>${esc(s.contact_phone)}</td></tr>`}).join('')||'<tr><td colspan="6" class="muted">No schools on a free trial yet.</td></tr>'}</tbody></table></div></div>
  <div class="card"><h2 style="font-size:20px">📨 Plan requests</h2><p class="small muted">When a school asks for a plan: send them an invoice, and once it’s paid click <b>Switch on</b>.</p>
   <div class="tablewrap"><table><thead><tr><th>Date</th><th>School</th><th>Plan</th><th>Asked by</th><th>Status</th><th></th></tr></thead><tbody>
-  ${R.map(r=>`<tr><td>${fd(r.at)}</td><td><b>${esc(r.school)}</b></td><td><span class="pill ${r.plan}">${esc((P.find(p=>p.id===r.plan)||{}).name||r.plan)}</span> USD ${((P.find(p=>p.id===r.plan)||{}).price||0).toLocaleString()}</td><td>${esc(r.by)}</td><td><span class="pill ${r.status}">${r.status==='new'?'Waiting':'Done'}</span></td>
+  ${R.map(r=>`<tr><td>${fd(r.at)}</td><td><b>${esc(r.school)}</b></td><td><span class="pill ${r.plan}">${esc((P.find(p=>p.id===r.plan)||{}).name||r.plan)}</span> AED ${((P.find(p=>p.id===r.plan)||{}).price||0).toLocaleString()}</td><td>${esc(r.by)}</td><td><span class="pill ${r.status}">${r.status==='new'?'Waiting':'Done'}</span></td>
    <td style="white-space:nowrap">${r.status==='new'?`<button class="y sm" data-on="${r.school_id}" data-plan="${r.plan}">Switch on for 1 year</button> <button class="w sm" data-rdone="${r.id}">Mark done</button>`:''}</td></tr>`).join('')||'<tr><td colspan="6" class="muted">No requests yet.</td></tr>'}</tbody></table></div></div>
  <div class="card"><div class="row"><h2 style="font-size:20px">🏫 Schools</h2><div class="spacer"></div><input id="q" placeholder="Search…" value="${esc(Q)}" style="width:220px"></div>
-  <div class="tablewrap" style="margin-top:8px"><table><thead><tr><th>School</th><th>Contact</th><th>Children</th><th>Last active</th><th>Plan</th><th>Until</th><th>Change plan</th></tr></thead><tbody>
+  <div class="tablewrap" style="margin-top:8px"><table><thead><tr><th>School</th><th>Contact</th><th>Children</th><th>Last active</th><th>Plan</th><th>Until</th><th>GL Practice</th><th>Change plan</th></tr></thead><tbody>
   ${list.map(s=>{const ended=s.plan_until<today;return `<tr><td><b>${esc(s.name)}</b><div class="small"><a href="./?s=${esc(s.slug)}" target="_blank">?s=${esc(s.slug)}</a> · ${esc(s.city||'')}</div><div class="small muted">Joined ${fd(s.created_at)}</div></td>
    <td class="small">${esc(s.contact_name)}<br><a href="mailto:${esc(s.contact_email)}">${esc(s.contact_email)}</a><br>${esc(s.contact_phone)}</td>
    <td>${s.children}${(()=>{const m=(P.find(p=>p.id===s.plan)||{}).max_children;return m?`<span class="small ${s.children>=m?'':'muted'}" style="${s.children>=m?'color:#991B1B;font-weight:800':''}"> / ${m}</span>`:''})()}<div class="small muted">${s.teachers} teacher${s.teachers==1?'':'s'}</div></td><td class="small">${s.last_active?fd(s.last_active):'—'}</td>
    <td><span class="pill ${ended?'ended':s.plan}">${ended?'Ended':esc((P.find(p=>p.id===s.plan)||{}).name||s.plan)}</span></td><td>${fd(s.plan_until)}</td>
-   <td style="white-space:nowrap"><select data-ps="${s.id}">${P.map(p=>`<option value="${p.id}" ${p.id===s.plan?'selected':''}>${esc(p.name)}</option>`).join('')}</select> <input type="date" data-pu="${s.id}" value="${s.plan_until}"> <button class="w sm" data-save="${s.id}">Save</button></td></tr>`}).join('')||'<tr><td colspan="7" class="muted">No schools.</td></tr>'}</tbody></table></div></div>
+   <td>${GLX?`<button class="sm ${glIs(s.id)?'y':'w'}" data-glsw="${s.id}" data-glto="${glIs(s.id)?0:1}" title="Click to switch ${glIs(s.id)?'off':'on'}">${glIs(s.id)?'✅ On':'⛔ Off'}</button>`:'<span class="small muted">Run the SQL</span>'}</td>
+   <td style="white-space:nowrap"><select data-ps="${s.id}">${P.map(p=>`<option value="${p.id}" ${p.id===s.plan?'selected':''}>${esc(p.name)}</option>`).join('')}</select> <input type="date" data-pu="${s.id}" value="${s.plan_until}"> <button class="w sm" data-save="${s.id}">Save</button></td></tr>`}).join('')||'<tr><td colspan="8" class="muted">No schools.</td></tr>'}</tbody></table></div></div>
  <div class="card"><h2 style="font-size:20px">💰 Plans & prices</h2><p class="small muted">These show on the website’s Plans section and on every school’s settings page. One feature per line.</p>
-  <div class="plansgrid">${P.map(p=>`<div class="card" style="margin:0"><div class="row"><b class="f" style="font-size:19px">${esc(p.name)}</b><div class="spacer"></div>${p.id==='trial'?'<span class="small muted">7 days free</span>':`USD <input type="number" min="0" step="10" data-price="${p.id}" value="${p.price}" style="width:100px">`}</div>
+  <div class="plansgrid">${P.map(p=>`<div class="card" style="margin:0"><div class="row"><b class="f" style="font-size:19px">${esc(p.name)}</b><div class="spacer"></div>${p.id==='trial'?'<span class="small muted">7 days free</span>':`AED <input type="number" min="0" step="50" data-price="${p.id}" value="${p.price}" style="width:100px">`}</div>
    <label class="small muted" style="display:block;margin-top:8px">Most children allowed <span>(leave empty for unlimited)</span></label><input type="number" min="1" step="10" data-max="${p.id}" value="${p.max_children==null?'':p.max_children}" placeholder="Unlimited" style="width:140px">
    <label class="small muted" style="display:block;margin-top:8px">Short description</label><input data-blurb="${p.id}" value="${esc(p.blurb)}" style="width:100%">
    <label class="small muted" style="display:block;margin-top:8px">Features</label><textarea data-feat="${p.id}" rows="6" style="width:100%">${esc((p.features||[]).join('\n'))}</textarea>
    <button class="y sm" data-psave="${p.id}" style="margin-top:8px">Save ${esc(p.name)}</button></div>`).join('')}</div></div>`;
  $('#q').oninput=e=>{Q=e.target.value.toLowerCase();const pos=e.target.selectionStart;render();const i=$('#q');i.focus();i.setSelectionRange(pos,pos)};
+ document.querySelectorAll('[data-glsw]').forEach(b=>b.onclick=async()=>{const on=b.dataset.glto==='1';b.disabled=true;const {data}=await sb.rpc('admin_set_gl',{p_school:b.dataset.glsw,p_app:'bee',p_on:on});if(data&&data.ok){await load();toast(on?'GL Practice switched on ✓':'GL Practice switched off ✓')}else{b.disabled=false;toast('Couldn’t change')}});
  document.querySelectorAll('[data-on]').forEach(b=>b.onclick=()=>setPlan(b.dataset.on,b.dataset.plan,plusYear()));
  document.querySelectorAll('[data-rdone]').forEach(b=>b.onclick=async()=>{await sb.rpc('admin_request_done',{p_id:+b.dataset.rdone});await load();toast('Done ✓')});
  document.querySelectorAll('[data-save]').forEach(b=>b.onclick=()=>{const id=b.dataset.save;setPlan(id,document.querySelector(`[data-ps="${id}"]`).value,document.querySelector(`[data-pu="${id}"]`).value)});

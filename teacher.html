@@ -469,7 +469,10 @@ function sgBars(o,names){const ks=Object.keys(names).filter(k=>o[k]);if(!ks.leng
  return ks.map(k=>{const p=sgP(o[k][0],o[k][1]);return `<div class="sgr"><span>${esc(names[k])}</span><span class="bar"><i style="width:${Math.max(p,2)}%;background:${sgC(p)}"></i></span><b style="color:${sgC(p)}">${p}%</b></div>`}).join('')}
 function sgCell(r,n){if(!r)return '<span class="muted">—</span>';const p=sgP(r.score,r.total);
  return `<b style="color:${sgC(p)}">${r.score}/${r.total}</b> <span class="small">(${p}%)</span><div class="muted small">${new Date(r.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short'})}${n>1?` · ${n} tries`:''}</div>`}
-async function renderGLT(){if(!SGR||Date.now()-(renderGLT.t||0)>60000){renderGLT.t=Date.now();$('#app').innerHTML=tabs()+'<p class="muted">Loading GL results…</p>';await sgLoad()}
+let SGON=null;async function sgOn(){try{const {data,error}=await sb.rpc('sb_gl_status');SGON=(error||!data)?true:data.on!==false}catch(e){SGON=true}}
+async function renderGLT(){if(SGON===null||Date.now()-(renderGLT.t||0)>60000)await sgOn();
+ if(SGON===false){$('#app').innerHTML=tabs()+`<div class="card" style="text-align:center;padding:30px;margin-top:4px"><div style="font-size:54px">🔒</div><h2 style="font-size:24px;margin:8px 0">GL Practice is not part of your subscription</h2><p class="muted">GL Practice gives your children Test A and Test B for spelling, grammar, punctuation and reading, with a report for every child. To add it, please contact ThinkNest.</p></div>`;bindTabs();return}
+ if(!SGR||Date.now()-(renderGLT.t||0)>60000){renderGLT.t=Date.now();$('#app').innerHTML=tabs()+'<p class="muted">Loading GL results…</p>';await sgLoad()}
  const grades=[...new Set(KIDS.map(k=>k.grade))].sort((a,b)=>a-b);if(SGG===null||!grades.includes(SGG))SGG=grades.length?grades[0]:0;
  const D=await sgCont(SGG);const classes=[...new Set(KIDS.filter(k=>k.grade===SGG).map(k=>k.class_name).filter(Boolean))].sort();if(SGCLS!=='all'&&!classes.includes(SGCLS))SGCLS='all';
  const ks=KIDS.filter(k=>k.grade===SGG&&(SGCLS==='all'||k.class_name===SGCLS)).sort((a,b)=>(a.class_name||'').localeCompare(b.class_name||'')||a.first_name.localeCompare(b.first_name));

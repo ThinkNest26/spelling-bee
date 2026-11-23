@@ -508,7 +508,8 @@ const GLAREA={S:'Spelling',G:'Grammar',P:'Punctuation',V:'Vocabulary',R:'Reading
 const GLTYPE={D:'Listen and spell',C:'Choose the right answer',E:'Find the mistake',W:'Write it correctly'};
 const GLSKILL={F:'Finding information',I:'Inference (reading between the lines)',M:'Word meaning',O:'Order and main ideas',A:'Author’s choices'};
 const GLTIP={S:'Practise your word list with the 🎧 Spelling test and 👀 Look, Cover, Write.',G:'Talk about word classes (nouns, verbs, adjectives, adverbs) and joining words when you read together.',P:'Check capital letters, full stops, commas and speech marks every time you write a sentence.',V:'Read every day and find new words. Ask what they mean and use them in your own sentences.',R:'Read together every day. Ask questions like “How do you know?” and “Why do you think the writer chose that word?”'};
-let GLD={},GLS=null,GLMINE=null;
+let GLD={},GLS=null,GLMINE=null,GLON=null;
+async function glOn(){try{const {data,error}=await db().rpc('sb_gl_status',{p_code:ME.code});GLON=(error||!data)?true:data.on!==false}catch(e){GLON=true}}
 async function glLoad(g){if(g in GLD)return GLD[g];try{const r=await fetch(`content/gl-grade${g}.json`,{cache:'no-cache'});GLD[g]=await r.json();
  ['A','B'].forEach(f=>{GLD[g][f].dict.forEach(it=>{CLIP[it.w+'. '+it.s+' '+it.w+'.']=it.k});GLD[g][f].written.forEach(it=>{CLIP[glSpoken(it)]=it.k});(GLD[g][f].reading||[]).forEach(p=>{CLIP[glPText(p)]=p.k;p.qs.forEach(it=>{CLIP[glSpoken(it)]=it.k})})})}catch(e){GLD[g]=null}return GLD[g]}
 function glPText(p){return p.title+'. '+p.text.replace(/\n/g,' ')}
@@ -521,6 +522,8 @@ function glOk(it,v){return !!String(v??'').trim()&&glNorm(v)===glNorm(it.a)}
 function glLast(f){return (GLMINE||[]).find(r=>r.grade===ME.grade&&r.form===f)}
 function glHead(t){return `<div class="row" style="justify-content:space-between;margin-bottom:12px"><button class="back" data-glbk="1">← ${GLS&&!['menu','result'].includes(GLS.stage)?'Stop test':'Back'}</button><div class="f" style="font-size:22px">📝 ${t}</div></div>`}
 function glView(){const g=ME.grade;
+ if(GLON===null){glOn().then(()=>{if(V.screen==='gl')render()});return '<p class="muted" style="text-align:center">Loading your GL practice…</p>'}
+ if(GLON===false)return glHead('GL Practice')+'<div class="panel" style="text-align:center;padding:34px 20px"><div style="font-size:54px">🔒</div><h2 style="margin:8px 0">GL Practice is not part of your school’s subscription</h2><p class="muted" style="font-size:18px">Ask your teacher if your school would like to add it.</p><button class="back" data-glbk="1" style="margin-top:12px">← Back</button></div>';
  if(!(g in GLD)){glLoad(g).then(()=>{if(V.screen==='gl')render()});return '<p class="muted" style="text-align:center">Loading your GL practice…</p>'}
  const D=GLD[g];if(!D)return glHead('GL Practice')+'<div class="panel">GL practice is not ready for your grade yet.</div>';
  if(!GLS)GLS={stage:'menu'};
@@ -603,7 +606,7 @@ function glKeep(){const i=document.getElementById('ans');if(i&&GLS&&GLS[GLS.stag
 function glGo(stage,i){const prevP=GLS.stage==='reading'&&GLS.reading[GLS.i]?GLS.reading[GLS.i].pid:null;GLS.stage=stage;if(i!==undefined)GLS.i=i;render();window.scrollTo(0,0);
  if(stage==='dict'||(stage==='written'&&GLS.read))setTimeout(glSay,300);
  else if(stage==='reading'&&GLS.read){const np=GLS.reading[GLS.i].pid;setTimeout(np!==prevP?glSayP:glSay,300)}}
-document.addEventListener('click',e=>{const op=e.target.closest('[data-glopen]');if(op&&ME){GLS=null;V.screen='gl';if(!V.team)V.team=ME.team;render();window.scrollTo(0,0);return}if(V.screen!=='gl')return;const b=e.target.closest('[data-glbk],[data-glgo],[data-glrep],[data-glready],[data-glsay],[data-glsayp],[data-glnx],[data-glbk2],[data-glend],[data-glj],[data-glsub],[data-glc]');if(!b)return;const d=b.dataset;
+document.addEventListener('click',e=>{const op=e.target.closest('[data-glopen]');if(op&&ME){GLS=null;GLON=null;V.screen='gl';if(!V.team)V.team=ME.team;render();window.scrollTo(0,0);return}if(V.screen!=='gl')return;const b=e.target.closest('[data-glbk],[data-glgo],[data-glrep],[data-glready],[data-glsay],[data-glsayp],[data-glnx],[data-glbk2],[data-glend],[data-glj],[data-glsub],[data-glc]');if(!b)return;const d=b.dataset;
  if(d.glbk){if(GLS&&!['menu','result'].includes(GLS.stage)){if(!confirm('Stop the test? Your answers will not be saved.'))return;GLS={stage:'menu'};render();return}if(GLS&&GLS.stage==='result'){GLS={stage:'menu'};render();return}GLS=null;V.screen='team';render();return}
  if(d.glgo){glStart(GLD[ME.grade],d.glgo);return}
  if(d.glrep){const L=glLast(d.glrep);if(L){GLS={stage:'result',form:d.glrep,saved:L};render();window.scrollTo(0,0)}return}
