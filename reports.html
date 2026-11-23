@@ -91,15 +91,16 @@ async function start(){
  const {data:{session}}=await sb.auth.getSession();
  if(session){const {data:si}=await sb.rpc('my_school_info');if(si&&!si.premium){lockPage('Parent reports');return}if(si){SCH=si;if(!ST.logo&&si.logo)ST.logo=si.logo}}
  if(!session){$('#app').innerHTML=`<div class="card" style="max-width:520px;margin:40px auto;text-align:center"><h2>Please sign in first</h2><p class="muted">Sign in on the teacher page, then come back here.</p><a href="teacher.html"><button class="y">Go to the teacher page</button></a></div>`;return}
- const [{data:k},{data:p},{data:w},{data:rw},glr,fam,rev]=await Promise.all([
+ const [{data:k},{data:p},{data:w},{data:rw},glr,fam,rev,hmt]=await Promise.all([
   sb.from('students').select('*').eq('active',true).order('grade').order('class_name').order('first_name'),
-  sb.from('progress').select('*'),sb.rpc('teacher_words'),sb.from('race_wins').select('student_id'),sb.from('sb_gl_results').select('*').order('created_at',{ascending:false}),sb.from('sb_family').select('student_id,week'),sb.from('sb_review').select('student_id,mastered')]);
- KIDS=k||[];(p||[]).forEach(x=>PROG[x.student_id]=x);GLR=(glr&&!glr.error&&glr.data)||[];FAM=(fam&&!fam.error&&fam.data)||[];REV=(rev&&!rev.error&&rev.data)||[];(rw||[]).forEach(r=>WINS[r.student_id]=(WINS[r.student_id]||0)+1);
+  sb.from('progress').select('*'),sb.rpc('teacher_words'),sb.from('race_wins').select('student_id'),sb.from('sb_gl_results').select('*').order('created_at',{ascending:false}),sb.from('sb_family').select('student_id,week'),sb.from('sb_review').select('student_id,mastered'),sb.from('sb_hometest').select('*')]);
+ KIDS=k||[];(p||[]).forEach(x=>PROG[x.student_id]=x);GLR=(glr&&!glr.error&&glr.data)||[];FAM=(fam&&!fam.error&&fam.data)||[];REV=(rev&&!rev.error&&rev.data)||[];HMT=(hmt&&!hmt.error&&hmt.data)||[];(rw||[]).forEach(r=>WINS[r.student_id]=(WINS[r.student_id]||0)+1);
  (Array.isArray(w)?w:[]).forEach(r=>(WORDS[r.team]=WORDS[r.team]||[]).push(r));
  render()}
-let GLR=[],FAM=[],REV=[];
+let GLR=[],FAM=[],REV=[],HMT=[];
 function homeLine(k){if(!window.SPELL)return '';const S=window.SPELL,wk=S.weekStart(),ch=S.familyFor(wk);const n=FAM.filter(f=>f.student_id===k.id).length,m=REV.filter(r=>r.student_id===k.id&&r.mastered).length,done=FAM.some(f=>f.student_id===k.id&&String(f.week).slice(0,10)===wk);
- return `<div class="homel"><div><b>🏡 This week’s family challenge: ${esc(ch.t)}</b>${done?' ✅ done':''}<div>${esc(ch.steps.join(' '))}</div></div><div class="homes"><span><b>${n}</b> family challenge${n===1?'':'s'} done</span>${m?`<span><b>${m}</b> tricky word${m===1?'':'s'} mastered 🎓</span>`:''}</div></div>`}
+ const h=HMT.find(x=>x.student_id===k.id&&String(x.week).slice(0,10)===wk);const link=`${SITE}/grownup.html?c=${esc(k.code||'')}`;
+ return `<div class="homel"><div><b>🔒 Test me at home:</b> ${k.first_name?esc(k.first_name):''} chooses 5 words, looks at them and locks them. Then you test them!${h&&h.done_at?` <b>This week: ${h.score}/${h.total} ✅</b>`:h&&h.locked_at?' <b>Words locked — ready for you to test.</b>':''}${ST.showCode&&k.code?`<div>Grown-up’s page: <b>${link}</b></div>`:'<div>Open the Grown-up’s page from the Family challenge on the Spelling Bee.</div>'}<div style="margin-top:1mm"><b>🏡 Family idea:</b> ${esc(ch.t)}${done?' ✅ done':''}</div></div><div class="homes"><span><b>${n}</b> family challenge${n===1?'':'s'} done</span>${m?`<span><b>${m}</b> tricky word${m===1?'':'s'} mastered 🎓</span>`:''}</div></div>`}
 const GLAREA={S:'Spelling',G:'Grammar',P:'Punctuation',V:'Vocabulary',R:'Reading'};
 function glLine(k){const L=['A','B'].map(f=>GLR.find(r=>r.student_id===k.id&&r.form===f&&r.grade===k.grade)).filter(Boolean);if(!L.length)return '';
  const a={};L.forEach(r=>{const x=(r.areas||{}).area||{};for(const c in x){a[c]=a[c]||[0,0];a[c][0]+=x[c][0];a[c][1]+=x[c][1]}});const w=Object.entries(a).filter(([,v])=>v[1]>=2).map(([c,v])=>[c,v[0]/v[1]]).sort((x,y)=>x[1]-y[1])[0];
