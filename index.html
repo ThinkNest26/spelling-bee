@@ -332,9 +332,9 @@ body.easyread main{letter-spacing:.04em;word-spacing:.14em;line-height:1.6}
 body.easyread .big,body.easyread .ans,body.easyread .sxw{letter-spacing:.12em}
 body.easyread .panel,body.easyread .act,body.easyread .sxfam{background:#FFFDF6}
 .sxword.chosen{background:var(--honey);border-color:#D49B00;color:#1F2A44}
-.xhcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-top:10px}
-.xhcard{background:var(--honeyL);border:3px solid var(--honey2);border-radius:20px;padding:16px 10px;cursor:pointer}
-.xhw{font-family:Fredoka;font-size:34px;letter-spacing:.05em}
+.xhcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:10px}
+.xhcard{background:var(--honeyL);border:3px solid var(--honey2);border-radius:20px;padding:16px 8px;cursor:pointer;min-width:0;overflow:hidden}
+.xhw{font-family:Fredoka;font-size:30px;letter-spacing:.02em;line-height:1.15;overflow-wrap:anywhere}
 .xhbtn{display:inline-block;text-decoration:none;font-family:Fredoka;font-weight:600;font-size:18px;padding:12px 20px;border-radius:999px;color:var(--ink);background:#fff;border:3px solid var(--line)}
 .xhres{display:grid;gap:8px;margin-top:10px}.xhr{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;background:#FAFAF7;border-radius:16px;padding:6px 10px}.xhr.ok{background:var(--okL)}.xhr .sxdiff{margin-top:0}.xhi{font-size:26px}
 .xhpeek{opacity:.75}.xhpeekw{font-family:Fredoka;font-size:30px;color:#7C3AED;min-height:38px;margin-top:6px}
@@ -844,7 +844,7 @@ function xHomeCard(){const h=XS.home;const head=`<div class="row" style="justify
  if(h.state==='chosen'){const ws=h.words||[];
   return `<div class="panel sxfc" style="margin-bottom:16px">${head}
    <p class="f" style="font-size:22px;margin:10px 0 4px">👀 Look carefully at your words</p><p class="muted" style="margin-top:0">Say each word. Spell it out loud. Spot the tricky part! Once you lock them, you won’t see them again until after your test.</p>
-   <div class="xhcards">${ws.map(w=>{const r=SX.ruleFor(w);return `<div class="xhcard" data-say="${esc(w)}"><div class="xhw">${r&&r.re?SX.markPattern(w,r):esc(w)}</div><div class="small muted">🔊 tap to hear</div></div>`}).join('')}</div>
+   <div class="xhcards">${ws.map(w=>{const r=SX.ruleFor(w);return `<div class="xhcard" data-say="${esc(w)}"><div class="xhw" style="font-size:${w.length>11?18:w.length>9?21:w.length>7?25:30}px">${r&&r.re?SX.markPattern(w,r):esc(w)}</div><div class="small muted">🔊 tap to hear</div></div>`}).join('')}</div>
    <div class="row" style="margin-top:16px"><button class="w" data-xh="change">Change my words</button><button class="y" data-xh="lock" style="font-size:21px">🔒 I’m ready — lock my words</button></div></div>`}
  if(h.state==='locked')return `<div class="panel sxfc" style="margin-bottom:16px">${head}
    <div style="font-size:70px;margin-top:6px">🔒</div><p class="f" style="font-size:24px;margin:4px 0">Your 5 words are locked!</p>
