@@ -283,6 +283,10 @@ button.mv{font-size:28px;padding:10px 34px}
 .glb{height:14px;background:#F3EBD2;border-radius:99px;overflow:hidden}.glb i{display:block;height:100%;border-radius:99px}
 .glnext{display:flex;flex-direction:column;gap:2px;padding:8px 0;border-bottom:1px dashed var(--line)}
 .glrev{margin-top:16px}.glrev summary{cursor:pointer;font-size:20px}.glrev ol{padding-left:22px}.glrev li{margin:9px 0;line-height:1.45}.glok{color:var(--ok);font-weight:800}.glno{color:var(--bad);font-weight:800}
+.glreadgrid{display:grid;grid-template-columns:1.15fr 1fr;gap:16px;align-items:start}
+.glpass{text-align:left;max-height:72vh;overflow:auto;position:sticky;top:10px}.glpass h3{margin:4px 0 8px;font-size:24px;color:var(--aa)}.glpass p{font-size:18px;line-height:1.6;margin:0 0 12px}
+.glpk{display:inline-block;background:var(--honeyL);border-radius:99px;padding:3px 12px;font-weight:800;font-size:13px}.glpass .glhear{margin:0 0 10px;box-shadow:none}
+@media(max-width:800px){.glreadgrid{grid-template-columns:1fr}.glpass{position:static;max-height:46vh}}
 @media(max-width:700px){.glforms,.glgrid{grid-template-columns:1fr}.glrow{grid-template-columns:1fr 80px 44px}}
 </style>
 </head>
@@ -500,12 +504,14 @@ function voicePanel(){pv();const g=goodVoices();const cur=voice&&voice.name;
  <div class="tipbox" style="margin-top:14px;font-size:15px"><b>Want an even nicer voice?</b><br>On a Mac: System Settings → Accessibility → Spoken Content → System voice → Manage Voices → English (United Kingdom) → download <b>Daniel (Enhanced)</b> or <b>Kate (Enhanced)</b>.<br>On iPad/iPhone: Settings → Accessibility → Spoken Content → Voices → English → UK → download an Enhanced voice.<br>Then come back and choose it here.</div>
  <div class="row" style="margin-top:16px"><button class="w" data-vclose="1">Done</button></div></div></div>`}
 /* ---------- GL Practice: tests in the style of the GL Progress Test in English (spelling, grammar, punctuation) ---------- */
-const GLAREA={S:'Spelling',G:'Grammar',P:'Punctuation',V:'Vocabulary'};
+const GLAREA={S:'Spelling',G:'Grammar',P:'Punctuation',V:'Vocabulary',R:'Reading'};
 const GLTYPE={D:'Listen and spell',C:'Choose the right answer',E:'Find the mistake',W:'Write it correctly'};
-const GLTIP={S:'Practise your word list with the 🎧 Spelling test and 👀 Look, Cover, Write.',G:'Talk about word classes (nouns, verbs, adjectives, adverbs) and joining words when you read together.',P:'Check capital letters, full stops, commas and speech marks every time you write a sentence.',V:'Read every day and find new words. Ask what they mean and use them in your own sentences.'};
+const GLSKILL={F:'Finding information',I:'Inference (reading between the lines)',M:'Word meaning',O:'Order and main ideas',A:'Author’s choices'};
+const GLTIP={S:'Practise your word list with the 🎧 Spelling test and 👀 Look, Cover, Write.',G:'Talk about word classes (nouns, verbs, adjectives, adverbs) and joining words when you read together.',P:'Check capital letters, full stops, commas and speech marks every time you write a sentence.',V:'Read every day and find new words. Ask what they mean and use them in your own sentences.',R:'Read together every day. Ask questions like “How do you know?” and “Why do you think the writer chose that word?”'};
 let GLD={},GLS=null,GLMINE=null;
 async function glLoad(g){if(g in GLD)return GLD[g];try{const r=await fetch(`content/gl-grade${g}.json`,{cache:'no-cache'});GLD[g]=await r.json();
- ['A','B'].forEach(f=>{GLD[g][f].dict.forEach(it=>{CLIP[it.w+'. '+it.s+' '+it.w+'.']=it.k});GLD[g][f].written.forEach(it=>{CLIP[glSpoken(it)]=it.k})})}catch(e){GLD[g]=null}return GLD[g]}
+ ['A','B'].forEach(f=>{GLD[g][f].dict.forEach(it=>{CLIP[it.w+'. '+it.s+' '+it.w+'.']=it.k});GLD[g][f].written.forEach(it=>{CLIP[glSpoken(it)]=it.k});(GLD[g][f].reading||[]).forEach(p=>{CLIP[glPText(p)]=p.k;p.qs.forEach(it=>{CLIP[glSpoken(it)]=it.k})})})}catch(e){GLD[g]=null}return GLD[g]}
+function glPText(p){return p.title+'. '+p.text.replace(/\n/g,' ')}
 function glSpoken(it){return ((it.q||'')+(it.s?' '+it.s:'')).replace(/…/g,'blank').replace(/[“”]/g,'').replace(/\s+/g,' ').trim()}
 async function glMine(){if(!ME||!db())return GLMINE||[];try{const {data}=await db().rpc('sb_gl_mine',{p_code:ME.code});if(Array.isArray(data))GLMINE=data}catch(e){}return GLMINE||[]}
 function glPct(r,n){return n?Math.round(100*r/n):0}
@@ -518,21 +524,22 @@ function glView(){const g=ME.grade;
  if(!(g in GLD)){glLoad(g).then(()=>{if(V.screen==='gl')render()});return '<p class="muted" style="text-align:center">Loading your GL practice…</p>'}
  const D=GLD[g];if(!D)return glHead('GL Practice')+'<div class="panel">GL practice is not ready for your grade yet.</div>';
  if(!GLS)GLS={stage:'menu'};
- return ({menu:glMenu,intro:glIntro,dict:glDict,written:glWritten,check:glCheck,result:glResult}[GLS.stage]||glMenu)(D)}
-function glMenu(D){const nd=D.A.dict.length,nw=D.A.written.length;
+ return ({menu:glMenu,intro:glIntro,dict:glDict,written:glWritten,reading:glWritten,check:glCheck,result:glResult}[GLS.stage]||glMenu)(D)}
+function glMenu(D){const nd=D.A.dict.length,nw=D.A.written.length,nr=(D.A.reading||[]).reduce((n,p)=>n+p.qs.length,0);
  if(!GLMINE||Date.now()-(glMenu.t||0)>30000){glMenu.t=Date.now();glMine().then(()=>{if(V.screen==='gl'&&GLS&&GLS.stage==='menu')render()})}
  const card=f=>{const L=glLast(f),all=(GLMINE||[]).filter(r=>r.grade===ME.grade&&r.form===f),best=all.reduce((b,r)=>Math.max(b,glPct(r.score,r.total)),0);
   return `<div class="glform"><div class="glfh">Test ${f}</div>
-   <div class="glparts"><span>🎧 <b>Part 1 · Listen and spell</b><br>${nd} words read by Kate</span><span>✏️ <b>Part 2 · Spelling, grammar and punctuation</b><br>${nw} questions${D.read?', read aloud by Kate':' at your own pace'}</span></div>
+   <div class="glparts"><span>🎧 <b>Part 1 · Listen and spell</b><br>${nd} words read by Kate</span><span>✏️ <b>Part 2 · Spelling, grammar and punctuation</b><br>${nw} questions${D.read?', read aloud by Kate':' at your own pace'}</span>${nr?`<span>📖 <b>Part 3 · Reading</b><br>${D.A.reading.length===1?'1 text':D.A.reading.length+' texts'} and ${nr} questions</span>`:''}</div>
    <div class="gllast">${L?`Last time: <b>${L.score}/${L.total}</b> (${glPct(L.score,L.total)}%) · best ${best}% · ${all.length} ${all.length===1?'try':'tries'}`:'Not tried yet · ⭐ 10 stars the first time you finish'}</div>
    <div class="row" style="justify-content:center"><button class="y" data-glgo="${f}">${L?'Try again':'Start Test '+f} →</button>${L?`<button class="w" data-glrep="${f}">My report</button>`:''}</div></div>`};
  return glHead('GL Practice')+`<div class="panel glintro"><div style="font-size:60px;line-height:1">📝</div><h2 class="f" style="margin:8px 0 6px">GL Practice · ${esc(D.name)}</h2>
-  <p style="margin:0 auto;max-width:640px">Get ready for the GL English test! First Kate reads some words for you to spell. Then you answer spelling, grammar and punctuation questions. At the end you see your score and what to practise next.</p>
+  <p style="margin:0 auto;max-width:640px">Get ready for the GL English test! First Kate reads some words for you to spell. Then you answer spelling, grammar and punctuation questions, and read some texts and answer questions about them. At the end you see your score and what to practise next.</p>
   <p class="muted" style="margin:8px 0 0">About ${D.mins} minutes · ${esc(D.year)}</p></div>
   <div class="glforms">${card('A')}${card('B')}</div>
   <p class="muted small" style="text-align:center;margin-top:12px">Practice tests written by the Spelling Bee team in the style of the GL Progress Test in English. Not made by or linked to GL Assessment.</p>`}
-function glStart(D,f){const T=D[f];GLS={stage:'intro',part:'dict',form:f,dict:T.dict,written:T.written,i:0,ans:{},t0:Date.now(),read:!!D.read};render();window.scrollTo(0,0)}
+function glStart(D,f){const T=D[f];GLS={stage:'intro',part:'dict',form:f,dict:T.dict,written:T.written,reading:(T.reading||[]).flatMap(p=>p.qs.map(q=>Object.assign({},q,{pid:p.id}))),passages:T.reading||[],i:0,ans:{},t0:Date.now(),read:!!D.read};render();window.scrollTo(0,0)}
 function glIntro(){const d=GLS.part==='dict';
+ if(GLS.part==='reading')return glHead(`GL Practice · Test ${GLS.form}`)+`<div class="panel glready"><div style="font-size:64px">📖</div><h2 class="f">Part 3: Reading</h2><p>Read ${GLS.passages.length===1?'the text':'each text'} carefully, then answer the questions about it. You can look back at the text as often as you like.${GLS.read?' Kate can read the text to you.':''}</p><p class="muted">There ${GLS.passages.length===1?'is 1 text':'are '+GLS.passages.length+' texts'} and ${GLS.reading.length} questions.</p><button class="y" data-glready="1" style="font-size:24px;margin-top:6px">I’m ready! →</button></div>`;
  return glHead(`GL Practice · Test ${GLS.form}`)+`<div class="panel glready"><div style="font-size:64px">${d?'🎧':'✏️'}</div>
   ${d?`<h2 class="f">Part 1: Listen and spell</h2><p>Kate will say a word, use it in a sentence, then say the word again. Type the word. You can hear it again if you need to.</p><p class="muted">There are ${GLS.dict.length} words. Take your time and check your spelling before you press Next.</p>`
    :`<h2 class="f">Part 2: Spelling, grammar and punctuation</h2><p>${GLS.read?'Kate will read each question to you. ':''}Read each question carefully and choose or write your answer. Tap 🔊 to hear a question.</p><p class="muted">There are ${GLS.written.length} questions. You can go back and change an answer.</p>`}
@@ -544,19 +551,23 @@ function glDict(){const L=GLS.dict,it=L[GLS.i];
   <div class="panel"><div class="muted" style="font-weight:800">Word ${GLS.i+1} of ${L.length}</div>
   <div class="row" style="justify-content:center;margin-top:10px"><button class="y" data-glsay="d">🔊 Hear it again</button></div>
   ${glInput(it)}<div class="row" style="justify-content:center;margin-top:16px"><button data-glnx="1">${GLS.i+1<L.length?'Next word →':'Finish part 1 →'}</button></div></div>`}
-function glWritten(){const L=GLS.written,it=L[GLS.i],cur=GLS.ans[it.id];
+function glWritten(){const st=GLS.stage,L=GLS[st],it=L[GLS.i],cur=GLS.ans[it.id];
  const ans=it.t==='choice'?`<div class="glch">${it.c.map(c=>`<button class="w${cur===c?' on':''}" data-glc="${esc(c)}">${esc(c)}</button>`).join('')}</div>`:glInput(it);
- return glHead(`Test ${GLS.form} · Part 2`)+`<div class="gldots">${L.map((x,j)=>`<button class="${j===GLS.i?'n':String(GLS.ans[x.id]||'').trim()?'a':''}" data-glj="${j}" aria-label="Question ${j+1}">${j+1}</button>`).join('')}</div>
-  <div class="panel"><div class="muted" style="font-weight:800">Question ${GLS.i+1} of ${L.length}</div>
+ const last=GLS.i+1>=L.length,more=st==='written'&&GLS.reading.length;
+ const P=st==='reading'?GLS.passages.find(p=>p.id===it.pid):null;
+ const q=`<div class="muted" style="font-weight:800">Question ${GLS.i+1} of ${L.length}</div>
   <div class="glq">${esc(it.q)} <button class="w glhear" data-glsay="w" aria-label="Hear the question">🔊</button></div>
   ${it.s?`<div class="gls">${esc(it.s)}</div>`:''}${ans}
-  <div class="glnav"><button class="w" data-glbk2="1" ${GLS.i?'':'disabled'}>← Back</button>${GLS.i+1<L.length?'<button data-glnx="1">Next →</button>':'<button class="g" data-glend="1">Finish test ✓</button>'}</div></div>`}
-function glCheck(){const miss=GLS.written.map((x,j)=>[x,j]).filter(([x])=>!String(GLS.ans[x.id]||'').trim());
+  <div class="glnav"><button class="w" data-glbk2="1" ${GLS.i?'':'disabled'}>← Back</button>${!last?'<button data-glnx="1">Next →</button>':more?'<button data-glnx="1">Part 3: Reading →</button>':'<button class="g" data-glend="1">Finish test ✓</button>'}</div>`;
+ return glHead(`Test ${GLS.form} · Part ${st==='reading'?3:2}`)+`<div class="gldots">${L.map((x,j)=>`<button class="${j===GLS.i?'n':String(GLS.ans[x.id]||'').trim()?'a':''}" data-glj="${j}" aria-label="Question ${j+1}">${j+1}</button>`).join('')}</div>
+  ${P?`<div class="glreadgrid"><div class="panel glpass"><div class="glpk">${P.kind==='story'?'📖 Story':'📰 Information text'}</div><h3 class="f">${esc(P.title)}</h3>${GLS.read?'<button class="y glhear" data-glsayp="1">🔊 Listen to the text</button>':''}${P.text.split('\n').map(x=>`<p>${esc(x)}</p>`).join('')}</div><div class="panel">${q}</div></div>`:`<div class="panel">${q}</div>`}`}
+function glMissing(){const m=[];['written','reading'].forEach(st=>(GLS[st]||[]).forEach((x,j)=>{if(!String(GLS.ans[x.id]||'').trim())m.push([st,j])}));return m}
+function glCheck(){const miss=glMissing();
  return glHead(`Test ${GLS.form}`)+`<div class="panel"><div style="font-size:54px">🤔</div><h2 class="f">You have ${miss.length} question${miss.length===1?'':'s'} without an answer</h2>
   <p>Would you like to go back and try ${miss.length===1?'it':'them'}? A good guess is better than nothing!</p>
-  <div class="gldots" style="justify-content:center">${miss.map(([x,j])=>`<button class="n" data-glj="${j}">${j+1}</button>`).join('')}</div>
-  <div class="row" style="justify-content:center;margin-top:14px"><button class="w" data-glj="${miss.length?miss[0][1]:0}">Go back</button><button class="y" data-glsub="1">Finish and see my score</button></div></div>`}
-function glMark(){const all=[...GLS.dict,...GLS.written],area={},type={},q={};let sc=0,ds=0;
+  <div class="gldots" style="justify-content:center">${miss.map(([st,j])=>`<button class="n" style="width:auto;padding:0 10px;border-radius:99px" data-glj="${j}" data-glst="${st}">${st==='reading'?'Reading ':'Part 2 · '}${j+1}</button>`).join('')}</div>
+  <div class="row" style="justify-content:center;margin-top:14px">${miss.length?`<button class="w" data-glj="${miss[0][1]}" data-glst="${miss[0][0]}">Go back</button>`:''}<button class="y" data-glsub="1">Finish and see my score</button></div></div>`}
+function glMark(){const all=[...GLS.dict,...GLS.written,...GLS.reading],area={},type={},q={};let sc=0,ds=0;
  all.forEach(it=>{const ok=glOk(it,GLS.ans[it.id]);if(ok){sc++;if(it.ty==='D')ds++}q[it.id]=ok?1:0;
   (area[it.area]=area[it.area]||[0,0])[1]++;if(ok)area[it.area][0]++;(type[it.ty]=type[it.ty]||[0,0])[1]++;if(ok)type[it.ty][0]++});
  return {score:sc,total:all.length,dict:ds,dict_of:GLS.dict.length,areas:{area,type,q}}}
@@ -572,33 +583,38 @@ function glResult(){const D=GLD[ME.grade],R=GLS.saved,A=R.areas||{},p=glPct(R.sc
  const ranked=Object.entries(A.area||{}).filter(([,v])=>v[1]>=2).map(([k,v])=>[k,v[0]/v[1]]).sort((a,b)=>a[1]-b[1]);
  const weak=ranked.filter(([,x])=>x<0.75).slice(0,2),strong=ranked.filter(([,x])=>x>=0.8).slice(-2).reverse();
  const msg=p>=85?'Bee-autiful work! 🏆':p>=65?'Great effort! 🎉':p>=40?'Good try. Keep practising! 💪':'Keep buzzing. Practice makes progress! 🌱';
- const items=[...T.dict.map(x=>[x,'🎧']),...T.written.map(x=>[x,'✏️'])],mine=GLS.ans,qm=A.q||{};
+ const items=[...T.dict.map(x=>[x,'🎧']),...T.written.map(x=>[x,'✏️']),...(T.reading||[]).flatMap(p=>p.qs.map(x=>[Object.assign({},x,{ptitle:p.title}),'📖']))],mine=GLS.ans,qm=A.q||{};
  if(GLS.fresh){GLS.fresh=false;if(p>=65)setTimeout(()=>{burst();happySound(true);setTimeout(()=>clapSound(true),120)},200)}
  return glHead(`Test ${R.form} · My report`)+`<div class="panel"><div class="glscore" style="--p:${p}"><b>${R.score}</b><span>out of ${R.total}</span></div>
-  <h2 class="f" style="margin:10px 0 4px">${msg}</h2><p class="muted" style="margin:0">${p}% correct · Listen and spell ${R.dict}/${R.dict_of} · Part 2 ${R.score-R.dict}/${R.total-R.dict_of}${R.secs?(m=>` · ${m} minute${m===1?'':'s'}`)(Math.max(1,Math.round(R.secs/60))):''}</p></div>
-  <div class="glgrid"><div class="panel gll"><h3 class="f">English areas</h3>${glBars(A.area,GLAREA)}</div><div class="panel gll"><h3 class="f">Question types</h3>${glBars(A.type,GLTYPE)}</div></div>
+  <h2 class="f" style="margin:10px 0 4px">${msg}</h2><p class="muted" style="margin:0">${p}% correct · Listen and spell ${R.dict}/${R.dict_of}${(A.area||{}).R?` · Reading ${A.area.R[0]}/${A.area.R[1]}`:''}${R.secs?(m=>` · ${m} minute${m===1?'':'s'}`)(Math.max(1,Math.round(R.secs/60))):''}</p></div>
+  <div class="glgrid"><div class="panel gll"><h3 class="f">English areas</h3>${glBars(A.area,GLAREA)}</div><div class="panel gll"><h3 class="f">Spelling and grammar questions</h3>${glBars(A.type,GLTYPE)}</div></div>
+  ${Object.keys(GLSKILL).some(k=>(A.type||{})[k])?`<div class="panel gll" style="margin-bottom:16px"><h3 class="f">Reading skills</h3>${glBars(A.type,GLSKILL)}</div>`:''}
   <div class="panel gll"><h3 class="f">🎯 What to practise next</h3>${weak.length?weak.map(([k])=>`<div class="glnext"><b>${GLAREA[k]}</b><span>${GLTIP[k]}</span></div>`).join(''):'<p style="margin:0">You did well in every area. Try the other test, or beat your own score! ⭐</p>'}
    ${weak.some(([k])=>k==='S')?'<div class="row" style="margin-top:10px"><button class="y" data-go="test">🎧 Spelling test</button><button class="w" data-go="lcwc">👀 Look, Cover, Write</button></div>':''}
    ${strong.length?`<p class="muted" style="margin:10px 0 0">💪 Strongest: ${strong.map(([k])=>GLAREA[k]).join(' and ')}</p>`:''}</div>
   <details class="panel gll glrev"><summary><b class="f">Check my answers</b> (${R.score} right)</summary><ol>${items.map(([it,ic])=>{const ok=mine?glOk(it,mine[it.id]):!!qm[it.id],a=mine?String(mine[it.id]||'').trim():null;
-   const q=it.ty==='D'?`Spell: <b>${esc(it.w)}</b>`:esc(it.q)+(it.s?` <i>${esc(it.s)}</i>`:'');
+   const q=it.ty==='D'?`Spell: <b>${esc(it.w)}</b>`:(it.ptitle?`<i>${esc(it.ptitle)}:</i> `:'')+esc(it.q)+(it.s?` <i>${esc(it.s)}</i>`:'');
    return `<li><span>${ic}</span> ${q}<br>${ok?'<span class="glok">✔ Correct</span>':`<span class="glno">✘</span> ${a!==null?`You wrote: <b>${esc(a||'—')}</b> · `:''}Answer: <b>${esc(it.a)}</b>${it.fix?` (the correct spelling is <b>${esc(it.fix)}</b>)`:''}`}</li>`}).join('')}</ol></details>
   <div class="row" style="justify-content:center;margin:14px 0"><button class="w" data-glgo="${R.form}">Try Test ${R.form} again</button><button class="y" data-glgo="${R.form==='A'?'B':'A'}">Try Test ${R.form==='A'?'B':'A'}</button></div>`}
 let GLT=null;
-function glSay(){if(!GLS)return;if(GLS.stage==='dict'){const it=GLS.dict[GLS.i];say(it.w+'. '+it.s+' '+it.w+'.')}else if(GLS.stage==='written'){say(glSpoken(GLS.written[GLS.i]))}}
-function glKeep(){const i=document.getElementById('ans');if(i&&GLS){const L=GLS.stage==='dict'?GLS.dict:GLS.written;GLS.ans[L[GLS.i].id]=i.value}}
-function glGo(stage,i){GLS.stage=stage;if(i!==undefined)GLS.i=i;render();window.scrollTo(0,0);if((stage==='dict')||(stage==='written'&&(GLS.read)))setTimeout(glSay,300)}
-document.addEventListener('click',e=>{const op=e.target.closest('[data-glopen]');if(op&&ME){GLS=null;V.screen='gl';if(!V.team)V.team=ME.team;render();window.scrollTo(0,0);return}if(V.screen!=='gl')return;const b=e.target.closest('[data-glbk],[data-glgo],[data-glrep],[data-glready],[data-glsay],[data-glnx],[data-glbk2],[data-glend],[data-glj],[data-glsub],[data-glc]');if(!b)return;const d=b.dataset;
+function glSay(){if(!GLS)return;if(GLS.stage==='dict'){const it=GLS.dict[GLS.i];say(it.w+'. '+it.s+' '+it.w+'.')}else if(GLS.stage==='written'||GLS.stage==='reading'){say(glSpoken(GLS[GLS.stage][GLS.i]))}}
+function glSayP(){const it=GLS.reading[GLS.i],P=GLS.passages.find(p=>p.id===it.pid);if(P)say(glPText(P))}
+function glKeep(){const i=document.getElementById('ans');if(i&&GLS&&GLS[GLS.stage]){GLS.ans[GLS[GLS.stage][GLS.i].id]=i.value}}
+function glGo(stage,i){const prevP=GLS.stage==='reading'&&GLS.reading[GLS.i]?GLS.reading[GLS.i].pid:null;GLS.stage=stage;if(i!==undefined)GLS.i=i;render();window.scrollTo(0,0);
+ if(stage==='dict'||(stage==='written'&&GLS.read))setTimeout(glSay,300);
+ else if(stage==='reading'&&GLS.read){const np=GLS.reading[GLS.i].pid;setTimeout(np!==prevP?glSayP:glSay,300)}}
+document.addEventListener('click',e=>{const op=e.target.closest('[data-glopen]');if(op&&ME){GLS=null;V.screen='gl';if(!V.team)V.team=ME.team;render();window.scrollTo(0,0);return}if(V.screen!=='gl')return;const b=e.target.closest('[data-glbk],[data-glgo],[data-glrep],[data-glready],[data-glsay],[data-glsayp],[data-glnx],[data-glbk2],[data-glend],[data-glj],[data-glsub],[data-glc]');if(!b)return;const d=b.dataset;
  if(d.glbk){if(GLS&&!['menu','result'].includes(GLS.stage)){if(!confirm('Stop the test? Your answers will not be saved.'))return;GLS={stage:'menu'};render();return}if(GLS&&GLS.stage==='result'){GLS={stage:'menu'};render();return}GLS=null;V.screen='team';render();return}
  if(d.glgo){glStart(GLD[ME.grade],d.glgo);return}
  if(d.glrep){const L=glLast(d.glrep);if(L){GLS={stage:'result',form:d.glrep,saved:L};render();window.scrollTo(0,0)}return}
- if(d.glready){if(GLS.part==='dict')glGo('dict',0);else{GLS.tw=Date.now();glGo('written',0)}return}
+ if(d.glready){if(GLS.part==='dict')glGo('dict',0);else if(GLS.part==='reading')glGo('reading',0);else{GLS.tw=Date.now();glGo('written',0)}return}
  if(d.glsay){glSay();return}
- if(d.glc!==undefined){const it=GLS.written[GLS.i];GLS.ans[it.id]=d.glc;document.querySelectorAll('[data-glc]').forEach(x=>x.classList.toggle('on',x===b));return}
- if(d.glnx){glKeep();if(GLS.stage==='dict'){if(GLS.i+1<GLS.dict.length)glGo('dict',GLS.i+1);else{GLS.part='written';GLS.stage='intro';render();window.scrollTo(0,0)}}else glGo('written',GLS.i+1);return}
- if(d.glbk2){glKeep();glGo('written',Math.max(0,GLS.i-1));return}
- if(d.glend){glKeep();if(GLS.written.some(x=>!String(GLS.ans[x.id]||'').trim())){GLS.stage='check';render();window.scrollTo(0,0)}else glFinish();return}
- if(d.glj!==undefined){glKeep();glGo('written',+d.glj);return}
+ if(d.glsayp){glSayP();return}
+ if(d.glc!==undefined){const it=GLS[GLS.stage][GLS.i];GLS.ans[it.id]=d.glc;document.querySelectorAll('[data-glc]').forEach(x=>x.classList.toggle('on',x===b));return}
+ if(d.glnx){glKeep();if(GLS.stage==='dict'){if(GLS.i+1<GLS.dict.length)glGo('dict',GLS.i+1);else{GLS.part='written';GLS.stage='intro';render();window.scrollTo(0,0)}}else if(GLS.stage==='written'&&GLS.i+1>=GLS.written.length){GLS.part='reading';GLS.stage='intro';render();window.scrollTo(0,0)}else glGo(GLS.stage,GLS.i+1);return}
+ if(d.glbk2){glKeep();glGo(GLS.stage,Math.max(0,GLS.i-1));return}
+ if(d.glend){glKeep();if(glMissing().length){GLS.stage='check';render();window.scrollTo(0,0)}else glFinish();return}
+ if(d.glj!==undefined){glKeep();glGo(d.glst||(GLS.stage==='check'?'written':GLS.stage),+d.glj);return}
  if(d.glsub){glFinish();return}
 });
 document.addEventListener('keydown',e=>{if(V.screen!=='gl'||e.key!=='Enter'||e.target.id!=='ans')return;e.preventDefault();const b=document.querySelector('[data-glnx]')||document.querySelector('[data-glend]');if(b)b.click()});

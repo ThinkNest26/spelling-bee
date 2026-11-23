@@ -95,7 +95,7 @@ async function start(){
  KIDS=k||[];(p||[]).forEach(x=>PROG[x.student_id]=x);GLR=(glr&&!glr.error&&glr.data)||[];(rw||[]).forEach(r=>WINS[r.student_id]=(WINS[r.student_id]||0)+1);
  (Array.isArray(w)?w:[]).forEach(r=>(WORDS[r.team]=WORDS[r.team]||[]).push(r));
  render()}
-let GLR=[];const GLAREA={S:'Spelling',G:'Grammar',P:'Punctuation',V:'Vocabulary'};
+let GLR=[];const GLAREA={S:'Spelling',G:'Grammar',P:'Punctuation',V:'Vocabulary',R:'Reading'};
 function glLine(k){const L=['A','B'].map(f=>GLR.find(r=>r.student_id===k.id&&r.form===f&&r.grade===k.grade)).filter(Boolean);if(!L.length)return '';
  const a={};L.forEach(r=>{const x=(r.areas||{}).area||{};for(const c in x){a[c]=a[c]||[0,0];a[c][0]+=x[c][0];a[c][1]+=x[c][1]}});const w=Object.entries(a).filter(([,v])=>v[1]>=2).map(([c,v])=>[c,v[0]/v[1]]).sort((x,y)=>x[1]-y[1])[0];
  return `<div class="glline">📋 <b>GL practice:</b> ${L.map(r=>`Test ${r.form} <b>${r.score}/${r.total}</b> (${Math.round(100*r.score/r.total)}%)`).join(' · ')}${w&&w[1]<.75?` · to practise: <b>${GLAREA[w[0]]}</b>`:''}</div>`}

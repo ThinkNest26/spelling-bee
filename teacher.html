@@ -83,7 +83,7 @@ code{background:#F3EBD2;padding:1px 6px;border-radius:6px;font-size:13px}
 .drow{display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid #F4EEDC}.drow svg{border-radius:50%;flex:none}
 td svg{border-radius:50%;flex:none}
 
-.sgcols{display:grid;grid-template-columns:1fr 1fr;gap:14px}.sgr{display:grid;grid-template-columns:1fr 140px 46px;gap:10px;align-items:center;margin:7px 0;font-size:14px}.sgr .bar{height:12px}
+.sgcols{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.sgr{display:grid;grid-template-columns:1fr 140px 46px;gap:10px;align-items:center;margin:7px 0;font-size:14px}.sgr .bar{height:12px}
 @media(max-width:760px){.sgcols{grid-template-columns:1fr}}
 </style>
 </head>
@@ -456,7 +456,8 @@ function visible(){const q=F.q.toLowerCase();return KIDS.filter(c=>(F.grade==='a
  .sort((a,b)=>{const k=SORT.k,d=SORT.d;const v=c=>k==='stars'?(PROG[c.id]?.stars||0):k==='learnt'?learnt(c.id):k==='seen'?(PROG[c.id]?.last_seen||''):k==='grade'?c.grade*1000+(c.class_name||'').charCodeAt(0):String(c[k]||'').toLowerCase();const x=v(a),y=v(b);return (x>y?1:x<y?-1:0)*d||a.first_name.localeCompare(b.first_name)})}
 /* ---------- GL practice results ---------- */
 let SGR=null,SGERR=false,SGG=null,SGCLS='all';const SGCONT={};
-const SGAREA={S:'Spelling',G:'Grammar',P:'Punctuation',V:'Vocabulary'};
+const SGAREA={S:'Spelling',G:'Grammar',P:'Punctuation',V:'Vocabulary',R:'Reading'};
+const SGSKILL={F:'Finding information',I:'Inference',M:'Word meaning',O:'Order and main ideas',A:'Author’s choices'};
 const SGTYPE={D:'Listen and spell',C:'Choose the right answer',E:'Find the mistake',W:'Write it correctly'};
 async function sgLoad(){const {data,error}=await sb.from('sb_gl_results').select('*').order('created_at',{ascending:false});SGR=data||[];SGERR=!!error}
 async function sgCont(g){if(!(g in SGCONT)){try{const r=await fetch(`content/gl-grade${g}.json`,{cache:'no-cache'});SGCONT[g]=await r.json()}catch(e){SGCONT[g]=null}}return SGCONT[g]}
@@ -479,18 +480,18 @@ async function renderGLT(){if(!SGR||Date.now()-(renderGLT.t||0)>60000){renderGLT
   const L=[rA,rB].filter(Boolean),a=sgSum(L,'area'),weak=Object.entries(a).filter(([,v])=>v[1]>=2).map(([x,v])=>[x,v[0]/v[1]]).sort((x,y)=>x[1]-y[1])[0];
   const ld=L.filter(r=>r.dict_of).sort((x,y)=>y.created_at<x.created_at?-1:1)[0];
   return `<tr><td><b>${esc(k.first_name)}</b></td><td>${esc(k.class_name||'')}</td><td>${sgCell(rA,n('A'))}</td><td>${sgCell(rB,n('B'))}</td><td>${ld?`${ld.dict}/${ld.dict_of}`:'<span class="muted">—</span>'}</td><td>${weak&&weak[1]<.75?`<span class="pill" style="background:var(--badL);color:#991B1B">${SGAREA[weak[0]]}</span>`:L.length?'<span class="pill" style="background:var(--okL);color:#166534">On track</span>':''}</td></tr>`}).join('');
- let hard='';if(D){const idx={};['A','B'].forEach(f=>[...D[f].dict,...D[f].written].forEach(it=>idx[it.id]=[it,f]));const q={};
+ let hard='';if(D){const idx={};['A','B'].forEach(f=>[...D[f].dict,...D[f].written,...(D[f].reading||[]).flatMap(p=>p.qs.map(x=>Object.assign({},x,{ptitle:p.title})))].forEach(it=>idx[it.id]=[it,f]));const q={};
   latest.forEach(r=>{const m=(r.areas||{}).q||{};for(const id in m){q[id]=q[id]||[0,0];q[id][1]++;if(!m[id])q[id][0]++}});
   const L=Object.entries(q).filter(([id,v])=>idx[id]&&v[1]>=2&&v[0]>0).sort((a,b)=>b[1][0]/b[1][1]-a[1][0]/a[1][1]).slice(0,8);
   hard=L.length?`<div class="tablewrap"><table><thead><tr><th>Question</th><th>Test</th><th>Area</th><th>Answered wrongly</th></tr></thead><tbody>${L.map(([id,v])=>{const [it,f]=idx[id];
-   return `<tr><td>${it.ty==='D'?`Spell the word <b>${esc(it.w)}</b>`:esc(it.q)+(it.s?`<div class="small"><i>${esc(it.s)}</i></div>`:'')}<div class="muted small">Answer: ${esc(it.a)}${it.fix?` (correct spelling: ${esc(it.fix)})`:''}</div></td><td>${f}</td><td>${SGAREA[it.area]}</td><td><b style="color:${sgC(100-sgP(v[0],v[1]))}">${v[0]} of ${v[1]}</b></td></tr>`}).join('')}</tbody></table></div>`:'<p class="muted">Shows here once at least 2 children have finished a test.</p>'}
+   return `<tr><td>${it.ty==='D'?`Spell the word <b>${esc(it.w)}</b>`:(it.ptitle?`<span class="small muted">${esc(it.ptitle)}:</span> `:'')+esc(it.q)+(it.s?`<div class="small"><i>${esc(it.s)}</i></div>`:'')}<div class="muted small">Answer: ${esc(it.a)}${it.fix?` (correct spelling: ${esc(it.fix)})`:''}</div></td><td>${f}</td><td>${SGAREA[it.area]}</td><td><b style="color:${sgC(100-sgP(v[0],v[1]))}">${v[0]} of ${v[1]}</b></td></tr>`}).join('')}</tbody></table></div>`:'<p class="muted">Shows here once at least 2 children have finished a test.</p>'}
  $('#app').innerHTML=tabs()+`<div class="card" style="margin-bottom:14px"><div class="row"><h2 style="margin:0">📋 GL Practice</h2><div class="spacer"></div>
   <select id="sgg" style="max-width:170px">${grades.map(g=>`<option value="${g}" ${g===SGG?'selected':''}>${GL(g)}</option>`).join('')}</select>
   <select id="sgc" style="max-width:170px"><option value="all">All classes</option>${classes.map(c=>`<option ${c===SGCLS?'selected':''}>${esc(c)}</option>`).join('')}</select></div>
-  <p class="muted" style="margin:8px 0 12px">Practice tests in the style of the GL Progress Test in English (spelling, grammar and punctuation), written by the Spelling Bee team. Each grade has <b>Test A</b> and <b>Test B</b>: Part 1 is <b>listen and spell</b> with Kate, and Part 2 has spelling, grammar, punctuation and vocabulary questions. Children find it under <b>📋 GL Practice</b> on their practice page. The table shows the latest try of each test.</p>
+  <p class="muted" style="margin:8px 0 12px">Practice tests in the style of the GL Progress Test in English, written by the Spelling Bee team. Each grade has <b>Test A</b> and <b>Test B</b>: Part 1 is <b>listen and spell</b> with Kate, Part 2 has spelling, grammar, punctuation and vocabulary questions, and Part 3 is <b>reading comprehension</b> (a story and an information text, with questions on finding information, inference, word meaning and the writer’s choices). Every National Curriculum spelling and grammar objective for the year group appears in both tests. Children find it under <b>📋 GL Practice</b> on their practice page. The table shows the latest try of each test.</p>
   ${SGERR?'<p style="color:#991B1B;font-weight:800">GL results can’t be loaded yet. Please run <b>setup-sb-gl.sql</b> in Supabase.</p>':''}
   <div class="grid g4"><div class="card"><div class="stat">${aA?aA[0]+'%':'—'}</div><div class="small muted">Test A average${aA?` · ${aA[1]} ${kids(aA[1])}`:''}</div></div><div class="card"><div class="stat">${aB?aB[0]+'%':'—'}</div><div class="small muted">Test B average${aB?` · ${aB[1]} ${kids(aB[1])}`:''}</div></div><div class="card"><div class="stat">${ks.filter(k=>sgLatest(k,'A')||sgLatest(k,'B')).length}/${ks.length}</div><div class="small muted">children have tried a test</div></div></div></div>
-  <div class="sgcols"><div class="card"><h3 style="margin:0 0 8px">English areas</h3>${sgBars(sgSum(latest,'area'),SGAREA)}</div><div class="card"><h3 style="margin:0 0 8px">Question types</h3>${sgBars(sgSum(latest,'type'),SGTYPE)}</div></div>
+  <div class="sgcols"><div class="card"><h3 style="margin:0 0 8px">English areas</h3>${sgBars(sgSum(latest,'area'),SGAREA)}</div><div class="card"><h3 style="margin:0 0 8px">Spelling and grammar questions</h3>${sgBars(sgSum(latest,'type'),SGTYPE)}</div><div class="card"><h3 style="margin:0 0 8px">Reading skills</h3>${sgBars(sgSum(latest,'type'),SGSKILL)}</div></div>
   <div class="card" style="margin:14px 0"><h3 style="margin:0 0 8px">Children</h3><div class="tablewrap"><table><thead><tr><th>Name</th><th>Class</th><th>Test A</th><th>Test B</th><th>Listen and spell</th><th>Area to support</th></tr></thead><tbody>${rows||`<tr><td colspan="6" class="muted">No children in ${GL(SGG)} yet.</td></tr>`}</tbody></table></div></div>
   <div class="card"><h3 style="margin:0 0 8px">Questions the group found hardest</h3>${hard}</div>`;
  bindTabs();$('#sgg').onchange=e=>{SGG=+e.target.value;SGCLS='all';renderGLT()};$('#sgc').onchange=e=>{SGCLS=e.target.value;renderGLT()}}
