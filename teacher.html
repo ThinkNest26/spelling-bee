@@ -10,6 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="invite.js"></script>
 <script src="avatar.js"></script>
+<script src="spell.js"></script>
 <style>
 :root{--aa:#1B3A6B;--aa2:#D62839;--honey:#F5B700;--honey2:#FFD54A;--honeyL:#FFF3C4;--ink:#1F2A44;--ink2:#46506B;--muted:#6B7280;--bg:#FFFBEF;--line:#EFE6CC;--ok:#1E9E5A;--okL:#E3F6EA;--bad:#D64545;--badL:#FDE8E8}
 *{box-sizing:border-box}
@@ -85,6 +86,17 @@ td svg{border-radius:50%;flex:none}
 
 .sgcols{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.sgr{display:grid;grid-template-columns:1fr 140px 46px;gap:10px;align-items:center;margin:7px 0;font-size:14px}.sgr .bar{height:12px}
 @media(max-width:760px){.sgcols{grid-template-columns:1fr}}
+/* weekly words + spelling insights */
+.wkpick{display:flex;flex-wrap:wrap;gap:6px;max-height:220px;overflow:auto;padding:8px;border:1.5px solid var(--line);border-radius:12px;background:#FFFDF6}
+.wkw{background:#fff;color:var(--ink);border:1.5px solid var(--line);padding:5px 10px;border-radius:999px;font-size:13px}
+.wkw.on{background:var(--honey);border-color:var(--honey)}
+.instype{background:#FFFDF6;border:1px solid var(--line);border-radius:14px;padding:12px}
+.insnext{margin-top:12px;background:var(--honeyL);border-radius:12px;padding:10px 12px}
+.insrule{border-bottom:1px solid #F4EEDC;padding:8px 0}.insrule:last-child{border:0}
+.insx{color:var(--bad);text-decoration:line-through;font-weight:700}
+.inssents{display:grid;gap:8px;max-height:520px;overflow:auto}
+.inss{background:#FFFDF6;border:1px solid var(--line);border-radius:12px;padding:8px 10px;margin-bottom:6px}
+.insw{display:flex;gap:6px;align-items:center;margin:0;font-size:13px;cursor:pointer}.insw input{width:auto}
 </style>
 </head>
 <body>
@@ -171,7 +183,7 @@ async function loadWords(){
  try{const {data,error}=await sb.rpc('teacher_words');if(!error&&Array.isArray(data)){WROWS=data;for(const t in TEAMS)TEAMS[t][2]=WROWS.filter(w=>w.team===t).length}}catch(e){}
  try{const r=await fetch('audio/manifest.json',{cache:'no-cache'});if(r.ok){const a=await r.json();if(Array.isArray(a))HAVE=new Set(a)}}catch(e){}
 }
-function tabs(){return `<div class="tabs">${[['dash','📊 Dashboard'],['spellers','👧 Spellers & progress'],['words','📚 Word lists'],['invites','✉️ Invitations'],['rounds','🎤 Bee rounds & Grand Final'],['certs','🎓 Certificates'],['gl','📋 GL Practice'],['reports','📄 Parent reports'],['settings','⚙️ School settings']].map(([k,l])=>`<button class="${TAB===k?'on':''}" data-tab="${k}">${l}</button>`).join('')}</div>`}
+function tabs(){return `<div class="tabs">${[['dash','📊 Dashboard'],['spellers','👧 Spellers & progress'],['words','📚 Word lists'],['weekly','🗓 Weekly words'],['insights','🔎 Spelling insights'],['invites','✉️ Invitations'],['rounds','🎤 Bee rounds & Grand Final'],['certs','🎓 Certificates'],['gl','📋 GL Practice'],['reports','📄 Parent reports'],['settings','⚙️ School settings']].map(([k,l])=>`<button class="${TAB===k?'on':''}" data-tab="${k}">${l}</button>`).join('')}</div>`}
 function needs(w){const n=[];if(!HAVE.has(w.w_clip))n.push('word');if(w.sentence&&(!HAVE.has(w.s_clip)||!HAVE.has(w.ws_clip)))n.push('sentence');if(w.meaning&&w.m_clip&&!HAVE.has(w.m_clip))n.push('meaning');return n}
 /* ---------- invitations ---------- */
 let INVS=null,INVSEL=null,DRAFT=null,DIRTY=false,INVEDIT=false;
@@ -498,7 +510,131 @@ async function renderGLT(){if(SGON===null||Date.now()-(renderGLT.t||0)>60000)awa
   <div class="card" style="margin:14px 0"><h3 style="margin:0 0 8px">Children</h3><div class="tablewrap"><table><thead><tr><th>Name</th><th>Class</th><th>Test A</th><th>Test B</th><th>Listen and spell</th><th>Area to support</th></tr></thead><tbody>${rows||`<tr><td colspan="6" class="muted">No children in ${GL(SGG)} yet.</td></tr>`}</tbody></table></div></div>
   <div class="card"><h3 style="margin:0 0 8px">Questions the group found hardest</h3>${hard}</div>`;
  bindTabs();$('#sgg').onchange=e=>{SGG=+e.target.value;SGCLS='all';renderGLT()};$('#sgc').onchange=e=>{SGCLS=e.target.value;renderGLT()}}
+/* ================= WEEKLY WORDS + SPELLING INSIGHTS ================= */
+const SX=window.SPELL;
+let WK=null,WKR=[],WKG=null,WKNEW=null,INS=null,INSF={grade:'all',cls:'all',days:30},INSERR='';
+function xToday(){return new Date(Date.now()+4*3600e3).toISOString().slice(0,10)}
+function xAdd(d,n){return new Date(Date.parse(d+'T12:00:00Z')+n*864e5).toISOString().slice(0,10)}
+function xFd(d){return new Date(String(d).slice(0,10)+'T12:00:00Z').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}
+function xThu(){const t=xToday(),dow=(new Date(t+'T12:00:00Z').getUTCDay()+6)%7;return dow<=3?xAdd(t,3-dow):xAdd(t,10-dow)}
+function xMon(){const t=xToday(),dow=(new Date(t+'T12:00:00Z').getUTCDay()+6)%7;return xAdd(t,-dow)}
+function xGrades(){const g=[...new Set(KIDS.map(k=>+k.grade))].sort((a,b)=>a-b);return g.length?g:[0,1,2,3,4,5]}
+function xClasses(g){return [...new Set(KIDS.filter(k=>g==='all'||+k.grade===+g).map(k=>k.class_name).filter(Boolean))].sort()}
+function xWordsOf(g){return WROWS.filter(w=>w.team===teamOf(g)).map(w=>w.word)}
+function xSplit(s){return [...new Set(String(s||'').split(/[\n,;]+/).map(x=>x.trim()).filter(x=>x&&x.length<=40))]}
+function xSetupMsg(){return `<div class="card" style="text-align:center;padding:30px"><div style="font-size:44px">🛠️</div><h2>One quick step first</h2><p class="muted">Run <b>setup-sb-plus.sql</b> in Supabase to switch on weekly words and spelling insights.</p></div>`}
+
+/* ---------- 🗓 weekly words ---------- */
+async function wkLoad(){const [{data:w,error:e1},{data:r,error:e2}]=await Promise.all([sb.from('sb_weekly').select('*').order('created_at',{ascending:false}).limit(60),sb.from('sb_weekly_results').select('*').limit(5000)]);
+ if(e1||e2){WK=false;return}WK=w||[];WKR=r||[]}
+async function renderWeekly(){if(WK===null||Date.now()-(renderWeekly.t||0)>60000){renderWeekly.t=Date.now();$('#app').innerHTML=tabs()+'<p class="muted">Loading weekly words…</p>';await wkLoad()}
+ if(WK===false){$('#app').innerHTML=tabs()+xSetupMsg();bindTabs();return}
+ const gs=xGrades();if(WKG===null||!gs.includes(+WKG))WKG=gs[0];
+ const list=WK.filter(w=>+w.grade===+WKG);
+ $('#app').innerHTML=tabs()+`<div class="card" style="margin-bottom:14px"><div class="row"><h2 style="margin:0">🗓 Weekly words</h2><div class="spacer"></div>
+  <label style="margin:0">Grade</label><select id="wkg" style="width:auto">${gs.map(g=>`<option value="${g}" ${+g===+WKG?'selected':''}>${GL(g)}</option>`).join('')}</select>
+  <button class="y" id="wknew">➕ New weekly words</button></div>
+  <p class="muted small" style="margin:8px 0 0">Choose this week’s words. On Monday children take a short <b>pre-test</b>, then practise the words they got wrong. Children who already know every word get <b>challenge words</b> instead. The <b>post-test</b> opens on the day you choose, and you can see how much each child has learnt.</p></div>
+  ${WKNEW?wkForm():''}
+  ${list.length?list.map(wkCard).join(''):`<div class="card muted" style="text-align:center;padding:26px">No weekly words for ${GL(WKG)} yet. Click <b>➕ New weekly words</b> to start.</div>`}`;
+ bindTabs();wkBind()}
+function wkForm(){const f=WKNEW;const all=xWordsOf(f.grade);const cls=xClasses(f.grade);
+ return `<div class="card" style="margin-bottom:14px;border:2px solid var(--honey)"><h3 style="margin:0 0 10px">New weekly words</h3>
+  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
+   <div><label>Grade</label><select id="wf-g">${[0,1,2,3,4,5].map(g=>`<option value="${g}" ${+g===+f.grade?'selected':''}>${GL(g)}</option>`).join('')}</select></div>
+   <div><label>Class</label><select id="wf-c"><option value="">Every class in ${GL(f.grade)}</option>${cls.map(c=>`<option ${c===f.cls?'selected':''}>${esc(c)}</option>`).join('')}</select></div>
+   <div><label>Title</label><input id="wf-t" value="${esc(f.title)}"></div>
+   <div><label>Post-test opens on</label><input type="date" id="wf-d" value="${f.post}"></div></div>
+  <label style="margin-top:12px">This week’s words <span class="muted">(${f.words.length} chosen · click words from your ${GL(f.grade)} list)</span></label>
+  <div class="wkpick">${all.map(w=>`<button class="wkw ${f.words.includes(w)?'on':''}" data-wkw="${esc(w)}">${esc(w)}</button>`).join('')||'<span class="muted small">This grade’s word list is empty.</span>'}</div>
+  <div class="grid" style="grid-template-columns:1fr 1fr;margin-top:10px"><div><label>Other words <span class="muted">(one per line)</span></label><textarea id="wf-x" rows="3" placeholder="e.g. station">${esc(f.extra)}</textarea></div>
+   <div><label>Challenge words <span class="muted">(for children who get every word right on Monday)</span></label><textarea id="wf-ch" rows="3" placeholder="one per line">${esc(f.ch)}</textarea><button class="w sm" id="wf-sug" style="margin-top:6px">✨ Suggest challenge words</button></div></div>
+  <div class="row" style="margin-top:12px"><div class="spacer"></div><button class="w" id="wf-cancel">Cancel</button><button class="y" id="wf-save">Save weekly words</button></div></div>`}
+function wkKids(w){return KIDS.filter(k=>k.active!==false&&+k.grade===+w.grade&&(!w.class_name||String(k.class_name).toLowerCase()===String(w.class_name).toLowerCase()))
+ .sort((a,b)=>(a.class_name||'').localeCompare(b.class_name||'')||a.first_name.localeCompare(b.first_name))}
+function wkCard(w){const kids=wkKids(w);const R=WKR.filter(r=>r.weekly_id===w.id);const res=(k,kind)=>R.find(r=>r.student_id===k.id&&r.kind===kind);
+ const pre=R.filter(r=>r.kind==='pre'),post=R.filter(r=>r.kind==='post');const pct=a=>a.length?Math.round(a.reduce((n,r)=>n+r.score/r.total,0)/a.length*100):null;
+ const both=kids.map(k=>[res(k,'pre'),res(k,'post')]).filter(([a,b])=>a&&b&&!b.challenge);const imp=both.filter(([a,b])=>b.score>a.score).length;
+ const miss={};pre.forEach(r=>w.words.forEach(x=>{const a=r.answers||{};if(a[x]===undefined)return;if(String(a[x]).trim().toLowerCase()!==x.toLowerCase())miss[x]=(miss[x]||0)+1}));
+ const top=Object.entries(miss).sort((a,b)=>b[1]-a[1]).slice(0,6);const open=w.post_from<=xToday();
+ return `<div class="card" style="margin-bottom:14px"><div class="row"><div><h3 style="margin:0">${esc(w.title||'Weekly words')}</h3><div class="small muted">${GL(w.grade)}${w.class_name?' · '+esc(w.class_name):' · every class'} · post-test ${open?'open since':'opens'} ${xFd(w.post_from)}</div></div><div class="spacer"></div><button class="w sm" data-wkdel="${w.id}">Delete</button></div>
+  <div style="margin:10px 0" class="row">${w.words.map(x=>`<span class="pill bum">${esc(x)}</span>`).join(' ')}${(w.challenge||[]).length?` <span class="small muted" style="margin-left:6px">🚀 Challenge:</span> ${(w.challenge||[]).map(x=>`<span class="pill cha">${esc(x)}</span>`).join(' ')}`:''}</div>
+  <div class="grid g4" style="margin:10px 0"><div class="card"><div class="stat">${pre.length}/${kids.length}</div><div class="small muted">did the pre-test</div></div><div class="card"><div class="stat">${pct(pre)??'—'}${pre.length?'%':''}</div><div class="small muted">average pre-test score</div></div><div class="card"><div class="stat">${pct(post)??'—'}${post.length?'%':''}</div><div class="small muted">average post-test score</div></div><div class="card"><div class="stat">${both.length?imp+'/'+both.length:'—'}</div><div class="small muted">improved</div></div></div>
+  ${top.length?`<div class="small" style="margin-bottom:8px"><b>Most missed on the pre-test:</b> ${top.map(([x,n])=>`${esc(x)} <span class="muted">(${n})</span>`).join(' · ')}</div>`:''}
+  <details><summary style="cursor:pointer;font-weight:800">Results for each child</summary><div style="overflow:auto"><table><thead><tr><th>Child</th><th>Class</th><th>Pre-test</th><th>Post-test</th><th>Change</th><th>Still to learn</th></tr></thead><tbody>
+  ${kids.map(k=>{const a=res(k,'pre'),b=res(k,'post');const ch=a&&b&&!b.challenge?b.score-a.score:null;const left=b?w.words.concat(b.challenge?(w.challenge||[]):[]).filter(x=>(b.answers||{})[x]!==undefined&&String(b.answers[x]).trim().toLowerCase()!==x.toLowerCase()):[];
+   return `<tr><td><b>${esc(k.first_name)}</b></td><td>${esc(k.class_name||'')}</td><td>${a?`${a.score}/${a.total}`:'<span class="muted">—</span>'}</td><td>${b?`${b.score}/${b.total}${b.challenge?' 🚀':''}`:'<span class="muted">—</span>'}</td><td>${ch===null?(b&&b.challenge?'<span class="small">challenge words</span>':''):`<b style="color:${ch>0?'var(--ok)':ch<0?'var(--bad)':'var(--ink2)'}">${ch>0?'+':''}${ch}</b>`}</td><td class="small">${left.map(esc).join(', ')}</td></tr>`}).join('')||'<tr><td colspan="6" class="muted">No children in this grade or class.</td></tr>'}</tbody></table></div></details></div>`}
+function wkBind(){const g=$('#wkg');if(g)g.onchange=e=>{WKG=+e.target.value;renderWeekly()};
+ const n=$('#wknew');if(n)n.onclick=()=>{WKNEW={grade:+WKG,cls:'',title:'Week of '+new Date(xMon()+'T12:00:00Z').toLocaleDateString('en-GB',{day:'numeric',month:'long'}),post:xThu(),words:[],extra:'',ch:''};renderWeekly()};
+ document.querySelectorAll('[data-wkdel]').forEach(b=>b.onclick=()=>confirmBox('Delete these weekly words?','The children’s pre-test and post-test results for this week will be deleted too.','Delete',async()=>{const {error}=await sb.from('sb_weekly').delete().eq('id',+b.dataset.wkdel);if(error){toast('Couldn’t delete');return}WK=WK.filter(x=>x.id!==+b.dataset.wkdel);renderWeekly();toast('Deleted')},true));
+ if(!WKNEW)return;const f=WKNEW;const keep=()=>{f.cls=$('#wf-c').value;f.title=$('#wf-t').value;f.post=$('#wf-d').value;f.extra=$('#wf-x').value;f.ch=$('#wf-ch').value};
+ $('#wf-g').onchange=e=>{keep();f.grade=+e.target.value;f.cls='';f.words=[];renderWeekly()};
+ document.querySelectorAll('[data-wkw]').forEach(b=>b.onclick=()=>{const w=b.dataset.wkw;f.words=f.words.includes(w)?f.words.filter(x=>x!==w):[...f.words,w];b.classList.toggle('on');const l=b.closest('.card').querySelector('label .muted');if(l)l.textContent=`(${f.words.length} chosen · click words from your ${GL(f.grade)} list)`});
+ $('#wf-sug').onclick=()=>{keep();const chosen=new Set([...f.words,...xSplit(f.extra)].map(x=>x.toLowerCase()));const nxt=[0,1,2,3,4,5].find(x=>teamOf(x)!==teamOf(f.grade)&&x>f.grade);
+  const pool=[...xWordsOf(f.grade).filter(w=>!chosen.has(w.toLowerCase())).sort((a,b)=>b.length-a.length).slice(0,8),...(nxt!==undefined?xWordsOf(nxt):[])];const pick=[...new Set(pool)].slice(0,5);
+  if(!pick.length){toast('No more words to suggest — type your own.');return}f.ch=pick.join('\n');renderWeekly()};
+ $('#wf-cancel').onclick=()=>{WKNEW=null;renderWeekly()};
+ $('#wf-save').onclick=async()=>{keep();const words=[...new Set([...f.words,...xSplit(f.extra)])];const ch=xSplit(f.ch);
+  if(words.length<2){toast('Choose at least 2 words');return}if(words.length>30){toast('Choose 30 words or fewer');return}if(!f.post){toast('Choose the post-test date');return}
+  const btn=$('#wf-save');btn.disabled=true;const {error}=await sb.from('sb_weekly').insert({grade:f.grade,class_name:f.cls||'',title:f.title.trim()||'Weekly words',words,challenge:ch.slice(0,20),post_from:f.post});
+  if(error){btn.disabled=false;toast('Couldn’t save — please try again');return}WKNEW=null;WKG=f.grade;await wkLoad();renderWeekly.t=Date.now();renderWeekly();toast('Weekly words saved ✓')}}
+
+/* ---------- 🔎 spelling insights: error patterns, sentences, family challenges, reading support ---------- */
+async function insLoad(){const since=new Date(Date.now()-120*864e5).toISOString();
+ const q=await Promise.all([sb.from('sb_mistakes').select('student_id,word,typed,created_at').gte('created_at',since).order('created_at',{ascending:false}).limit(8000),
+  sb.from('sb_review').select('student_id,word,mastered,due'),sb.from('sb_sentences').select('*').order('created_at',{ascending:false}).limit(600),
+  sb.from('sb_family').select('student_id,week,note,grownup'),sb.from('sb_support').select('student_id')]);
+ if(q.some(r=>r.error)){INS=false;return}
+ INS={mis:q[0].data||[],rev:q[1].data||[],sent:q[2].data||[],fam:q[3].data||[],sup:new Set((q[4].data||[]).map(r=>r.student_id))}}
+function insKids(){return KIDS.filter(k=>k.active!==false&&(INSF.grade==='all'||+k.grade===+INSF.grade)&&(INSF.cls==='all'||k.class_name===INSF.cls))
+ .sort((a,b)=>a.grade-b.grade||(a.class_name||'').localeCompare(b.class_name||'')||a.first_name.localeCompare(b.first_name))}
+async function renderIns(){if(INS===null||Date.now()-(renderIns.t||0)>60000){renderIns.t=Date.now();$('#app').innerHTML=tabs()+'<p class="muted">Loading spelling insights…</p>';await insLoad()}
+ if(INS===false){$('#app').innerHTML=tabs()+xSetupMsg();bindTabs();return}
+ const kids=insKids(),ids=new Set(kids.map(k=>k.id)),since=new Date(Date.now()-INSF.days*864e5).toISOString();
+ const M=INS.mis.filter(m=>ids.has(m.student_id)&&m.created_at>=since).map(m=>Object.assign({},m,{type:SX.classify(m.word,m.typed),rule:SX.ruleFor(m.word,m.typed)})).filter(m=>m.type);
+ const cnt={sound:0,rule:0,tricky:0};M.forEach(m=>cnt[m.type]++);const tot=M.length||1;
+ const rules={};M.filter(m=>m.type==='rule'&&m.rule&&m.rule.id!=='tricky').forEach(m=>{const r=rules[m.rule.id]=rules[m.rule.id]||{rule:m.rule,n:0,ex:[],kids:new Set()};r.n++;r.kids.add(m.student_id);if(r.ex.length<4&&!r.ex.some(e=>e[0]===m.word))r.ex.push([m.typed,m.word])});
+ const topRules=Object.values(rules).sort((a,b)=>b.n-a.n).slice(0,6);
+ const words={};M.forEach(m=>{const w=words[m.word.toLowerCase()]=words[m.word.toLowerCase()]||{w:m.word,n:0,typed:{},kids:new Set()};w.n++;w.kids.add(m.student_id);const t=m.typed.toLowerCase();w.typed[t]=(w.typed[t]||0)+1});
+ const topWords=Object.values(words).sort((a,b)=>b.kids.size-a.kids.size||b.n-a.n).slice(0,12);
+ const big=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0];const cls=xClasses(INSF.grade);const gs=xGrades();
+ const perKid=k=>{const m=M.filter(x=>x.student_id===k.id);const c={sound:0,rule:0,tricky:0};m.forEach(x=>c[x.type]++);const r={};m.filter(x=>x.type==='rule'&&x.rule).forEach(x=>r[x.rule.name]=(r[x.rule.name]||0)+1);
+  const tr=Object.entries(r).sort((a,b)=>b[1]-a[1])[0];const main=m.length>=3?Object.keys(c).sort((a,b)=>c[b]-c[a])[0]:null;return {n:m.length,c,main,rule:tr&&tr[0],ex:m.slice(0,3)}};
+ const rv=k=>{const r=INS.rev.filter(x=>x.student_id===k.id);return [r.filter(x=>!x.mastered).length,r.filter(x=>x.mastered).length]};
+ const S=INS.sent.filter(s=>ids.has(s.student_id));const KN={};KIDS.forEach(k=>KN[k.id]=k);
+ const famN=k=>INS.fam.filter(f=>f.student_id===k.id).length,wk=SX.weekStart(xToday()),famWk=INS.fam.filter(f=>ids.has(f.student_id)&&String(f.week).slice(0,10)===wk).length;
+ const bar=(t)=>{const p=Math.round(cnt[t]/tot*100);return `<div class="instype"><div class="row"><span style="font-size:26px">${SX.TYPES[t].e}</span><b style="flex:1">${SX.TYPES[t].name}</b><span class="stat" style="font-size:26px">${M.length?p:0}%</span></div><div class="bar" style="margin:6px 0"><i style="width:${M.length?p:0}%"></i></div><div class="small muted">${cnt[t]} mistake${cnt[t]===1?'':'s'} · ${SX.TYPES[t].tip}</div></div>`};
+ $('#app').innerHTML=tabs()+`<div class="card" style="margin-bottom:14px"><div class="row"><h2 style="margin:0">🔎 Spelling insights</h2><div class="spacer"></div>
+  <select id="ig" style="width:auto"><option value="all">All grades</option>${gs.map(g=>`<option value="${g}" ${String(g)===String(INSF.grade)?'selected':''}>${GL(g)}</option>`).join('')}</select>
+  <select id="ic" style="width:auto"><option value="all">All classes</option>${cls.map(c=>`<option ${c===INSF.cls?'selected':''}>${esc(c)}</option>`).join('')}</select>
+  <select id="id" style="width:auto">${[[7,'Last 7 days'],[30,'Last 30 days'],[120,'Last 4 months']].map(([d,l])=>`<option value="${d}" ${+d===+INSF.days?'selected':''}>${l}</option>`).join('')}</select></div>
+  <p class="muted small" style="margin:8px 0 0">Every spelling mistake a child types is sorted into one of three kinds, so you can see <b>what to teach</b>, not just who got it wrong.</p></div>
+ <div class="card" style="margin-bottom:14px"><h3 style="margin:0 0 10px">Error patterns <span class="small muted">(${M.length} mistakes)</span></h3>
+  ${M.length?`<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">${['sound','rule','tricky'].map(bar).join('')}</div>
+  <div class="insnext"><b>Focus next:</b> most mistakes are <b>${SX.TYPES[big].name.toLowerCase()}</b>. ${SX.TYPES[big].tip}</div>`:'<p class="muted">No mistakes recorded yet for these children. They’ll appear here as children practise.</p>'}</div>
+ ${M.length?`<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr));margin-bottom:14px">
+  <div class="card"><h3 style="margin:0 0 10px">💡 Rules to teach next</h3>${topRules.length?topRules.map(r=>`<div class="insrule"><div class="row"><b style="flex:1">${esc(r.rule.name)}</b><span class="pill bum">${r.n} mistake${r.n>1?'s':''} · ${r.kids.size} child${r.kids.size>1?'ren':''}</span></div><div class="small muted">${esc(r.rule.tip)}</div><div class="small" style="margin-top:4px">${r.ex.map(([t,w])=>`<span class="insx">${esc(t)}</span> → <b>${esc(w)}</b>`).join(' · ')}</div></div>`).join(''):'<p class="muted small">No rule mistakes yet.</p>'}</div>
+  <div class="card"><h3 style="margin:0 0 10px">📌 Most misspelt words</h3><table><thead><tr><th>Word</th><th>Children</th><th>Common spellings</th></tr></thead><tbody>${topWords.map(w=>`<tr><td><b>${esc(w.w)}</b></td><td>${w.kids.size}</td><td class="small">${Object.entries(w.typed).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([t,n])=>`<span class="insx">${esc(t)}</span>${n>1?` ×${n}`:''}`).join(', ')}</td></tr>`).join('')}</tbody></table></div></div>`:''}
+ <div class="card" style="margin-bottom:14px"><h3 style="margin:0 0 4px">👧 Each child</h3><p class="small muted" style="margin:0 0 8px">🧠 Tricky words come back after 1, 3 and 7 days; a word is <b>mastered</b> after 3 right in a row. 🅰️ <b>Reading support</b> gives a child a clearer font, more spacing, a cream background and slower speech.</p>
+  <div style="overflow:auto"><table><thead><tr><th>Child</th><th>Class</th><th>Mistakes</th><th>👂 Sounds</th><th>💡 Rules</th><th>⭐ Tricky</th><th>Main need</th><th>🧠 Learning / mastered</th><th>✍️ Sentences</th><th>🏡 Family</th><th>🅰️ Reading support</th></tr></thead><tbody>
+  ${kids.map(k=>{const p=perKid(k),[l,ms]=rv(k),sn=S.filter(s=>s.student_id===k.id).length;const pc=t=>p.n?Math.round(p.c[t]/p.n*100)+'%':'';
+   return `<tr><td><b>${esc(k.first_name)}</b></td><td>${esc(k.class_name||GL(k.grade))}</td><td>${p.n||'<span class="muted">0</span>'}</td><td>${pc('sound')}</td><td>${pc('rule')}</td><td>${pc('tricky')}</td>
+    <td class="small">${p.main?`${SX.TYPES[p.main].e} ${p.main==='rule'&&p.rule?esc(p.rule):SX.TYPES[p.main].name}`:'<span class="muted">—</span>'}${p.ex.length?`<div class="muted">${p.ex.map(x=>`${esc(x.typed)} → ${esc(x.word)}`).join(' · ')}</div>`:''}</td>
+    <td>${l} / ${ms}</td><td>${sn}</td><td>${famN(k)}</td><td><label class="insw"><input type="checkbox" data-sup="${k.id}" ${INS.sup.has(k.id)?'checked':''}> ${INS.sup.has(k.id)?'On':'Off'}</label></td></tr>`}).join('')||'<tr><td colspan="11" class="muted">No children.</td></tr>'}</tbody></table></div></div>
+ <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr))">
+  <div class="card"><h3 style="margin:0 0 10px">✍️ Sentences children have written</h3>${S.length?`<div class="inssents">${S.slice(0,60).map(s=>`<div class="inss"><div class="row"><b>${esc((KN[s.student_id]||{}).first_name||'')}</b><span class="pill cha">${esc(s.word)}</span><span class="spacer"></span><span class="small muted">${xFd(s.created_at)}</span><button class="w sm" data-sdel="${s.id}" title="Remove this sentence">✕</button></div><div>${esc(s.sentence)}</div></div>`).join('')}</div>`:'<p class="muted small">No sentences yet. Children unlock a word for sentence writing once they’ve spelt it right twice.</p>'}</div>
+  <div class="card"><h3 style="margin:0 0 10px">🏡 Family challenge</h3><div class="row" style="margin-bottom:8px"><span style="font-size:34px">${SX.familyFor(wk).e}</span><div><b>This week: ${esc(SX.familyFor(wk).t)}</b><div class="small muted">${famWk} of ${kids.length} children have done it this week</div></div></div>
+   ${INS.fam.filter(f=>ids.has(f.student_id)&&f.note).slice(-12).reverse().map(f=>`<div class="inss"><b>${esc((KN[f.student_id]||{}).first_name||'')}</b>${f.grownup?` <span class="small muted">with ${esc(f.grownup)}</span>`:''} <span class="small muted">· week of ${xFd(f.week)}</span><div>${esc(f.note)}</div></div>`).join('')||'<p class="muted small">Children’s notes about their family challenges will appear here.</p>'}</div></div>`;
+ bindTabs();
+ $('#ig').onchange=e=>{INSF.grade=e.target.value;INSF.cls='all';renderIns()};$('#ic').onchange=e=>{INSF.cls=e.target.value;renderIns()};$('#id').onchange=e=>{INSF.days=+e.target.value;renderIns()};
+ document.querySelectorAll('[data-sup]').forEach(c=>c.onchange=async()=>{const id=c.dataset.sup,on=c.checked;c.disabled=true;
+  const {error}=on?await sb.from('sb_support').insert({student_id:id}):await sb.from('sb_support').delete().eq('student_id',id);c.disabled=false;
+  if(error&&!/duplicate/i.test(error.message||'')){c.checked=!on;toast('Couldn’t change — please try again');return}if(on)INS.sup.add(id);else INS.sup.delete(id);c.parentElement.lastChild.textContent=on?' On':' Off';toast(on?'Reading support on ✓':'Reading support off')});
+ document.querySelectorAll('[data-sdel]').forEach(b=>b.onclick=()=>confirmBox('Remove this sentence?','The child won’t lose any stars.','Remove',async()=>{const {error}=await sb.from('sb_sentences').delete().eq('id',+b.dataset.sdel);if(error){toast('Couldn’t remove');return}INS.sent=INS.sent.filter(s=>s.id!==+b.dataset.sdel);renderIns()},true))}
+
 function render(){
+ if(TAB==='weekly'){renderWeekly();return}
+ if(TAB==='insights'){renderIns();return}
  if(TAB==='gl'){renderGLT();return}
  if(TAB==='settings'){renderSettings();return}
  if(TAB!=='settings')SDRAFT=null;
