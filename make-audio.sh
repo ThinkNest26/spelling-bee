@@ -53,6 +53,8 @@ k-10	Ten in a row! You're a champion bee!
 perfect	Wow! A perfect score! Well done!
 g-speed	Hello! This is how I will read your words.
 FIXED
+# GL practice questions (spelling, grammar and punctuation tests)
+[ -s content/gl-audio.tsv ] && cat content/gl-audio.tsv >> "$LIST"
 # 2. the latest word lists from the teacher page
 echo ""
 echo "  Getting the latest word lists…"

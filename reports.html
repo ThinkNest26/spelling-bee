@@ -55,6 +55,7 @@ main{max-width:1250px;margin:0 auto;padding:22px}
 #printarea{display:none}
 @media print{@page{size:A4 portrait;margin:0}body *{visibility:hidden}#printarea,#printarea *{visibility:visible}#printarea{display:block;position:absolute;left:0;top:0}header,main,footer{display:none}}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:12px;font-weight:800;z-index:60;display:none}
+.glline{background:#EEF2FF;border:1.5px solid #C7D2FE;border-radius:8px;padding:2mm 3mm;margin:0 0 3mm;font-size:3.4mm}
 </style>
 </head>
 <body>
@@ -88,12 +89,16 @@ async function start(){
  const {data:{session}}=await sb.auth.getSession();
  if(session){const {data:si}=await sb.rpc('my_school_info');if(si&&!si.premium){lockPage('Parent reports');return}if(si){SCH=si;if(!ST.logo&&si.logo)ST.logo=si.logo}}
  if(!session){$('#app').innerHTML=`<div class="card" style="max-width:520px;margin:40px auto;text-align:center"><h2>Please sign in first</h2><p class="muted">Sign in on the teacher page, then come back here.</p><a href="teacher.html"><button class="y">Go to the teacher page</button></a></div>`;return}
- const [{data:k},{data:p},{data:w},{data:rw}]=await Promise.all([
+ const [{data:k},{data:p},{data:w},{data:rw},glr]=await Promise.all([
   sb.from('students').select('*').eq('active',true).order('grade').order('class_name').order('first_name'),
-  sb.from('progress').select('*'),sb.rpc('teacher_words'),sb.from('race_wins').select('student_id')]);
- KIDS=k||[];(p||[]).forEach(x=>PROG[x.student_id]=x);(rw||[]).forEach(r=>WINS[r.student_id]=(WINS[r.student_id]||0)+1);
+  sb.from('progress').select('*'),sb.rpc('teacher_words'),sb.from('race_wins').select('student_id'),sb.from('sb_gl_results').select('*').order('created_at',{ascending:false})]);
+ KIDS=k||[];(p||[]).forEach(x=>PROG[x.student_id]=x);GLR=(glr&&!glr.error&&glr.data)||[];(rw||[]).forEach(r=>WINS[r.student_id]=(WINS[r.student_id]||0)+1);
  (Array.isArray(w)?w:[]).forEach(r=>(WORDS[r.team]=WORDS[r.team]||[]).push(r));
  render()}
+let GLR=[];const GLAREA={S:'Spelling',G:'Grammar',P:'Punctuation',V:'Vocabulary'};
+function glLine(k){const L=['A','B'].map(f=>GLR.find(r=>r.student_id===k.id&&r.form===f&&r.grade===k.grade)).filter(Boolean);if(!L.length)return '';
+ const a={};L.forEach(r=>{const x=(r.areas||{}).area||{};for(const c in x){a[c]=a[c]||[0,0];a[c][0]+=x[c][0];a[c][1]+=x[c][1]}});const w=Object.entries(a).filter(([,v])=>v[1]>=2).map(([c,v])=>[c,v[0]/v[1]]).sort((x,y)=>x[1]-y[1])[0];
+ return `<div class="glline">📋 <b>GL practice:</b> ${L.map(r=>`Test ${r.form} <b>${r.score}/${r.total}</b> (${Math.round(100*r.score/r.total)}%)`).join(' · ')}${w&&w[1]<.75?` · to practise: <b>${GLAREA[w[0]]}</b>`:''}</div>`}
 function visible(){return KIDS.filter(k=>(ST.grade==='all'||k.grade==ST.grade)&&(ST.cls==='all'||k.class_name===ST.cls))}
 function analyse(k){const p=PROG[k.id]||{},ok=p.words||{},bad=p.tricky||{},list=WORDS[teamOf(k.grade)]||[];
  const sec=[],alm=[],tri=[],todo=[];list.forEach(r=>{const o=+ok[r.word]||0,b=+bad[r.word]||0;if(o>=2)sec.push(r);else if(o===1&&b<=o)alm.push(r);else if(b>0)tri.push(r);else todo.push(r)});
@@ -106,7 +111,7 @@ function report(k){const a=analyse(k),p=a.p;const pct=a.total?Math.round(a.sec.l
  <div class="hd">${ST.logo?`<div class="logo"><img src="${ST.logo}" alt=""></div>`:'<div style="font-size:11mm">🐝</div>'}<div><h1>Spelling Bee progress report</h1><div class="sub">${esc(SCH?SCH.name:'The Big Spelling Bee')}${SCH&&SCH.settings&&SCH.settings.final_date?' · Grand Final '+new Date(SCH.settings.final_date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}):''}</div></div><div style="margin-left:auto;text-align:right;font-weight:800">${esc(ST.date)}</div></div>
  <div class="kid">${av(p.avatar,96)}<div><div class="nm">${esc(k.first_name)}</div><div class="cl">${esc(k.class_name||GL(k.grade))} · ${TEAMN[teamOf(k.grade)]}</div></div></div>
  <div class="stats"><div class="st"><b>${p.stars||0}</b><span>⭐ stars earned</span></div><div class="st"><b>${a.sec.length}/${a.total}</b><span>🔵 words secure</span></div><div class="st"><b>${p.attempts||0}</b><span>✏️ words practised</span></div><div class="st"><b>${acc}%</b><span>✅ spelt correctly</span></div><div class="st"><b>${p.best_streak||0}</b><span>🔥 best streak (days)</span></div></div>
- <div style="font-weight:800">Spelling list progress: ${pct}% secure</div><div class="bar"><i style="width:${pct}%"></i></div>
+ ${glLine(k)}<div style="font-weight:800">Spelling list progress: ${pct}% secure</div><div class="bar"><i style="width:${pct}%"></i></div>
  <h3>How ${esc(k.first_name)} is doing with the words</h3>
  <div class="cols"><div class="box b-sec"><div class="t">🔵 Secure (${a.sec.length})</div><div class="small">Spelt correctly at least twice</div>${wl(a.sec,14)}</div>
   <div class="box b-alm"><div class="t">🟢 Almost there (${a.alm.length})</div><div class="small">Spelt correctly once</div>${wl(a.alm,14)}</div>
