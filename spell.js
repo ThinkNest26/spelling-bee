@@ -174,5 +174,24 @@ const FAMILY=[
 function weekStart(d){const x=d?new Date(d+'T12:00:00Z'):new Date(Date.now()+4*3600e3);const dow=(x.getUTCDay()+6)%7;return new Date(x.getTime()-dow*864e5).toISOString().slice(0,10)}
 function familyFor(week){const n=Math.round(Date.parse((week||weekStart())+'T12:00:00Z')/(7*864e5));return FAMILY[((n%FAMILY.length)+FAMILY.length)%FAMILY.length]}
 
-window.SPELL={RULES:R,RULE,TRICKY,HOMO,TYPES,align,span,diffHTML,key,ruleFor,errorRule,patternRules,classify,family,families,markPattern,FAMILY,familyFor,weekStart,low};
+
+/* ---------- spell-checking a sentence (British and American spellings both accepted) ---------- */
+let DICT=null,DICTP=null;
+function loadDict(){if(DICT)return Promise.resolve(DICT);if(DICTP)return DICTP;
+ DICTP=fetch('words.txt',{cache:'force-cache'}).then(r=>{if(!r.ok)throw 0;return r.text()}).then(t=>{DICT=new Set(t.split('\n'));return DICT}).catch(()=>{DICTP=null;return null});return DICTP}
+function known(w,extra){w=low(w);if(!w)return true;if(DICT&&DICT.has(w))return true;if(extra&&extra.has(w))return true;
+ const b=w.replace(/'s$/,'').replace(/s'$/,'s');if(b!==w&&(DICT&&DICT.has(b)||extra&&extra.has(b)))return true;return false}
+/* every word in the text with ok true/false; names (capital letter, not the first word) are skipped */
+function checkText(text,extraList){const extra=new Set((extraList||[]).map(low));const out=[];const re=/[A-Za-z][A-Za-z'’]*/g;let m,first=true,prevEnd=0;
+ while((m=re.exec(text))){const raw=m[0].replace(/[’]/g,"'").replace(/'+$/,'');const before=text.slice(prevEnd,m.index);const start=first||/[.!?]\s*$/.test(before);
+  const name=(!start&&/^[A-Z]/.test(raw)&&raw!=='I')||(/^[A-Z]/.test(raw)&&/'s$/.test(raw));out.push({w:raw,at:m.index,end:m.index+m[0].length,ok:name||raw==='I'||known(raw,extra),name});first=false;prevEnd=m.index+m[0].length}
+ return out}
+function lev(a,b,max){if(Math.abs(a.length-b.length)>max)return max+1;let prev=Array.from({length:b.length+1},(_,i)=>i);
+ for(let i=1;i<=a.length;i++){const cur=[i];let best=i;for(let j=1;j<=b.length;j++){cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));if(cur[j]<best)best=cur[j]}if(best>max)return max+1;prev=cur}return prev[b.length]}
+function suggest(word,extraList,n){if(!DICT)return [];const w=low(word),kw=key(w);const pri=new Set([...(extraList||[]).map(low),...TRICKY]);const res=new Map();
+ const consider=d=>{if(res.has(d)||d===w)return;const k=lev(w,d,3);const same=key(d)===kw;if(k>2&&!(same&&k<=3))return;res.set(d,k+(d[0]===w[0]?0:.6)-(same?1.5:0)-(pri.has(d)?.8:0)+(d.length<3?.5:0))};
+ pri.forEach(d=>{if(Math.abs(d.length-w.length)<=3)consider(d)});
+ for(const d of DICT){if(Math.abs(d.length-w.length)>3)continue;if(d[0]!==w[0]&&Math.abs(d.length-w.length)>2)continue;consider(d)}
+ return [...res.entries()].sort((a,b)=>a[1]-b[1]).slice(0,n||3).map(x=>x[0])}
+window.SPELL={RULES:R,RULE,TRICKY,HOMO,TYPES,align,span,diffHTML,key,ruleFor,errorRule,patternRules,classify,family,families,markPattern,FAMILY,familyFor,weekStart,low,loadDict,checkText,suggest,known};
 })();
