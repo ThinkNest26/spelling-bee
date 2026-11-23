@@ -375,7 +375,7 @@ const DATES=[
  ['Week of 25 Jan','Celebration','Certificates for everyone who took part and trophies for our champions.']];
 const RULES=['The pronouncer says your word, uses it in a sentence, then says it again.','You can ask to hear the word again, its meaning, or the sentence.','Say the word, spell it letter by letter, then say the word again.','You have up to 1 minute to finish spelling — watch the timer on the big screen.','Once you say a letter you can’t change it — so take your time!','If you miss a word, you are out at the end of that round. Well done for trying!','The last speller standing spells one more word to become champion.'];
 const FUN=[['🎧','Practise your words','Hear Kate say each word, then try the spelling test, Look-Cover-Write, missing letters and fill the gap.'],['🎮','Play spelling games','Bee to the Hive, Honey Catch, Grow a Garden, Bee Race, Balloon Rescue — and race your friends!'],['🎨','Create your avatar','Pick a cute character and spend your stars on outfits, hats, pets and more in the Bee Shop.'],['🔥','Grow your streak','Practise every school day to grow your flame and win bonus stars.'],['🌟','Word of the day','Spell the special word each day for 5 bonus stars.'],['🏆','Real Bee practice','Get ready for the big day: ask for the meaning, beat the timer, spell like a champion!']];
-const PARENTS=[['🎯','A daily goal','Practising 5 words a day (KG2 and Grade 1) or 10 words a day (Grades 2–5) lights your child’s 🔥 flame. Weekends never break their streak!'],['📄','Progress reports','Your child’s teacher can send home a one-page report showing the words they know and the words to practise together.'],['⏱️','Little and often','Five to ten minutes a day works better than a long session once a week.'],['🗣️','Say, spell, say','Ask your child to say the word, spell it out loud, then say it again — just like on stage.'],['👀','Look, cover, write, check','Look at the word, cover it, write it from memory, then check. Repeat the tricky ones.'],['🎉','Celebrate effort','Taking part is brave! Praise practice and courage, not just correct answers.']];
+const PARENTS=[['🎯','A daily goal','Practising 5 words a day (KG2 and Grade 1) or 10 words a day (Grades 2–5) lights your child’s 🔥 flame. Weekends never break their streak!'],['📱','Your Grown-up’s page','A private page just for you, showing your child’s stars, the words they find tricky, and their test results. Ask your child to open Family challenge and tap “📤 Send to a grown-up” — or use the link on their printed report.'],['🔒','Test me at home','Each week your child chooses 5 words, looks at them and locks them. You test them using your Grown-up’s page, then the words unlock so they can learn from their mistakes.'],['⏱️','Little and often','Five to ten minutes a day works better than a long session once a week.'],['🗣️','Say, spell, say','Ask your child to say the word, spell it out loud, then say it again — just like on stage.'],['👀','Look, cover, write, check','Look at the word, cover it, write it from memory, then check. Repeat the tricky ones.'],['🎉','Celebrate effort','Taking part is brave! Praise practice and courage, not just correct answers.']];
 const WORDS={};for(const t of TEAMS)WORDS[t.id]=STUDY[t.id].split(/\s+/).filter(Boolean);
 const BEE=`<svg viewBox="0 0 100 100"><ellipse class="wing" cx="40" cy="30" rx="16" ry="20" fill="#fff" opacity=".85"/><ellipse class="wing" cx="60" cy="28" rx="14" ry="18" fill="#E8F4FF" opacity=".85"/><ellipse cx="50" cy="58" rx="30" ry="22" fill="#FFC72C"/><path d="M36 39 Q32 58 36 78" stroke="#1F2A44" stroke-width="7" fill="none"/><path d="M52 36 Q48 58 52 80" stroke="#1F2A44" stroke-width="7" fill="none"/><circle cx="78" cy="54" r="13" fill="#1F2A44"/><circle cx="82" cy="51" r="3.4" fill="#fff"/><path d="M76 62 Q81 66 86 61" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M76 42 Q74 30 68 28 M84 42 Q88 31 94 31" stroke="#1F2A44" stroke-width="2.5" fill="none"/><circle cx="68" cy="28" r="3" fill="#1F2A44"/><circle cx="94" cy="31" r="3" fill="#1F2A44"/></svg>`;
 const PRAISE=['Brilliant!','Bee-autiful spelling!','Buzzing brilliant!','Super speller!','Amazing!','You did it!','Fantastic!'];
@@ -682,7 +682,7 @@ document.addEventListener('keydown',e=>{if(V.screen!=='gl'||e.key!=='Enter'||e.t
    weekly words (pre-test and post-test) · family challenge · reading support */
 const SX=window.SPELL;
 let LASTANS='',LASTANST=0,SUPPORT=false;
-const XS={code:null,loading:false,sent:[],weekly:[],fam:[],support:null,home:null,semi:null};
+const XS={code:null,loading:false,sent:[],weekly:[],fam:[],support:null,home:null,semi:null,ptok:null};
 let XH=null,XHSEL=null;
 let XD=null,XW=null,XF=null;
 try{SUPPORT=!!(ME&&localStorage.getItem('sb-support-'+ME.code)==='1')}catch(e){}
@@ -703,15 +703,15 @@ function xHook(team,w,ok){if(!ME||team!==ME.team||!w)return;const r=xRev(),td=du
 function xApplySupport(){document.body.classList.toggle('easyread',!!SUPPORT);
  if(SUPPORT&&!document.getElementById('lexend')){const l=document.createElement('link');l.id='lexend';l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&display=swap';document.head.appendChild(l)}}
 xApplySupport();
-async function xLoad(force){if(!ME||!db()||XS.loading)return;if(XS.code===ME.code&&!force)return;if(XS.code&&XS.code!==ME.code){XS.sent=[];XS.weekly=[];XS.fam=[];XS.home=null;XS.semi=null}XS.loading=true;const code=ME.code;
- try{const [rv,wk,st,fm,sp,hm,smi]=await Promise.all([xRun('sb_review_mine',{p_code:code}),xRun('sb_weekly_mine',{p_code:code}),xRun('sb_sentence_mine',{p_code:code}),xRun('sb_family_mine',{p_code:code}),xRun('sb_support_mine',{p_code:code}),xRun('sb_home_mine',{p_code:code}),xRun('sb_semi_mine',{p_code:code})]);
+async function xLoad(force){if(!ME||!db()||XS.loading)return;if(XS.code===ME.code&&!force)return;if(XS.code&&XS.code!==ME.code){XS.sent=[];XS.weekly=[];XS.fam=[];XS.home=null;XS.semi=null;XS.ptok=null}XS.loading=true;const code=ME.code;
+ try{const [rv,wk,st,fm,sp,hm,smi,ptk]=await Promise.all([xRun('sb_review_mine',{p_code:code}),xRun('sb_weekly_mine',{p_code:code}),xRun('sb_sentence_mine',{p_code:code}),xRun('sb_family_mine',{p_code:code}),xRun('sb_support_mine',{p_code:code}),xRun('sb_home_mine',{p_code:code}),xRun('sb_semi_mine',{p_code:code}),xRun('sb_parent_token',{p_code:code})]);
   if(!ME||ME.code!==code)return;XS.code=code;
   const p=prog(ME.team),r=xRev();
   if(Array.isArray(rv)){rv.forEach(x=>{const l=r[x.w];if(!l||(l.u||0)<(x.u||0))r[x.w]={b:x.b,s:x.s,due:String(x.due).slice(0,10),m:!!x.m,u:x.u||0}});
    if(!p.revSeeded){const tr=(WORDS[ME.team]||[]).filter(w=>wordLevel(ME.team,w)==='tricky'&&!r[w]);const td=dubaiDay();tr.slice(0,60).forEach(w=>r[w]={b:1,s:0,due:td,m:false,u:Date.now()});
     if(tr.length)xRun('sb_review_seed',{p_code:code,p_words:tr.slice(0,60)});p.revSeeded=true}
    savePR()}
-  if(Array.isArray(wk))XS.weekly=wk;if(Array.isArray(st))XS.sent=st;if(Array.isArray(fm))XS.fam=fm;if(hm&&hm.state)XS.home=hm;XS.semi=smi&&smi.grade!==undefined?smi:null;
+  if(Array.isArray(wk))XS.weekly=wk;if(Array.isArray(st))XS.sent=st;if(Array.isArray(fm))XS.fam=fm;if(hm&&hm.state)XS.home=hm;XS.semi=smi&&smi.grade!==undefined?smi:null;XS.ptok=ptk&&ptk.token?ptk.token:null;
   if(sp&&typeof sp.on==='boolean'){SUPPORT=sp.on;try{localStorage.setItem('sb-support-'+code,SUPPORT?'1':'0')}catch(e){}xApplySupport()}
   if(['team','xrules','xsent','xweekly','xfamily','xsemi'].includes(V.screen))render()}
  finally{XS.loading=false}}
@@ -860,9 +860,9 @@ function xWeekGo(kind,id){const w=XS.weekly.find(x=>String(x.id)===String(id));i
 /* ---------- family challenge ---------- */
 function xFamWords(){const due=xLearning();const t=ME.team;const tr=(WORDS[t]||[]).filter(w=>wordLevel(t,w)==='tricky');const al=(WORDS[t]||[]).filter(w=>wordLevel(t,w)!=='secure');
  return [...new Set([...due,...tr,...al,...(WORDS[t]||[])])].slice(0,5)}
-function xFamilyView(){return xHead('🏡 Family challenge')+xHomeCard()+xIdeaCard()}
+function xFamilyView(){return xHead('🏡 Family challenge')+(xGrownLink()?`<div class="xban" style="background:#EEF6FF;border-color:#BFDBFE"><div class="e">👪</div><div style="flex:1"><b class="f" style="font-size:20px">Grown-up’s page</b><div class="small">Send your grown-up their private page. It shows your stars, tricky words and test results.</div></div><button class="w" data-xh="share">📤 Send to a grown-up</button></div>`:'')+xHomeCard()+xIdeaCard()}
 /* 🔒 Test me at home: choose 5 words, look, lock, get tested by a grown-up, unlock and learn */
-function xGrownLink(){return location.origin+location.pathname.replace(/[^/]*$/,'')+'grownup.html?c='+encodeURIComponent(ME.code)}
+function xGrownLink(){return XS.ptok?location.origin+location.pathname.replace(/[^/]*$/,'')+'grownup.html?p='+encodeURIComponent(XS.ptok):''}
 function xHomeCard(){const h=XS.home;const head=`<div class="row" style="justify-content:center;gap:10px"><span style="font-size:46px">🔒</span><div style="text-align:left"><div class="muted">This week’s challenge</div><h2 style="font-size:30px;margin:0">Test me at home</h2></div></div>`;
  if(!h)return `<div class="panel sxfc" style="margin-bottom:16px">${head}<p class="muted">Loading…</p></div>`;
  const t=V.team;
@@ -881,7 +881,7 @@ function xHomeCard(){const h=XS.home;const head=`<div class="row" style="justify
  if(h.state==='locked')return `<div class="panel sxfc" style="margin-bottom:16px">${head}
    <div style="font-size:70px;margin-top:6px">🔒</div><p class="f" style="font-size:24px;margin:4px 0">Your 5 words are locked!</p>
    <p>Now ask a grown-up to test you. They can open the <b>Grown-up’s page</b> to see your words.</p>
-   <div class="row"><a class="xhbtn" href="${esc(xGrownLink())}" target="_blank" rel="noopener">👪 Open the Grown-up’s page</a><button class="w" data-xh="share">📤 Send to a grown-up</button></div>
+   ${xGrownLink()?`<div class="row"><a class="xhbtn" href="${esc(xGrownLink())}" target="_blank" rel="noopener">👪 Open the Grown-up’s page</a><button class="w" data-xh="share">📤 Send to a grown-up</button></div>`:'<p class="muted small">The Grown-up’s page isn’t ready yet — ask your teacher.</p>'}
    <div class="sxgrown" style="text-align:center">When your grown-up is ready, tap <b>Start my test</b>. They read each word, and you write it.</div>
    <div class="row" style="margin-top:14px"><button class="y" data-xh="start" style="font-size:22px">✏️ Start my test</button></div></div>`;
  const ws=Object.keys(h.answers||{}),miss=ws.filter(w=>!same(String(h.answers[w]||''),w));
@@ -903,7 +903,7 @@ async function xHomeAct(a,b){const h=XS.home;const t=V.team;
   XS.home={state:'chosen',words:XHSEL.slice(),n:5};XHSEL=null;render();happySound(false);return}
  if(a==='change'){XHSEL=(h.words||[]).slice();XS.home={state:'none'};render();return}
  if(a==='lock'){b.disabled=true;const r=await xRun('sb_home_lock',{p_code:ME.code});if(!r){b.disabled=false;note('Couldn’t lock — check the internet and try again.');return}XS.home={state:'locked',n:h.n||5};render();window.scrollTo(0,0);return}
- if(a==='share'){const url=xGrownLink();const txt=`${ME.first_name}’s spelling challenge: please test me on my 5 words!`;try{if(navigator.share){await navigator.share({title:'Test me at home',text:txt,url});return}}catch(e){return}
+ if(a==='share'){const url=xGrownLink();if(!url){note('The Grown-up’s page isn’t ready yet — ask your teacher.');return}const txt=`${ME.first_name}’s spelling challenge: please test me on my 5 words!`;try{if(navigator.share){await navigator.share({title:'Test me at home',text:txt,url});return}}catch(e){return}
   try{await navigator.clipboard.writeText(url);note('Link copied! Send it to your grown-up. 📋')}catch(e){note(url)}return}
  if(a==='start'){XH={i:0,n:h.n||5,ans:[]};V.screen='xhtest';render();window.scrollTo(0,0);return}
  if(a==='next'||a==='prev'){XH.ans[XH.i]=readAns();if(a==='next'&&!XH.ans[XH.i]){note('Write the word first — or ask your grown-up to say it again.');return}
