@@ -746,12 +746,13 @@ function render(){
    <span class="small muted">${list.length} shown</span></div>
   <div class="tablewrap" style="margin-top:10px"><table><thead><tr>
    <th><input type="checkbox" id="all" style="width:auto" ${list.length&&list.every(c=>SEL.has(c.id))?'checked':''}></th>
-   <th data-s="first_name">Name</th><th data-s="grade">Grade · class</th><th>Code</th><th data-s="stars">⭐ Stars</th><th data-s="learnt">Words learnt</th><th>Tricky words</th><th data-s="seen">Last practised</th><th></th></tr></thead><tbody>
+   <th data-s="first_name">Name</th><th data-s="grade">Grade · class</th><th>Code</th><th title="The number your school uses for each child. With the Whole Nest, it links their results to Nestopia.">Student no.</th><th data-s="stars">⭐ Stars</th><th data-s="learnt">Words learnt</th><th>Tricky words</th><th data-s="seen">Last practised</th><th></th></tr></thead><tbody>
    ${list.map(c=>{const t=teamOf(c.grade),p=PROG[c.id]||{},L=learnt(c.id),tot=TEAMS[t][2];return `<tr>
     <td><input type="checkbox" data-sel="${c.id}" style="width:auto" ${SEL.has(c.id)?'checked':''}></td>
     <td><div class="row" style="gap:6px;flex-wrap:nowrap">${avt(p.avatar,28)}<input value="${esc(c.first_name)}" data-ed="${c.id}" data-f="first_name" style="min-width:110px;font-weight:800"></div></td>
     <td><div class="row" style="gap:6px;flex-wrap:nowrap"><select data-ed="${c.id}" data-f="grade" style="width:84px">${GRADES.map(g=>`<option value="${g}" ${c.grade==g?'selected':''}>${g===0?'KG2':g}</option>`).join('')}</select><input value="${esc(c.class_name)}" data-ed="${c.id}" data-f="class_name" style="width:70px"><span class="pill ${t}" title="${TEAMS[t][0]}">${TEAMS[t][1]}</span></div></td>
     <td><span class="code">${fmtCode(c.code)}</span></td>
+    <td><input value="${esc(c.ext_ref||'')}" data-ed="${c.id}" data-f="ext_ref" placeholder="–" maxlength="30" style="width:76px" aria-label="Student number for ${esc(c.first_name)}"></td>
     <td><b>${p.stars||0}</b></td>
     <td><div class="row" style="gap:6px;flex-wrap:nowrap"><div class="bar"><i style="width:${Math.min(100,Math.round(L/tot*100))}%"></i></div><span class="small">${L}/${tot}</span></div></td>
     <td class="tricky">${tricky(c.id).map(esc).join(', ')||'<span class="muted">—</span>'}</td>
@@ -769,8 +770,8 @@ function bind(){
  $('#all').onchange=e=>{visible().forEach(c=>e.target.checked?SEL.add(c.id):SEL.delete(c.id));render()};
  document.querySelectorAll('[data-sel]').forEach(x=>x.onchange=()=>{x.checked?SEL.add(x.dataset.sel):SEL.delete(x.dataset.sel);$('#print').textContent='🖨 Print code cards'+(SEL.size?' ('+SEL.size+')':'')});
  document.querySelectorAll('th[data-s]').forEach(x=>x.onclick=()=>{const k=x.dataset.s;SORT.d=SORT.k===k?-SORT.d:1;SORT.k=k;render()});
- document.querySelectorAll('[data-ed]').forEach(x=>x.onchange=async()=>{const id=x.dataset.ed,f=x.dataset.f;let v=x.value.trim();if(f==='grade')v=+v;if(f==='first_name'&&!v){render();return}
-  const {error}=await sb.from('students').update({[f]:v}).eq('id',id);if(error){toast('Couldn’t save that change');return}const c=KIDS.find(k=>k.id===id);c[f]=v;toast('Saved ✓');if(f==='grade')render()});
+ document.querySelectorAll('[data-ed]').forEach(x=>x.onchange=async()=>{const id=x.dataset.ed,f=x.dataset.f;let v=x.value.trim();if(f==='grade')v=+v;if(f==='ext_ref')v=v||null;if(f==='first_name'&&!v){render();return}
+  const {error}=await sb.from('students').update({[f]:v}).eq('id',id);if(error){toast(f==='ext_ref'&&/ext_ref/.test(error.message||'')?'The student number needs a quick database update first':'Couldn’t save that change');return}const c=KIDS.find(k=>k.id===id);c[f]=v;toast('Saved ✓');if(f==='grade')render()});
  document.querySelectorAll('[data-recode]').forEach(x=>x.onclick=()=>confirmBox('Give a new code?','The old code will stop working. Progress is kept.','New code',async()=>{const id=x.dataset.recode;for(let i=0;i<5;i++){const code=newCode();const {error}=await sb.from('students').update({code}).eq('id',id);if(!error){KIDS.find(k=>k.id===id).code=code;render();toast('New code: '+fmtCode(code));return}}toast('Couldn’t make a new code')}));
  document.querySelectorAll('[data-del]').forEach(x=>x.onclick=()=>{const c=KIDS.find(k=>k.id===x.dataset.del);confirmBox('Remove '+c.first_name+'?','Their code and all their progress will be deleted.','Remove',async()=>{const {error}=await sb.from('students').delete().eq('id',c.id);if(error){toast('Couldn’t remove');return}KIDS=KIDS.filter(k=>k.id!==c.id);SEL.delete(c.id);render();toast('Removed')},true)});
 }
