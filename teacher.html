@@ -67,11 +67,13 @@ td input,td select{padding:5px 7px}
 .card.warn{background:#FFF7E0;border-color:#F5D58A}.card.okc{background:var(--okL);border-color:#A7E3BF;font-weight:800}
 code{background:#F3EBD2;padding:1px 6px;border-radius:6px;font-size:13px}
 #cards{display:none}
-.cards{display:grid;grid-template-columns:1fr 1fr;gap:10mm;padding:8mm}
-.ccard{border:3px dashed #F5B700;border-radius:16px;padding:14px;text-align:center;break-inside:avoid;page-break-inside:avoid;background:#fff}
-.ccard .bee{font-size:40px}.ccard .h{font-family:Fredoka;font-size:22px;color:#1B3A6B}.ccard .n{font-family:Fredoka;font-size:28px;margin-top:4px}
-.ccard .tm{font-weight:800;color:#46506B}.ccard .cd{font-family:ui-monospace,Menlo,monospace;font-size:34px;font-weight:800;letter-spacing:.12em;background:#FFF3C4;border-radius:12px;padding:8px;margin:10px 0}
-.ccard .go{font-size:14px}
+.cpage{--k:1;height:276mm;box-sizing:border-box;display:grid;gap:5mm;overflow:hidden;break-after:page;page-break-after:always;break-inside:avoid;page-break-inside:avoid}
+.cpage:last-child{break-after:auto;page-break-after:auto}
+.ccard{border:calc(3px*var(--k)) dashed #F5B700;border-radius:calc(16px*var(--k));padding:calc(12px*var(--k));text-align:center;background:#fff;overflow:hidden;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;min-height:0;min-width:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.ccard .bee{font-size:calc(40px*var(--k));line-height:1.1}.ccard .h{font-family:Fredoka;font-size:calc(22px*var(--k));color:#1B3A6B;line-height:1.15}.ccard .n{font-family:Fredoka;font-size:calc(28px*var(--k));margin-top:calc(4px*var(--k));line-height:1.15;overflow-wrap:anywhere}
+.ccard .tm{font-weight:800;color:#46506B;font-size:calc(14px*var(--k))}.ccard .lb{font-size:calc(13px*var(--k));margin-top:calc(8px*var(--k))}.ccard .cd{font-family:ui-monospace,Menlo,monospace;font-size:calc(34px*var(--k));font-weight:800;letter-spacing:.12em;background:#FFF3C4;border-radius:calc(12px*var(--k));padding:calc(8px*var(--k));margin:calc(10px*var(--k)) 0;white-space:nowrap}
+.ccard .go{font-size:calc(14px*var(--k));line-height:1.3}
+.csz{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}.csz button{text-align:left;padding:12px 14px;border-radius:14px;border:2px solid #E8DDBF;background:#fff;font-weight:800;cursor:pointer}.csz button.on{border-color:#F5B700;background:#FFF7DA}.csz small{display:block;font-weight:600;color:#6B7280;margin-top:2px}
 @media print{body:not(.inv-printing)>*:not(#cards){display:none!important}body:not(.inv-printing) #cards{display:block!important}body:not(.inv-printing){}@page{size:A4;margin:8mm}}
 
 .bars{display:flex;align-items:flex-end;gap:6px;height:190px;margin-top:12px;padding-bottom:34px}
@@ -816,10 +818,20 @@ function addModal(){
 }
 function goLimit(e){if(e&&e.preventDefault)e.preventDefault();$('#modal').innerHTML='';TAB='settings';render();setTimeout(()=>document.getElementById('plancard')?.scrollIntoView({behavior:'smooth'}),50)}
 function bindLimit(){document.querySelectorAll('[data-golimit]').forEach(a=>a.onclick=goLimit)}
+const CSIZES=[{id:'l',name:'Large',cols:2,rows:2,k:1.5,note:'4 per page'},{id:'m',name:'Medium',cols:2,rows:3,k:1.02,note:'6 per page'},{id:'s',name:'Small',cols:2,rows:4,k:.78,note:'8 per page'},{id:'x',name:'Mini',cols:3,rows:4,k:.62,note:'12 per page'}];
 function printCards(){
  const list=SEL.size?KIDS.filter(c=>SEL.has(c.id)):visible();if(!list.length){toast('No children to print');return}
- $('#cards').innerHTML=`<div class="cards">${list.map(c=>{const t=TEAMS[teamOf(c.grade)];return `<div class="ccard"><div class="bee">🐝</div><div class="h">Spelling Bee</div><div class="n">${esc(c.first_name)}</div><div class="tm">${t[1]} ${t[0]} · ${GL(c.grade)}${c.class_name?' · '+esc(c.class_name):''}</div><div class="small" style="margin-top:8px">Your secret bee code</div><div class="cd">${fmtCode(c.code)}</div><div class="go">Go to <b>${SITE}</b>, click <b>Start practising</b> and type your code. Happy spelling! ✨</div></div>`}).join('')}</div>`;
- setTimeout(()=>window.print(),150);
+ let pick='m';try{pick=localStorage.getItem('sb-card-size')||'m'}catch(e){}if(!CSIZES.some(z=>z.id===pick))pick='m';
+ const draw=()=>{$('#modal').innerHTML=`<div class="modal"><div class="card"><h2 style="font-size:21px">Print code cards</h2><p>${list.length} card${list.length===1?'':'s'}. Choose a size — every card stays whole on the page.</p><div class="csz">${CSIZES.map(z=>`<button data-csz="${z.id}" class="${z.id===pick?'on':''}">${z.name}<small>${z.note} · ${Math.ceil(list.length/(z.cols*z.rows))} page${Math.ceil(list.length/(z.cols*z.rows))===1?'':'s'}</small></button>`).join('')}</div><p class="small muted">In the print window, keep Scaling at 100% and paper size A4.</p><div class="row"><div class="spacer"></div><button class="w" id="mc">Cancel</button><button class="y" id="mo">🖨 Print</button></div></div></div>`;
+  document.querySelectorAll('[data-csz]').forEach(b=>b.onclick=()=>{pick=b.dataset.csz;draw()});
+  $('#mc').onclick=()=>$('#modal').innerHTML='';
+  $('#mo').onclick=()=>{try{localStorage.setItem('sb-card-size',pick)}catch(e){}$('#modal').innerHTML='';buildCards(list,CSIZES.find(z=>z.id===pick))}};
+ draw();
+}
+function buildCards(list,z){const per=z.cols*z.rows,pages=[];for(let i=0;i<list.length;i+=per)pages.push(list.slice(i,i+per));
+ const card=c=>{const t=TEAMS[teamOf(c.grade)];return `<div class="ccard"><div class="bee">🐝</div><div class="h">Spelling Bee</div><div class="n">${esc(c.first_name)}</div><div class="tm">${t[1]} ${t[0]} · ${GL(c.grade)}${c.class_name?' · '+esc(c.class_name):''}</div><div class="lb">Your secret bee code</div><div class="cd">${fmtCode(c.code)}</div><div class="go">Go to <b>${SITE}</b>, click <b>Start practising</b> and type your code. Happy spelling! ✨</div></div>`};
+ $('#cards').innerHTML=pages.map(pg=>`<div class="cpage" style="--k:${z.k};grid-template-columns:repeat(${z.cols},minmax(0,1fr));grid-template-rows:repeat(${z.rows},minmax(0,1fr))">${pg.map(card).join('')}</div>`).join('');
+ setTimeout(()=>window.print(),200);
 }
 function csv(){const list=visible();const rows=[['First name','Grade','Class','Team','Code','Stars','Words learnt','Tricky words','Last practised']].concat(list.map(c=>[c.first_name,GL(c.grade),c.class_name,TEAMS[teamOf(c.grade)][0],fmtCode(c.code),PROG[c.id]?.stars||0,learnt(c.id),tricky(c.id).join(' '),PROG[c.id]?.last_seen?new Date(PROG[c.id].last_seen).toLocaleString('en-GB'):'']));
  const txt=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+txt],{type:'text/csv'}));a.download='spelling-bee-spellers.csv';a.click()}
