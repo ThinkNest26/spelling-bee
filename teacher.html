@@ -476,7 +476,7 @@ function setHeader(){if(!SCHOOL)return;const h=document.querySelector('header .s
 
 function learnt(id){const p=PROG[id];if(!p)return 0;return Object.values(p.words||{}).filter(n=>n>=2).length}
 function tricky(id){const p=PROG[id];if(!p)return [];return Object.entries(p.tricky||{}).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0])}
-function visible(){const q=F.q.toLowerCase();return KIDS.filter(c=>(F.grade==='all'||c.grade==F.grade)&&(F.cls==='all'||c.class_name===F.cls)&&(!q||fullName(c).toLowerCase().includes(q)||c.code.toLowerCase().includes(q.replace(/-/g,''))))
+function visible(){const q=F.q.toLowerCase();return KIDS.filter(c=>(!F.nosur||!c.last_name)&&(F.grade==='all'||c.grade==F.grade)&&(F.cls==='all'||c.class_name===F.cls)&&(!q||fullName(c).toLowerCase().includes(q)||c.code.toLowerCase().includes(q.replace(/-/g,''))))
  .sort((a,b)=>{const k=SORT.k,d=SORT.d;const v=c=>k==='stars'?(PROG[c.id]?.stars||0):k==='learnt'?learnt(c.id):k==='seen'?(PROG[c.id]?.last_seen||''):k==='grade'?c.grade*1000+(c.class_name||'').charCodeAt(0):String(c[k]||'').toLowerCase();const x=v(a),y=v(b);return (x>y?1:x<y?-1:0)*d||a.first_name.localeCompare(b.first_name)})}
 /* ---------- GL practice results ---------- */
 let SGR=null,SGERR=false,SGG=null,SGCLS='all';const SGCONT={};
@@ -775,7 +775,8 @@ function render(){
    <select id="fg" style="max-width:160px"><option value="all">All grades</option>${GRADES.map(g=>`<option value="${g}" ${F.grade==g?'selected':''}>${GL(g)}</option>`).join('')}</select>
    <select id="fc" style="max-width:160px"><option value="all">All classes</option>${classes.map(c=>`<option ${F.cls===c?'selected':''}>${esc(c)}</option>`).join('')}</select>
    <input id="fq" placeholder="Search name or code…" style="max-width:240px" value="${esc(F.q)}">
-   <span class="small muted">${list.length} shown</span></div>
+   <span class="small muted">${list.length} shown</span>${(()=>{const ns=KIDS.filter(k=>!k.last_name).length;return ns?`<label class="small" style="display:flex;align-items:center;gap:6px;margin:0;cursor:pointer"><input type="checkbox" id="fns" style="width:auto" ${F.nosur?'checked':''}> Only children without a surname (${ns})</label>`:''})()}</div>
+  ${(()=>{const n=dupPairs().length;return n?`<div class="card" style="background:#FFF7E0;border-color:#F5D58A;margin-top:10px;padding:10px 14px"><div class="row"><b>🧩 ${n} child${n===1?'':'ren'} may have been added twice by the upload (a second copy with a new code).</b><div class="spacer"></div><button class="y sm" id="dupfix">Check and fix</button></div></div>`:''})()}
   <div class="tablewrap" style="margin-top:10px"><table><thead><tr>
    <th><input type="checkbox" id="all" style="width:auto" ${list.length&&list.every(c=>SEL.has(c.id))?'checked':''}></th>
    <th data-s="first_name">Name</th><th data-s="grade">Grade · class</th><th>Code</th><th title="The number your school uses for each child. With the Whole Nest, it links their results to Nestopia.">Student no.</th><th data-s="stars">⭐ Stars</th><th data-s="learnt">Words learnt</th><th>Tricky words</th><th data-s="seen">Last practised</th><th></th></tr></thead><tbody>
@@ -796,7 +797,7 @@ function render(){
 }
 function bind(){
  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{TAB=b.dataset.tab;render()});
- $('#upx').onclick=pickSheet;$('#add').onclick=addModal;$('#print').onclick=printCards;$('#csv').onclick=csv;$('#refresh').onclick=load;
+ $('#upx').onclick=pickSheet;if($('#dupfix'))$('#dupfix').onclick=()=>{DUPS=null;dupModal()};if($('#fns'))$('#fns').onchange=e=>{F.nosur=e.target.checked;render()};$('#add').onclick=addModal;$('#print').onclick=printCards;$('#csv').onclick=csv;$('#refresh').onclick=load;
  $('#fg').onchange=e=>{F.grade=e.target.value;F.cls='all';render()};$('#fc').onchange=e=>{F.cls=e.target.value;render()};
  $('#fq').oninput=e=>{F.q=e.target.value;const pos=e.target.selectionStart;render();const i=$('#fq');i.focus();i.setSelectionRange(pos,pos)};
  $('#all').onchange=e=>{visible().forEach(c=>e.target.checked?SEL.add(c.id):SEL.delete(c.id));render()};
@@ -851,6 +852,26 @@ function addModal(){
 }
 /* fill in surnames and classes for children already added — codes and progress stay the same */
 let UPD=null;
+/* ---------- 🧩 children added twice (a second copy with a new code) ---------- */
+function dupPairs(){const out=[];KIDS.filter(b=>b.last_name&&!hasProgress(b)).forEach(b=>{const c=KIDS.filter(a=>a.id!==b.id&&!a.last_name&&+a.grade===+b.grade&&nameSim(a.first_name,b.first_name));if(c.length)out.push({b,c,pick:c.length===1?c[0].id:''})});
+ const cnt={};out.forEach(x=>{if(x.pick)cnt[x.pick]=(cnt[x.pick]||0)+1});out.forEach(x=>{if(x.pick&&cnt[x.pick]>1)x.pick=''});return out}
+let DUPS=null;
+function dupModal(){if(!DUPS)DUPS=dupPairs();const D=DUPS;const used={};D.forEach(x=>{if(x.pick)used[x.pick]=(used[x.pick]||0)+1});const n=D.filter(x=>x.pick).length;
+ $('#modal').innerHTML=`<div class="modal"><div class="card" style="max-width:900px"><h2 style="font-size:22px">🧩 Children added twice</h2>
+ <p class="small muted">These children from your sheet look like they were added a second time with a <b>new code</b>, while the first copy has no surname. Choosing <b>Same child</b> keeps the <b>first code</b> (the one on the printed card, with any progress), moves the surname, class and student number onto it, and removes the second copy.</p>
+ <div class="tablewrap" style="max-height:55vh;overflow:auto"><table><thead><tr><th>Second copy (from the upload)</th><th>Is it the same child as…</th></tr></thead><tbody>
+ ${D.map((x,i)=>`<tr><td><b>${esc(fullName(x.b))}</b><div class="small muted">${GL(x.b.grade)}${x.b.class_name?' · '+esc(x.b.class_name):''} · new code ${fmtCode(x.b.code)}</div></td><td><select data-dp="${i}" style="min-width:300px${x.pick&&used[x.pick]>1?';border-color:#DC2626':''}"><option value="">Not the same child — keep both</option>${x.c.map(a=>`<option value="${a.id}" ${x.pick===a.id?'selected':''}>Same child: ${esc(a.first_name)} · keep code ${fmtCode(a.code)}${a.class_name?' · '+esc(a.class_name):''}${hasProgress(a)?' · has progress':''}</option>`).join('')}</select>${x.pick&&used[x.pick]>1?'<div class="small" style="color:#DC2626">Chosen twice</div>':''}</td></tr>`).join('')}
+ </tbody></table></div><div class="msg bad" id="dmsg"></div>
+ <div class="row" style="margin-top:10px"><div class="spacer"></div><button class="w" id="dc">Cancel</button><button class="y" id="dgo" ${n?'':'disabled'}>✅ Fix ${n} child${n===1?'':'ren'}</button></div></div></div>`;
+ $('#dc').onclick=()=>{$('#modal').innerHTML='';DUPS=null};
+ document.querySelectorAll('[data-dp]').forEach(sl=>sl.onchange=()=>{DUPS[+sl.dataset.dp].pick=sl.value;dupModal()});
+ $('#dgo').onclick=async()=>{if(Object.values(used).some(v=>v>1)){const m=$('#dmsg');m.textContent='One first copy is chosen twice — please fix the red box.';m.classList.add('show');return}
+  const b=$('#dgo');b.disabled=true;b.textContent='Fixing…';let ok=0,fail=0;
+  for(const x of D.filter(x=>x.pick)){const a=KIDS.find(k=>k.id===x.pick);const row={last_name:x.b.last_name};if(x.b.class_name&&!a.class_name&&/\d|kg/i.test(x.b.class_name))row.class_name=x.b.class_name;if(x.b.ext_ref&&!a.ext_ref)row.ext_ref=x.b.ext_ref;
+   const d=await sb.from('students').delete().eq('id',x.b.id);if(d.error){fail++;continue}
+   const u=await sb.from('students').update(row).eq('id',a.id);if(u.error){fail++;continue}
+   KIDS=KIDS.filter(k=>k.id!==x.b.id);SEL.delete(x.b.id);Object.assign(a,row);ok++}
+  $('#modal').innerHTML='';DUPS=null;render();toast(`${ok} fixed ✓ — first codes kept${fail?` · ${fail} couldn’t be fixed`:''}`)}}
 /* ---------- 📤 upload a class list (Excel or CSV) ---------- */
 function loadXLSX(){if(window.XLSX)return Promise.resolve(true);return new Promise(res=>{const sc=document.createElement('script');sc.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';sc.onload=()=>res(true);sc.onerror=()=>res(false);document.head.appendChild(sc)})}
 function pickSheet(){const f=document.createElement('input');f.type='file';f.accept='.xlsx,.xls,.csv,.numbers,text/csv';f.onchange=()=>{if(f.files[0])readSheet(f.files[0])};f.click()}
@@ -862,7 +883,7 @@ async function readSheet(file){toast('Reading '+file.name+'…');if(!(await load
 function sheetItems(rows){const H=rows[0].map(h=>h.toLowerCase().replace(/[^a-z ]/g,' ').replace(/\s+/g,' ').trim());
  const col=re=>H.findIndex(h=>re.test(h));
  const iF=col(/^(first|given|fore)( name)?|first name|given name/),iL=col(/^(last|sur|family)( ?name)?|surname|last name|family name/),
-  iN=col(/^(full name|student name|child name|pupil name|name of student|student|name|child|pupil)$/),iG=col(/grade|year|level/),iC=col(/class|section|homeroom|form|group/),
+  iN=col(/^(full name|student name|child name|pupil name|name of student|student|name|child|pupil)$/),iG=H.findIndex(h=>/grade|year|level/.test(h)&&!/teacher|tutor/.test(h)),iC=H.findIndex(h=>/class|section|homeroom|form|group/.test(h)&&!/teacher|tutor|staff|name/.test(h)),
   iR=col(/student (no|number|num|id)|admission|roll|esis|^id$|^no$/);
  const hasHead=(iF>=0||iN>=0)&&(iG>=0||iC>=0);const yearHead=iG>=0&&/year/.test(H[iG]);const out=[];
  if(!hasHead){rows.forEach(r=>{const line=r.filter(Boolean).join('\t');const p=parseLine(line);if(p)out.push({line,r:Object.assign(p,{ext_ref:''})})});return out}
@@ -877,11 +898,16 @@ function sheetItems(rows){const H=rows[0].map(h=>h.toLowerCase().replace(/[^a-z 
   if(grade===null)return;
   out.push({line:[first,last,gv,cv].filter(Boolean).join(' · '),r:{first_name:pCap(first),last_name:last.split(/\s+/).filter(Boolean).map(w=>/^(bin|bint|ibn|van|von|de|da)$/.test(w)?w:pCap(w)).join(' '),grade,class_name:cls,ext_ref:iR>=0?String(r[iR]||'').slice(0,30):''}})});
  return out}
+function lev(a,b){if(a===b)return 0;const m=a.length,n=b.length;if(!m||!n)return m||n;let p=Array.from({length:n+1},(_,j)=>j);for(let i=1;i<=m;i++){const c=[i];for(let j=1;j<=n;j++)c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1));p=c}return p[n]}
+function nKey(x){return String(x||'').toLowerCase().normalize('NFD').replace(/[^a-z]/g,'')}
+function nameSim(a,b){a=nKey(a);b=nKey(b);if(!a||!b)return false;if(a===b)return true;if(Math.min(a.length,b.length)>=4&&(a.startsWith(b)||b.startsWith(a)))return true;return lev(a,b)<=(Math.max(a.length,b.length)>=6?2:1)}
+function hasProgress(k){const p=PROG[k.id]||{};return !!(p.last_seen||p.stars)}
 function matchItems(items){const taken=new Set();
  items.forEach(it=>{const r=it.r;let c=KIDS.filter(k=>+k.grade===+r.grade&&pNorm(k.first_name)===pNorm(r.first_name));
   if(r.last_name){const c3=c.filter(k=>pNorm(k.last_name)===pNorm(r.last_name));if(c3.length)c=c3}
   if(r.class_name){const c2=c.filter(k=>!k.class_name||pNorm(k.class_name)===pNorm(r.class_name));if(c2.length)c=c2}
-  it.cands=c;const free=c.filter(k=>!taken.has(k.id));it.pick=free.length===1?free[0].id:(c.length?'':'NEW');if(it.pick&&it.pick!=='NEW')taken.add(it.pick)});
+  it.sim=false;if(!c.length){c=KIDS.filter(k=>+k.grade===+r.grade&&nameSim(k.first_name,r.first_name));it.sim=c.length>0}
+  it.cands=c;const free=c.filter(k=>!taken.has(k.id));it.pick=!it.sim&&free.length===1?free[0].id:(c.length?'':'NEW');if(it.pick&&it.pick!=='NEW')taken.add(it.pick)});
  UPD=items}
 function pNorm(x){return String(x||'').trim().toLowerCase()}
 function updModal(text){$('#modal').innerHTML=`<div class="modal"><div class="card" style="max-width:760px"><h2 style="font-size:22px">✏️ Update children already added</h2>
@@ -899,7 +925,7 @@ function updReview(){const it=UPD;const used={};it.forEach(x=>{if(x.pick&&x.pick
  <p class="small"><span class="pill done">${ok} to update</span> ${nw?`<span class="pill bum">${nw} new — will get codes</span>`:''} ${choose?`<span class="pill hon">${choose} to choose</span>`:''} ${none?`<span class="pill">${none} skipped</span>`:''}</p>
  <p class="small muted">Children already on the website keep their code and progress — only their surname, class and student number are filled in. Where two children share a first name, pick the right one (their code is on their printed card).</p>
  <div class="tablewrap" style="max-height:52vh;overflow:auto"><table><thead><tr><th>From your list</th><th>Class</th><th>What will happen</th></tr></thead><tbody>
- ${it.map((x,i)=>`<tr${!x.pick?' style="opacity:.6"':''}><td><b>${esc(x.r.first_name)}</b> ${esc(x.r.last_name)}</td><td>${esc(x.r.class_name||GL(x.r.grade))}</td><td><select data-upk="${i}" style="min-width:280px${x.pick&&x.pick!=='NEW'&&used[x.pick]>1?';border-color:#DC2626':''}"><option value="">— skip —</option><option value="NEW" ${x.pick==='NEW'?'selected':''}>➕ Add as a new child (new code)</option>${x.cands.map(k=>`<option value="${k.id}" ${x.pick===k.id?'selected':''}>✏️ Update ${esc(fullName(k))} · ${fmtCode(k.code)}${k.class_name?' · '+esc(k.class_name):''}</option>`).join('')}</select>${x.pick&&x.pick!=='NEW'&&used[x.pick]>1?'<div class="small" style="color:#DC2626">Chosen twice</div>':''}</td></tr>`).join('')}
+ ${it.map((x,i)=>`<tr${!x.pick?' style="opacity:.6"':''}><td><b>${esc(x.r.first_name)}</b> ${esc(x.r.last_name)}</td><td>${esc(x.r.class_name||GL(x.r.grade))}</td><td><select data-upk="${i}" style="min-width:280px${x.pick&&x.pick!=='NEW'&&used[x.pick]>1?';border-color:#DC2626':''}"><option value="">— skip —</option><option value="NEW" ${x.pick==='NEW'?'selected':''}>➕ Add as a new child (new code)</option>${x.cands.map(k=>`<option value="${k.id}" ${x.pick===k.id?'selected':''}>✏️ Update ${esc(fullName(k))} · ${fmtCode(k.code)}${k.class_name?' · '+esc(k.class_name):''}${x.sim?' (similar name)':''}</option>`).join('')}${(()=>{const o=KIDS.filter(k=>+k.grade===+x.r.grade&&!k.last_name&&!x.cands.includes(k)).sort((a,b)=>a.first_name.localeCompare(b.first_name));return o.length?`<optgroup label="Other ${GL(x.r.grade)} children without a surname">${o.map(k=>`<option value="${k.id}" ${x.pick===k.id?'selected':''}>✏️ Update ${esc(k.first_name)} · ${fmtCode(k.code)}</option>`).join('')}</optgroup>`:''})()}</select>${x.sim&&!x.pick?'<div class="small" style="color:#92400E">Similar name found — choose the right child</div>':''}${x.pick&&x.pick!=='NEW'&&used[x.pick]>1?'<div class="small" style="color:#DC2626">Chosen twice</div>':''}</td></tr>`).join('')}
  </tbody></table></div><div class="msg bad" id="umsg2"></div>
  <div class="row" style="margin-top:10px"><button class="w" id="uback">← Back</button><div class="spacer"></div><button class="w" id="uc">Cancel</button><button class="y" id="us" ${ok+nw?'':'disabled'}>💾 Save${ok?` ${ok} update${ok===1?'':'s'}`:''}${ok&&nw?' and':''}${nw?` add ${nw} new`:''}</button></div></div></div>`;
  $('#uc').onclick=()=>$('#modal').innerHTML='';$('#uback').onclick=()=>updModal(UPD.map(x=>x.line.replace(/ · /g,' ')).join('\n'));
