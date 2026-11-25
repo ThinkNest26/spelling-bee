@@ -738,9 +738,9 @@ function s85Key(){return 'sb-semi85-'+(ME?ME.code+'-'+ME.grade:'')}
 function s85Done(){try{return localStorage.getItem(s85Key())==='1'}catch(e){return false}}
 function s85Need(){const n=(WORDS[ME.team]||[]).length;return Math.ceil(n*0.85)}
 async function xSemi85(){if(!ME||!db()||S85_BUSY||s85Done())return;const t=ME.team,n=(WORDS[t]||[]).length;if(n<10||mastered(t)<s85Need())return;if(actsLeft().length)return;
- if(Date.now()-S85_T<30000)return;S85_BUSY=true;S85_T=Date.now();
+ if(Date.now()-S85_T<12000)return;S85_BUSY=true;S85_T=Date.now();
  try{await flush();const r=await xRun('sb_semi_claim',{p_code:ME.code,p_total:n});
-  if(r&&r.ok){try{localStorage.setItem(s85Key(),'1')}catch(e){}if(r.new)semi85Party();xLoad(true)}else if(r&&r.acts){actLoad()}}
+  if(r&&r.ok){try{localStorage.setItem(s85Key(),'1')}catch(e){}if(r.new)semi85Party();xLoad(true)}else if(r&&r.acts){await actLoad()}}
  finally{S85_BUSY=false}}
 const SEMI_SAY="Congratulations! You've secured eighty-five percent of your words. You're in the semi-final!";
 /* fireworks + crowd sounds, made in the browser (no files needed) */
@@ -792,6 +792,7 @@ function semi85Party(){const old=document.getElementById('s85');if(old)old.remov
  setTimeout(()=>{if(!d.isConnected)return;try{clapSound(true)}catch(e){}try{crowdCheer(0,3)}catch(e){}},4200)}
 function xSemi85Bar(){if(!ME||XS.semi||s85Done())return '';const t=ME.team,n=(WORDS[t]||[]).length;if(n<10)return '';const need=s85Need(),have=Math.min(mastered(t),need),pc=Math.round(have/need*100);
  const req=reqActs(),d=actGet(),dn=req.filter(([id])=>d.has(id)).length;
+ if(have>=need&&dn===req.length){setTimeout(xSemi85,1500);return `<div class="xban semi"><div class="e">🎉</div><div style="flex:1"><b class="f" style="font-size:22px">You’ve done it, ${esc(ME.first_name)}!</b><div>All your words and activities are done. Getting your semi-final place ready…</div></div></div>`}
  return `<div class="xban semi" style="opacity:.97;align-items:flex-start"><div class="e">🏅</div><div style="flex:1"><b class="f" style="font-size:20px">Road to the semi-final</b>
   <div style="margin-top:4px"><b>1.</b> Secure <b>${need}</b> of your ${n} words (85%). You have <b>${have}</b>${have<need?` — ${need-have} to go!`:' ✅'}</div><div style="height:12px;background:#fff;border-radius:8px;margin-top:6px;overflow:hidden;border:1px solid #F1D27A"><div style="height:100%;width:${pc}%;background:linear-gradient(90deg,#F5B700,#FFD54A)"></div></div>
   <div style="margin-top:10px"><b>2.</b> Finish every activity once: <b>${dn} of ${req.length}</b> done${dn===req.length?' ✅':''}</div>
