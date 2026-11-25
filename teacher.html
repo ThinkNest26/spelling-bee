@@ -656,16 +656,17 @@ const SFMT={out:{e:'🎤',t:'Rounds — a mistake means out',d:'Spellers take tu
  written:{e:'📝',t:'Written round, then out loud',d:'First everyone writes a set of words. The highest scores then spell out loud on stage, and the best spellers go to the Grand Final.'},
  points:{e:'⭐',t:'Points rounds',d:'Everyone spells the same number of words out loud and gets a point for each word spelt correctly. The highest scores go to the Grand Final.'}};
 async function semiCheck(){try{const {data,error}=await sb.rpc('sb_is_organiser');SEMIORG=!error&&data===true}catch(e){SEMIORG=false}}
-async function semiLoad(){const q=await Promise.all([sb.from('sb_organisers').select('*').order('added_at'),sb.from('sb_semis').select('*'),sb.from('bee_rounds').select('*').eq('kind','class').order('created_at',{ascending:false})]);
- if(q[0].error||q[1].error){SM=false;return}SM={org:q[0].data||[],semis:q[1].data||[],rounds:(q[2].data||[]).filter(r=>r.status==='done'&&r.state&&Array.isArray(r.state.spellers))}}
+async function semiLoad(){const q=await Promise.all([sb.from('sb_organisers').select('*').order('added_at'),sb.from('sb_semis').select('*'),sb.from('bee_rounds').select('*').eq('kind','class').order('created_at',{ascending:false}),sb.from('sb_semi_auto').select('student_id,grade')]);
+ if(q[0].error||q[1].error){SM=false;return}SM={org:q[0].data||[],semis:q[1].data||[],auto:(q[3]&&!q[3].error&&q[3].data)||[],rounds:(q[2].data||[]).filter(r=>r.status==='done'&&r.state&&Array.isArray(r.state.spellers))}}
 function semiRank(st){const ok=id=>(st.log||[]).filter(l=>l.id===id&&l.ok).length;const r=x=>x.id===st.winner?1e6:(st.through||[]).includes(x.id)?1e5:(x.out==null?5e4:x.out*100+ok(x.id));
  return st.spellers.slice().sort((a,b)=>r(b)-r(a))}
 function semiSuggest(g,n){const kids=KIDS.filter(k=>k.active!==false&&+k.grade===+g);const byId={};kids.forEach(k=>byId[k.id]=k);
  const classes=[...new Set(kids.map(k=>k.class_name||GL(g)))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
  return classes.map(c=>{const ids=new Set(kids.filter(k=>(k.class_name||GL(g))===c).map(k=>k.id));const rd=SM.rounds.find(r=>r.state.spellers.some(s=>ids.has(s.id)));
   if(!rd)return {cls:c,round:null,picks:[]};return {cls:c,round:rd,picks:semiRank(rd.state).filter(s=>ids.has(s.id)).slice(0,n).map(s=>s.id)}})}
-function semiDraft(g){const m=SM.semis.find(x=>+x.grade===+g);if(m)return JSON.parse(JSON.stringify(m));
- const d={grade:+g,day:'',place:'',format:'out',per_class:5,finalists:3,notes:'',status:'draft',qualifiers:[]};d.qualifiers=semiSuggest(g,5).flatMap(c=>c.picks);d._auto=true;return d}
+function semiAuto(g){const ids=new Set(KIDS.filter(k=>+k.grade===+g).map(k=>k.id));return (SM&&SM.auto||[]).filter(a=>+a.grade===+g&&ids.has(a.student_id)).map(a=>a.student_id)}
+function semiDraft(g){const m=SM.semis.find(x=>+x.grade===+g);const au=semiAuto(g);if(m){const d=JSON.parse(JSON.stringify(m));d.qualifiers=[...new Set([...(d.qualifiers||[]),...au])];return d}
+ const d={grade:+g,day:'',place:'',format:'out',per_class:5,finalists:3,notes:'',status:'draft',qualifiers:[]};d.qualifiers=[...new Set([...semiSuggest(g,5).flatMap(c=>c.picks),...au])];d._auto=true;return d}
 async function renderSemi(){if(SEMIORG===false){TAB='dash';render();return}
  if(SM===null||Date.now()-(renderSemi.t||0)>60000){renderSemi.t=Date.now();$('#app').innerHTML=tabs()+'<p class="muted">Loading the semi-finals…</p>';await semiLoad()}
  if(SM===false){$('#app').innerHTML=tabs()+`<div class="card" style="text-align:center;padding:30px"><div style="font-size:44px">🛠️</div><h2>One quick step first</h2><p class="muted">Run <b>setup-sb-semi.sql</b> in Supabase to switch on the semi-finals.</p></div>`;bindTabs();return}
@@ -678,7 +679,7 @@ async function renderSemi(){if(SEMIORG===false){TAB='dash';render();return}
  $('#app').innerHTML=tabs()+`<div class="card" style="margin-bottom:14px"><div class="row"><h2 style="margin:0">🏅 Grade semi-finals</h2><div class="spacer"></div>
    <label style="margin:0">Grade</label><select id="smg" style="width:auto">${gs.map(g=>`<option value="${g}" ${+g===+SMG?'selected':''}>${GL(g)}</option>`).join('')}</select>
    <span class="pill ${d.status==='confirmed'?'bum':'hon'}">${d.status==='confirmed'?'✅ Confirmed — children can see it':'✏️ Draft — children can’t see it yet'}</span></div>
-   <p class="muted small" style="margin:8px 0 0">The top spellers from each <b>class round</b> go through automatically. Check the list, add or remove a child, then confirm. Qualifiers then see “🏅 You’re in the semi-final!” on their page, with a countdown and semi-final practice.</p></div>
+   <p class="muted small" style="margin:8px 0 0">🌟 Children who secure <b>85% of their words</b> through practice are in automatically. The top spellers from each <b>class round</b> go through automatically too. Check the list, add or remove a child, then confirm. Qualifiers then see “🏅 You’re in the semi-final!” on their page, with a countdown and semi-final practice.</p></div>
  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr));margin-bottom:14px">
   <div class="card"><h3 style="margin:0 0 10px">📅 Details</h3>
    <div class="grid" style="grid-template-columns:1fr 1fr"><div><label>Date</label><input type="date" id="sm-day" value="${esc(d.day||'')}"></div><div><label>Place</label><input id="sm-place" value="${esc(d.place)}" placeholder="e.g. School hall"></div>
@@ -689,7 +690,7 @@ async function renderSemi(){if(SEMIORG===false){TAB='dash';render();return}
   <div class="card"><div class="row" style="margin-bottom:6px"><h3 style="margin:0">👧 Qualifiers <span class="pill bum">${d.qualifiers.length}</span></h3><div class="spacer"></div><button class="w sm" id="sm-fill">↻ Fill with the top ${d.per_class} from each class round</button></div>
    ${d._auto?'<p class="small" style="background:var(--honeyL);border-radius:10px;padding:6px 10px">✨ Filled in automatically from the class rounds. Check it, then save.</p>':''}
    ${clsList.map(c=>{const s=sugg.find(x=>x.cls===c);const ks=byCls[c]||[];return `<div class="smcls"><div class="row"><b>${esc(c)}</b><span class="small muted">${s&&s.round?`from “${esc(s.round.name)}”`:'no class round finished yet'}</span></div>
-     <div class="row" style="margin-top:4px">${ks.map(k=>`<span class="smkid">${esc(k.first_name)}<button class="smx" data-smx="${k.id}" title="Remove">✕</button></span>`).join('')||'<span class="small muted">Nobody yet</span>'}</div></div>`}).join('')}
+     <div class="row" style="margin-top:4px">${ks.map(k=>semiAuto(SMG).includes(k.id)?`<span class="smkid" title="Secured 85% of their words — in automatically">🌟 ${esc(k.first_name)}</span>`:`<span class="smkid">${esc(k.first_name)}<button class="smx" data-smx="${k.id}" title="Remove">✕</button></span>`).join('')||'<span class="small muted">Nobody yet</span>'}</div></div>`}).join('')}
    <div class="row" style="margin-top:10px"><select id="sm-add" style="flex:1"><option value="">➕ Add a child…</option>${others.map(k=>`<option value="${k.id}">${esc(k.first_name)} (${esc(k.class_name||GL(k.grade))})</option>`).join('')}</select><button class="w" id="sm-addb">Add</button></div></div></div>
  <div class="card" style="margin-bottom:14px"><div class="row">${d.status==='confirmed'?'':'<button class="w" id="sm-save">💾 Save draft</button>'}${d.status==='confirmed'?'<button class="w" id="sm-hide">Hide from children</button><button class="y" id="sm-conf">💾 Save changes</button>':'<button class="y" id="sm-conf">✅ Confirm and tell the children</button>'}<div class="spacer"></div><button class="w" id="sm-live" ${d.qualifiers.length<2?'disabled':''}>🎤 Set up the live semi-final in Bee rounds</button></div></div>
  <div class="card"><h3 style="margin:0 0 6px">🔑 Semi-final organisers</h3><p class="small muted" style="margin:0 0 8px">Only these teachers see this tab. Use the same email they sign in with.</p>
