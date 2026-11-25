@@ -28,7 +28,7 @@ const SUPABASE_URL='https://xpbkdnkfufkahaszfycd.supabase.co';
 const SUPABASE_KEY='sb_publishable_QIAV_9tLUBbDCu7FHqaTEw_zYQ0teEG';
 const app=document.getElementById('app');
 SBInvite.injectCSS();
-function footer(){return `<div class="foot"><a href="./">school-spellingbee.com</a> · Powered by <a href="https://thinknestonline.com" target="_blank" rel="noopener">ThinkNest</a></div>`}
+function footer(){return `<div class="foot"><a href="./">school-spellingbee.com</a> · Powered by <span>ThinkNest</span></div>`}
 async function start(){
  let sb=null;try{sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:false}})}catch(e){}
  if(!sb){app.innerHTML='<div class="msg">Sorry, the invitation couldn’t load. Please try again later.</div>'+footer();return}
