@@ -351,6 +351,16 @@ body.easyread .panel,body.easyread .act,body.easyread .sxfam{background:#FFFDF6}
 <script>
 (function(){
 "use strict";
+/* ✍️ no copy-and-paste: children must type every spelling themselves */
+const NOPASTE=el=>!!(el&&el.matches&&el.matches('.ans,textarea')&&!/^(codein|fjoin|fgrown|fnote)$/.test(el.id||''));
+let NPT=0;function noPasteNote(){if(Date.now()-NPT<1500)return;NPT=Date.now();try{note('✍️ No copying — type the word yourself!')}catch(e){}}
+['paste','drop'].forEach(ev=>document.addEventListener(ev,e=>{if(NOPASTE(e.target)){e.preventDefault();e.stopPropagation();noPasteNote()}},true));
+document.addEventListener('beforeinput',e=>{if(NOPASTE(e.target)&&/^(insertFromPaste|insertFromPasteAsQuotation|insertFromDrop|insertFromYank|insertReplacementText)$/.test(e.inputType||'')){e.preventDefault();noPasteNote()}},true);
+['copy','cut'].forEach(ev=>document.addEventListener(ev,e=>{if(!document.body.classList.contains('nocopy'))return;const t=e.target&&e.target.closest?e.target.closest('#codein,#fjoin,#fgrown,#fnote'):null;if(!t)e.preventDefault()},true));
+document.addEventListener('dragstart',e=>{if(document.body.classList.contains('nocopy'))e.preventDefault()},true);
+document.addEventListener('contextmenu',e=>{if(document.body.classList.contains('nocopy')&&!(e.target.closest&&e.target.closest('#codein,#fjoin,#fgrown,#fnote')))e.preventDefault()},true);
+document.addEventListener('focusin',e=>{const t=e.target;if(NOPASTE(t)){t.setAttribute('autocorrect','off');t.setAttribute('autocomplete','off');t.setAttribute('autocapitalize','off');t.setAttribute('spellcheck','false');t.setAttribute('data-gramm','false');t.setAttribute('data-enable-grammarly','false')}},true);
+(function(){const st=document.createElement('style');st.textContent='body.nocopy{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}body.nocopy input,body.nocopy textarea{-webkit-user-select:text;user-select:text}';document.head.appendChild(st)})();
 const STUDY={
 buz:"the do to today of said says are were was is his has you your they be he me she we no go so by my here there where love come some one once ask friend school put push pull full house our Monday Tuesday Wednesday Thursday Friday Saturday Sunday",
 hon:"because door floor poor find kind mind behind child children wild climb most only both cold gold hold told every everybody even great break steak pretty beautiful after fast last past father class grass pass plant path bath hour move prove improve sure sugar eye could should would who whole any many clothes busy people water again half money parents",
@@ -1034,6 +1044,7 @@ document.addEventListener('change',e=>{if(e.target.id==='xwsel'&&XW){XW.val=($('
 document.addEventListener('input',e=>{if(e.target.id!=='ans')return;if(V.screen==='xdrill'&&XD)XD.val=e.target.value;if(V.screen==='xsent'&&XW){XW.val=e.target.value}});
 
 function render(){
+ document.body.classList.toggle('nocopy',!!ME);
  const a=$('#app');
  if(V.screen==='home')a.innerHTML=home();
  else if(!ME){V={screen:'home',team:null};a.innerHTML=home()}
