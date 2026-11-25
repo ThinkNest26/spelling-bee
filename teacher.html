@@ -476,7 +476,7 @@ function setHeader(){if(!SCHOOL)return;const h=document.querySelector('header .s
 
 function learnt(id){const p=PROG[id];if(!p)return 0;return Object.values(p.words||{}).filter(n=>n>=2).length}
 function tricky(id){const p=PROG[id];if(!p)return [];return Object.entries(p.tricky||{}).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0])}
-function visible(){const q=F.q.toLowerCase();return KIDS.filter(c=>(F.grade==='all'||c.grade==F.grade)&&(F.cls==='all'||c.class_name===F.cls)&&(!q||c.first_name.toLowerCase().includes(q)||c.code.toLowerCase().includes(q.replace(/-/g,''))))
+function visible(){const q=F.q.toLowerCase();return KIDS.filter(c=>(F.grade==='all'||c.grade==F.grade)&&(F.cls==='all'||c.class_name===F.cls)&&(!q||fullName(c).toLowerCase().includes(q)||c.code.toLowerCase().includes(q.replace(/-/g,''))))
  .sort((a,b)=>{const k=SORT.k,d=SORT.d;const v=c=>k==='stars'?(PROG[c.id]?.stars||0):k==='learnt'?learnt(c.id):k==='seen'?(PROG[c.id]?.last_seen||''):k==='grade'?c.grade*1000+(c.class_name||'').charCodeAt(0):String(c[k]||'').toLowerCase();const x=v(a),y=v(b);return (x>y?1:x<y?-1:0)*d||a.first_name.localeCompare(b.first_name)})}
 /* ---------- GL practice results ---------- */
 let SGR=null,SGERR=false,SGG=null,SGCLS='all';const SGCONT={};
@@ -781,7 +781,7 @@ function render(){
    <th data-s="first_name">Name</th><th data-s="grade">Grade · class</th><th>Code</th><th title="The number your school uses for each child. With the Whole Nest, it links their results to Nestopia.">Student no.</th><th data-s="stars">⭐ Stars</th><th data-s="learnt">Words learnt</th><th>Tricky words</th><th data-s="seen">Last practised</th><th></th></tr></thead><tbody>
    ${list.map(c=>{const t=teamOf(c.grade),p=PROG[c.id]||{},L=learnt(c.id),tot=TEAMS[t][2];return `<tr>
     <td><input type="checkbox" data-sel="${c.id}" style="width:auto" ${SEL.has(c.id)?'checked':''}></td>
-    <td><div class="row" style="gap:6px;flex-wrap:nowrap">${avt(p.avatar,28)}<input value="${esc(c.first_name)}" data-ed="${c.id}" data-f="first_name" style="min-width:110px;font-weight:800"></div></td>
+    <td><div class="row" style="gap:6px;flex-wrap:nowrap">${avt(p.avatar,28)}<input value="${esc(c.first_name)}" data-ed="${c.id}" data-f="first_name" style="min-width:100px;font-weight:800" aria-label="First name"><input value="${esc(c.last_name||'')}" data-ed="${c.id}" data-f="last_name" placeholder="Surname" style="min-width:110px" aria-label="Surname"></div></td>
     <td><div class="row" style="gap:6px;flex-wrap:nowrap"><select data-ed="${c.id}" data-f="grade" style="width:84px">${GRADES.map(g=>`<option value="${g}" ${c.grade==g?'selected':''}>${g===0?'KG2':g}</option>`).join('')}</select><input value="${esc(c.class_name)}" data-ed="${c.id}" data-f="class_name" style="width:70px"><span class="pill ${t}" title="${TEAMS[t][0]}">${TEAMS[t][1]}</span></div></td>
     <td><span class="code">${fmtCode(c.code)}</span></td>
     <td><input value="${esc(c.ext_ref||'')}" data-ed="${c.id}" data-f="ext_ref" placeholder="–" maxlength="30" style="width:76px" aria-label="Student number for ${esc(c.first_name)}"></td>
@@ -809,33 +809,38 @@ function bind(){
 }
 function confirmBox(title,text,btn,fn,danger){$('#modal').innerHTML=`<div class="modal"><div class="card"><h2 style="font-size:21px">${esc(title)}</h2><p>${esc(text)}</p><div class="row"><div class="spacer"></div><button class="w" id="mc">Cancel</button><button class="${danger?'r':'y'}" id="mo">${esc(btn)}</button></div></div></div>`;
  $('#mc').onclick=()=>$('#modal').innerHTML='';$('#mo').onclick=async()=>{$('#modal').innerHTML='';await fn()}}
-/* understands: "Mariam, 1, 1A" · "dina 1A" · "mona KG2" · "Saeed Ahmed KG2B" · "Lina Grade 5 5C" */
-function parseLine(line){const toks=line.split(/[,\t;]+|\s+/).map(t=>t.trim()).filter(Boolean);if(!toks.length)return null;
- let name=null,grade=null,cls='';
- for(const t of toks){const u=t.toUpperCase().replace(/[.\-_/]/g,'');
-  if(/^(GRADE|GR|YEAR|CLASS)$/.test(u))continue;
-  let m;
-  if((m=u.match(/^KG2?([A-Z]{0,2})$/))){grade=0;if(m[1])cls='KG2'+m[1];continue}
-  if((m=u.match(/^(?:G|GR|GRADE)?([0-5])([A-Z]{0,2})$/))){const g=+m[1];if(m[2]){cls=m[1]+m[2];if(grade===null)grade=g}else if(grade===null)grade=g;continue}
-  if(name===null&&/^[\p{L}'’]+$/u.test(t)){name=t;continue}
-  if(name!==null&&/^[A-Z]$/.test(u)&&grade!==null&&!cls){cls=(grade===0?'KG2':grade)+u;continue}}
+/* understands: "Mariam Ali, 1, 1A" · "Dina Saeed 1A" · "Mona Khalid KG2" · "Saeed Ahmed Grade 1 A" · "Lina Omar	Grade 5	5C" (pasted from Excel) */
+const PKW=/^(GRADE|GR|YEAR|YR|CLASS|CL|SECTION|SEC|NAME)$/;
+function pCap(w){return w.split(/([\-'’ ])/).map(x=>x?x.charAt(0).toLocaleUpperCase()+x.slice(1):x).join('')}
+function pGrade(u){let m;if((m=u.match(/^KG2?([A-Z]{0,2})$/)))return {g:0,c:m[1]?'KG2'+m[1]:''};
+ if((m=u.match(/^(?:G|GR|GRADE|Y|YR|YEAR)?([0-5])([A-Z]{0,2})$/)))return {g:+m[1],c:m[2]?m[1]+m[2]:''};return null}
+function parseLine(line){const fields=line.split(/[,\t;|]+/).map(t=>t.trim()).filter(Boolean);if(!fields.length)return null;
+ const toks=[];fields.forEach((f,fi)=>f.split(/\s+/).forEach(t=>t&&toks.push({t,fi})));
+ const names=[];let grade=null,cls='',gf=-1;
+ for(const {t,fi} of toks){const u=t.toUpperCase().replace(/[.\-_/()#:]/g,'');if(!u)continue;if(PKW.test(u))continue;
+  const g=pGrade(u);
+  if(g){if(grade===null){grade=g.g;gf=fi}if(g.c&&!cls)cls=g.c;continue}
+  if(!/^[\p{L}'’\-]+$/u.test(t))continue;
+  if(grade!==null&&!cls&&/^[A-Z]{1,2}$/.test(u)){cls=(grade===0?'KG2':grade)+u;continue}
+  if(grade!==null&&!cls&&fields.length>1&&fi>gf&&names.length){cls=t;continue}
+  names.push(t)}
  if(grade===null&&F.grade!=='all')grade=+F.grade;
- if(!name||grade===null||grade<0||grade>5)return null;
- name=name.charAt(0).toLocaleUpperCase()+name.slice(1);
- return {first_name:name,grade,class_name:cls}}
+ if(!names.length||grade===null||grade<0||grade>5)return null;
+ return {first_name:pCap(names[0]),last_name:names.slice(1).map(w=>/^(bin|bint|ibn|van|von|de|da)$/.test(w)?w:pCap(w)).join(' '),grade,class_name:cls}}
+function fullName(c){return (c.first_name+' '+(c.last_name||'')).trim()}
 function kidCount(){if(!SCHOOL||!SCHOOL.max_children)return '';const m=SCHOOL.max_children,n=KIDS.length;return `<span class="pill ${n>=m?'':'done'}" style="align-self:center${n>=m?';background:#FEE2E2;color:#991B1B':''}" title="Children allowed on your plan">${n} of ${m} children</span>`}
 function limitMsg(){return `Your ${esc(SCHOOL.plan_name)} plan allows up to <b>${SCHOOL.max_children}</b> children. <a href="#" data-golimit="1">Ask to upgrade</a> to add more.`}
 function addModal(){
  if(SCHOOL&&SCHOOL.max_children&&KIDS.length>=SCHOOL.max_children){$('#modal').innerHTML=`<div class="modal"><div class="card"><h2 style="font-size:22px">Your plan is full 🐝</h2><p>${limitMsg()}</p><div class="row" style="margin-top:10px"><div class="spacer"></div><button class="w" id="ac">Close</button><button class="y" id="aup">See plans</button></div></div></div>`;$('#ac').onclick=()=>$('#modal').innerHTML='';$('#aup').onclick=goLimit;return}
  $('#modal').innerHTML=`<div class="modal"><div class="card"><h2 style="font-size:22px">Add children</h2>
- <p class="small muted">One child per line: their <b>first name</b> and <b>class</b> (or grade). Paste straight from a class list — commas are optional.<br><code>Mariam 1A</code> &nbsp; <code>Saeed KG2B</code> &nbsp; <code>Lina, 5, 5C</code> &nbsp; <code>Omar KG2</code>${F.grade!=='all'?`<br>Lines with no grade go into <b>${GL(F.grade)}</b> (the grade you’re viewing).`:''}</p>
+ <p class="small muted">One child per line: their <b>full name</b> and <b>class</b> (or grade). Paste straight from a class list or Excel.<br><code>Mariam Ali 1A</code> &nbsp; <code>Saeed Ahmed KG2B</code> &nbsp; <code>Lina Omar, 5, 5C</code> &nbsp; <code>Omar Khalid Grade 1 A</code><br>Children only ever see their first name.${F.grade!=='all'?`<br>Lines with no grade go into <b>${GL(F.grade)}</b> (the grade you’re viewing).`:''}</p>
  <textarea id="kids" rows="10" placeholder="Mariam, 1, 1A"></textarea>
  <div class="msg bad" id="amsg"></div>
- <div class="row" style="margin-top:10px"><div class="spacer"></div><button class="w" id="ac">Cancel</button><button class="y" id="ao">Add and make codes</button></div></div></div>`;
- $('#ac').onclick=()=>$('#modal').innerHTML='';
+ <div class="row" style="margin-top:10px"><button class="w" id="aupd" title="Already added these children? Fill in their surnames and classes without changing their codes">✏️ Update children already added</button><div class="spacer"></div><button class="w" id="ac">Cancel</button><button class="y" id="ao">Add and make codes</button></div></div></div>`;
+ $('#ac').onclick=()=>$('#modal').innerHTML='';$('#aupd').onclick=()=>updModal($('#kids').value);
  $('#ao').onclick=async()=>{const rows=[],bad=[];
   $('#kids').value.split('\n').map(l=>l.trim()).filter(Boolean).forEach((l,i)=>{const r=parseLine(l);if(!r){bad.push(i+1);return}rows.push(r)});
-  if(bad.length){const m=$('#amsg');m.innerHTML='Please check line'+(bad.length>1?'s ':' ')+bad.join(', ')+' — each line needs a first name and a class or grade, e.g. <b>Mariam 1A</b> or <b>Saeed KG2</b>.';m.classList.add('show');return}
+  if(bad.length){const m=$('#amsg');m.innerHTML='Please check line'+(bad.length>1?'s ':' ')+bad.join(', ')+' — each line needs a name and a class or grade, e.g. <b>Mariam Ali 1A</b> or <b>Saeed Ahmed KG2</b>.';m.classList.add('show');return}
   if(!rows.length)return;if(SCHOOL&&SCHOOL.max_children&&KIDS.length+rows.length>SCHOOL.max_children){const m=$('#amsg');const left=Math.max(0,SCHOOL.max_children-KIDS.length);m.innerHTML=`You can add <b>${left}</b> more child${left===1?'':'ren'} (you pasted ${rows.length}). `+limitMsg();m.classList.add('show');bindLimit();return}const b=$('#ao');b.disabled=true;b.textContent='Making codes…';
   const used=new Set(KIDS.map(k=>k.code));rows.forEach(r=>{let c;do{c=newCode()}while(used.has(c));used.add(c);r.code=c});
   let {data,error}=await sb.from('students').insert(rows).select();
@@ -843,6 +848,41 @@ function addModal(){
   if(error){b.disabled=false;b.textContent='Add and make codes';const m=$('#amsg');if(/PLAN_LIMIT/.test(error.message)){m.innerHTML=limitMsg();bindLimit()}else m.textContent='Couldn’t add the children. Please try again.';m.classList.add('show');return}
   $('#modal').innerHTML='';KIDS=KIDS.concat(data);data.forEach(d=>SEL.add(d.id));render();toast(data.length+' children added — their cards are ticked, ready to print')};
 }
+/* fill in surnames and classes for children already added — codes and progress stay the same */
+let UPD=null;
+function pNorm(x){return String(x||'').trim().toLowerCase()}
+function updModal(text){$('#modal').innerHTML=`<div class="modal"><div class="card" style="max-width:760px"><h2 style="font-size:22px">✏️ Update children already added</h2>
+ <p class="small muted">Paste your class list again (full name and class, one child per line). Each line is matched to the child already on your list with the same first name and grade, and their surname and class are filled in. <b>Codes and progress don’t change</b>, so printed cards still work.</p>
+ <textarea id="ukids" rows="10" placeholder="Mariam Ali 1A">${esc(text||'')}</textarea><div class="msg bad" id="umsg"></div>
+ <div class="row" style="margin-top:10px"><div class="spacer"></div><button class="w" id="uc">Cancel</button><button class="y" id="uf">Find the children →</button></div></div></div>`;
+ $('#uc').onclick=()=>$('#modal').innerHTML='';
+ $('#uf').onclick=()=>{const lines=$('#ukids').value.split('\n').map(l=>l.trim()).filter(Boolean);const bad=[];const items=[];
+  lines.forEach((l,i)=>{const r=parseLine(l);if(!r){bad.push(i+1);return}items.push({line:l,r})});
+  if(bad.length){const m=$('#umsg');m.innerHTML='Please check line'+(bad.length>1?'s ':' ')+bad.join(', ')+' — each line needs a name and a class or grade.';m.classList.add('show');return}
+  const taken=new Set();
+  items.forEach(it=>{const r=it.r;let c=KIDS.filter(k=>+k.grade===+r.grade&&pNorm(k.first_name)===pNorm(r.first_name));
+   if(r.class_name){const c2=c.filter(k=>!k.class_name||pNorm(k.class_name)===pNorm(r.class_name));if(c2.length)c=c2}
+   if(r.last_name){const c3=c.filter(k=>pNorm(k.last_name)===pNorm(r.last_name));if(c3.length)c=c3}
+   it.cands=c;const free=c.filter(k=>!taken.has(k.id));it.pick=free.length===1?free[0].id:'';if(it.pick)taken.add(it.pick)});
+  UPD=items;updReview()}}
+function updReview(){const it=UPD;const used={};it.forEach(x=>{if(x.pick)used[x.pick]=(used[x.pick]||0)+1});
+ const ok=it.filter(x=>x.pick).length,choose=it.filter(x=>!x.pick&&x.cands.length).length,none=it.filter(x=>!x.cands.length).length;
+ $('#modal').innerHTML=`<div class="modal"><div class="card" style="max-width:860px"><h2 style="font-size:22px">✏️ Check the matches</h2>
+ <p class="small"><span class="pill done">${ok} matched</span> ${choose?`<span class="pill hon">${choose} to choose</span>`:''} ${none?`<span class="pill" style="background:#FEE2E2;color:#991B1B">${none} not found</span>`:''}</p>
+ <p class="small muted">Where two children share a first name, pick the right one (their code is shown — it’s on their printed card). Lines that are not found are skipped; add them with “Add children”.</p>
+ <div class="tablewrap" style="max-height:52vh;overflow:auto"><table><thead><tr><th>From your list</th><th>Class</th><th>Child on the website</th></tr></thead><tbody>
+ ${it.map((x,i)=>`<tr${!x.cands.length?' style="opacity:.6"':''}><td><b>${esc(x.r.first_name)}</b> ${esc(x.r.last_name)}</td><td>${esc(x.r.class_name||GL(x.r.grade))}</td><td>${x.cands.length?`<select data-upk="${i}" style="min-width:260px${x.pick&&used[x.pick]>1?';border-color:#DC2626':''}"><option value="">— skip this line —</option>${x.cands.map(k=>`<option value="${k.id}" ${x.pick===k.id?'selected':''}>${esc(fullName(k))} · ${fmtCode(k.code)}${k.class_name?' · '+esc(k.class_name):''}</option>`).join('')}</select>${x.pick&&used[x.pick]>1?'<div class="small" style="color:#DC2626">Chosen twice</div>':''}`:'<span class="small muted">Not found on the website</span>'}</td></tr>`).join('')}
+ </tbody></table></div><div class="msg bad" id="umsg2"></div>
+ <div class="row" style="margin-top:10px"><button class="w" id="uback">← Back</button><div class="spacer"></div><button class="w" id="uc">Cancel</button><button class="y" id="us" ${ok?'':'disabled'}>💾 Save ${ok} update${ok===1?'':'s'}</button></div></div></div>`;
+ $('#uc').onclick=()=>$('#modal').innerHTML='';$('#uback').onclick=()=>updModal(UPD.map(x=>x.line).join('\n'));
+ document.querySelectorAll('[data-upk]').forEach(sel=>sel.onchange=()=>{UPD[+sel.dataset.upk].pick=sel.value;updReview()});
+ $('#us').onclick=async()=>{const dup=Object.values(used).some(n=>n>1);if(dup){const m=$('#umsg2');m.textContent='One child is chosen for two lines — please fix the red box first.';m.classList.add('show');return}
+  const b=$('#us');b.disabled=true;b.textContent='Saving…';let done=0,fail=0;
+  const jobs=UPD.filter(x=>x.pick).map(x=>async()=>{const row={first_name:x.r.first_name,last_name:x.r.last_name};if(x.r.class_name)row.class_name=x.r.class_name;
+   const {error}=await sb.from('students').update(row).eq('id',x.pick);if(error){fail++;return}done++;const k=KIDS.find(k=>k.id===x.pick);if(k)Object.assign(k,row)});
+  for(let i=0;i<jobs.length;i+=8)await Promise.all(jobs.slice(i,i+8).map(f=>f()));
+  if(fail&&!done){const m=$('#umsg2');m.textContent='Couldn’t save. If this keeps happening, run setup-sb-lastname.sql in Supabase first.';m.classList.add('show');b.disabled=false;b.textContent='💾 Try again';return}
+  $('#modal').innerHTML='';render();toast(`${done} children updated ✓${fail?` · ${fail} couldn’t be saved`:''}`)}}
 function goLimit(e){if(e&&e.preventDefault)e.preventDefault();$('#modal').innerHTML='';TAB='settings';render();setTimeout(()=>document.getElementById('plancard')?.scrollIntoView({behavior:'smooth'}),50)}
 function bindLimit(){document.querySelectorAll('[data-golimit]').forEach(a=>a.onclick=goLimit)}
 let CFIT=100;try{CFIT=+localStorage.getItem('sb-card-fit')||100}catch(e){}
@@ -858,11 +898,11 @@ function printCards(){
  draw();
 }
 function buildCards(list,z){const per=z.cols*z.rows,pages=[];for(let i=0;i<list.length;i+=per)pages.push(list.slice(i,i+per));
- const card=c=>{const t=TEAMS[teamOf(c.grade)];return `<div class="ccard"><div class="bee">🐝</div><div class="h">Spelling Bee</div><div class="n">${esc(c.first_name)}</div><div class="tm">${t[1]} ${t[0]} · ${GL(c.grade)}${c.class_name?' · '+esc(c.class_name):''}</div><div class="lb">Your secret bee code</div><div class="cd">${fmtCode(c.code)}</div><div class="go">Go to <b>${SITE}</b>, click <b>Start practising</b> and type your code. Happy spelling! ✨</div></div>`};
+ const card=c=>{const t=TEAMS[teamOf(c.grade)];return `<div class="ccard"><div class="bee">🐝</div><div class="h">Spelling Bee</div><div class="n">${esc(fullName(c))}</div><div class="tm">${t[1]} ${t[0]} · ${GL(c.grade)}${c.class_name?' · '+esc(c.class_name):''}</div><div class="lb">Your secret bee code</div><div class="cd">${fmtCode(c.code)}</div><div class="go">Go to <b>${SITE}</b>, click <b>Start practising</b> and type your code. Happy spelling! ✨</div></div>`};
  $('#cards').innerHTML=pages.map(pg=>`<div class="cpage" style="--f:${CFIT/100};--k:${(z.k*CFIT/100).toFixed(3)};grid-template-columns:repeat(${z.cols},minmax(0,1fr));grid-template-rows:repeat(${z.rows},minmax(0,1fr))">${pg.map(card).join('')}</div>`).join('');
  setTimeout(()=>window.print(),200);
 }
-function csv(){const list=visible();const rows=[['First name','Grade','Class','Team','Code','Stars','Words learnt','Tricky words','Last practised']].concat(list.map(c=>[c.first_name,GL(c.grade),c.class_name,TEAMS[teamOf(c.grade)][0],fmtCode(c.code),PROG[c.id]?.stars||0,learnt(c.id),tricky(c.id).join(' '),PROG[c.id]?.last_seen?new Date(PROG[c.id].last_seen).toLocaleString('en-GB'):'']));
+function csv(){const list=visible();const rows=[['First name','Surname','Full name','Grade','Class','Student no.','Team','Code','Stars','Words learnt','Tricky words','Last practised']].concat(list.map(c=>[c.first_name,c.last_name||'',fullName(c),GL(c.grade),c.class_name||'',c.ext_ref||'',TEAMS[teamOf(c.grade)][0],fmtCode(c.code),PROG[c.id]?.stars||0,learnt(c.id),tricky(c.id).join(' '),PROG[c.id]?.last_seen?new Date(PROG[c.id].last_seen).toLocaleString('en-GB'):'']));
  const txt=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+txt],{type:'text/csv'}));a.download='spelling-bee-spellers.csv';a.click()}
 window.addEventListener('beforeunload',e=>{if(DIRTY){e.preventDefault();e.returnValue=''}});
 start();
