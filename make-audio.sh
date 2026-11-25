@@ -51,6 +51,7 @@ k-5	Five in a row! Amazing!
 k-8	Eight in a row! You're a spelling superstar!
 k-10	Ten in a row! You're a champion bee!
 perfect	Wow! A perfect score! Well done!
+semi85	Congratulations! You've secured eighty-five percent of your words. You're in the semi-final!
 g-speed	Hello! This is how I will read your words.
 FIXED
 # GL practice questions (spelling, grammar and punctuation tests)

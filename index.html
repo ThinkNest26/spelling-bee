@@ -461,7 +461,7 @@ let DBROWS=null;
 function buildClips(){if(DBROWS){DBROWS.forEach(r=>{CLIP[r.word]=r.w_clip;if(r.meaning&&r.m_clip)CLIP[r.meaning]=r.m_clip;if(r.sentence){CLIP[r.sentence]=r.s_clip;CLIP[r.word+'. '+r.sentence+' '+r.word+'.']=r.ws_clip}})}
  else{for(const t of TEAMS)for(const w of WORDS[t.id])CLIP[w]='w-'+slugW(w);for(const w in SENT){CLIP[SENT[w]]='s-'+slugW(w);CLIP[w+'. '+SENT[w]+' '+w+'.']='ws-'+slugW(w)}}
  CLIP["Hello! Let's practise your spellings!"]='g-start';CLIP['Hello! This is how I will read your words.']='g-speed';
- CHEERS.forEach((c,i)=>CLIP[c[1]]='p-'+(i+1));ENCOURAGE.forEach((t,i)=>CLIP[t]='e-'+(i+1));for(const k in STREAK_SAY)CLIP[STREAK_SAY[k]]='k-'+k;CLIP[PERFECT_SAY]='perfect'}
+ CHEERS.forEach((c,i)=>CLIP[c[1]]='p-'+(i+1));ENCOURAGE.forEach((t,i)=>CLIP[t]='e-'+(i+1));for(const k in STREAK_SAY)CLIP[STREAK_SAY[k]]='k-'+k;CLIP[PERFECT_SAY]='perfect';CLIP["Congratulations! You've secured eighty-five percent of your words. You're in the semi-final!"]='semi85'}
 let HAVE=new Set(),curAudio=null,HAVE_LOADED=false,PLAYTOK=0;
 const HAVE_P=(function(){if(location.protocol.indexOf('http')!==0){HAVE_LOADED=true;return Promise.resolve()}
  return Promise.race([fetch('audio/manifest.json',{cache:'no-cache'}).then(r=>r.ok?r.json():[]).then(a=>{if(Array.isArray(a)){HAVE=new Set(a);if(HAVE.size&&(!V||!/^g/.test(V.screen)))try{render()}catch(e){}}}).catch(()=>{}),new Promise(r=>setTimeout(r,4000))]).then(()=>{HAVE_LOADED=true})})();
@@ -710,14 +710,54 @@ async function xSemi85(){if(!ME||!db()||S85_BUSY||s85Done())return;const t=ME.te
  try{await flush();const r=await xRun('sb_semi_claim',{p_code:ME.code,p_total:n});
   if(r&&r.ok){try{localStorage.setItem(s85Key(),'1')}catch(e){}if(r.new)semi85Party();xLoad(true)}}
  finally{S85_BUSY=false}}
-function semi85Party(){const old=document.getElementById('s85');if(old)old.remove();try{happySound(true);setTimeout(()=>clapSound(true),150)}catch(e){}
- let conf='';const cols=['#F5B700','#FFD54A','#F472B6','#60A5FA','#34D399','#A78BFA','#FB923C'];
- for(let i=0;i<70;i++){const isE=i%4===0;conf+=`<i class="cf" style="left:${Math.random()*100}vw;animation-delay:${(Math.random()*1.2).toFixed(2)}s;animation-duration:${(2+Math.random()*1.6).toFixed(2)}s;${isE?'':'background:'+cols[i%cols.length]+';'}">${isE?['🐝','⭐','🏅','🌼','✨'][i%5]:''}</i>`}
+const SEMI_SAY="Congratulations! You've secured eighty-five percent of your words. You're in the semi-final!";
+/* fireworks + crowd sounds, made in the browser (no files needed) */
+function fwPop(t,big){const a=ac();if(!a)return;const r=room()||a.destination;const n=a.currentTime+(t||0);
+ const len=Math.floor(a.sampleRate*(big?1.1:.7)),buf=a.createBuffer(1,len,a.sampleRate),d=buf.getChannelData(0);
+ for(let i=0;i<len;i++){const x=i/len;d[i]=(Math.random()*2-1)*Math.pow(1-x,big?2.2:3)*(x<.02?x/.02:1)}
+ const src=a.createBufferSource();src.buffer=buf;const lp=a.createBiquadFilter();lp.type='lowpass';lp.frequency.value=big?900:1400;const g=a.createGain();g.gain.value=big?.9:.55;
+ src.connect(lp);lp.connect(g);g.connect(r);src.start(n);
+ for(let k=0;k<14;k++){const c=a.createBufferSource(),cb=a.createBuffer(1,Math.floor(a.sampleRate*.03),a.sampleRate),cd=cb.getChannelData(0);for(let i=0;i<cd.length;i++)cd[i]=(Math.random()*2-1)*(1-i/cd.length);
+  c.buffer=cb;const hp=a.createBiquadFilter();hp.type='highpass';hp.frequency.value=2500;const cg=a.createGain();cg.gain.value=.25*Math.random()+.1;c.connect(hp);hp.connect(cg);cg.connect(r);c.start(n+.25+Math.random()*.9)}}
+function fwWhistle(t){const a=ac();if(!a)return;const r=room()||a.destination;const n=a.currentTime+(t||0);const o=a.createOscillator(),g=a.createGain();o.type='sine';
+ o.frequency.setValueAtTime(700,n);o.frequency.exponentialRampToValueAtTime(2200,n+.55);g.gain.setValueAtTime(0.0001,n);g.gain.exponentialRampToValueAtTime(.05,n+.05);g.gain.exponentialRampToValueAtTime(0.0001,n+.6);o.connect(g);g.connect(r);o.start(n);o.stop(n+.65)}
+function crowdCheer(t,dur){const a=ac();if(!a)return;const r=room()||a.destination;const n=a.currentTime+(t||0);dur=dur||3.2;
+ const len=Math.floor(a.sampleRate*dur),buf=a.createBuffer(2,len,a.sampleRate);for(let c=0;c<2;c++){const d=buf.getChannelData(c);for(let i=0;i<len;i++)d[i]=Math.random()*2-1}
+ [[380,6],[750,7],[1150,8],[2400,9]].forEach(([f,q],k)=>{const s=a.createBufferSource();s.buffer=buf;const bp=a.createBiquadFilter();bp.type='bandpass';bp.Q.value=q;
+  bp.frequency.setValueAtTime(f*.8,n);bp.frequency.linearRampToValueAtTime(f*1.15,n+.6);bp.frequency.linearRampToValueAtTime(f,n+dur);
+  const g=a.createGain();const peak=[.5,.45,.35,.18][k];g.gain.setValueAtTime(0.0001,n);g.gain.exponentialRampToValueAtTime(peak,n+.35);g.gain.setValueAtTime(peak,n+dur*.55);g.gain.exponentialRampToValueAtTime(0.0001,n+dur);
+  s.connect(bp);bp.connect(g);g.connect(r);s.start(n);s.stop(n+dur+.05)});
+ for(let w=0;w<7;w++){const st=n+.2+Math.random()*(dur-.8),o=a.createOscillator(),g=a.createGain(),f0=500+Math.random()*350;o.type='triangle';
+  o.frequency.setValueAtTime(f0,st);o.frequency.linearRampToValueAtTime(f0*1.6,st+.18);o.frequency.linearRampToValueAtTime(f0*1.1,st+.55);
+  g.gain.setValueAtTime(0.0001,st);g.gain.exponentialRampToValueAtTime(.035,st+.06);g.gain.exponentialRampToValueAtTime(0.0001,st+.6);o.connect(g);g.connect(r);o.start(st);o.stop(st+.65)}}
+function fwLaunch(box,delay){setTimeout(()=>{if(!box.isConnected)return;const W=box.clientWidth,H=box.clientHeight,side=Math.random(),x=side<.4?W*(.04+Math.random()*.22):side<.8?W*(.74+Math.random()*.22):W*(.2+Math.random()*.6),y=side<.8?H*(.1+Math.random()*.55):H*(.06+Math.random()*.1);
+ const cols=['#F5B700','#FFD54A','#F472B6','#60A5FA','#34D399','#A78BFA','#FB923C','#FFFFFF'],col=cols[Math.floor(Math.random()*cols.length)],col2=cols[Math.floor(Math.random()*cols.length)];
+ const rk=document.createElement('i');rk.style.cssText=`position:absolute;left:${x}px;top:${H}px;width:4px;height:16px;border-radius:3px;background:linear-gradient(${col},transparent);box-shadow:0 0 10px ${col}`;box.appendChild(rk);
+ fwWhistle(0);
+ const fly=rk.animate([{transform:'translateY(0)'},{transform:`translateY(${y-H}px)`}],{duration:650,easing:'cubic-bezier(.2,.7,.4,1)',fill:'forwards'});
+ fly.onfinish=()=>{rk.remove();fwPop(0,Math.random()<.4);const N=48;
+  for(let i=0;i<N;i++){const p=document.createElement('i'),ang=i/N*Math.PI*2,sp=130+Math.random()*110,c=i%2?col:col2;
+   p.style.cssText=`position:absolute;left:${x}px;top:${y}px;width:9px;height:9px;border-radius:50%;background:${c};box-shadow:0 0 14px ${c},0 0 4px #fff`;box.appendChild(p);
+   p.animate([{transform:'translate(0,0) scale(1)',opacity:1},{opacity:1,offset:.7},{transform:`translate(${Math.cos(ang)*sp}px,${Math.sin(ang)*sp+45}px) scale(.25)`,opacity:0}],{duration:1300+Math.random()*400,easing:'cubic-bezier(.1,.75,.3,1)',fill:'forwards'}).onfinish=()=>p.remove()}
+  const fl=document.createElement('i');fl.style.cssText=`position:absolute;left:${x-60}px;top:${y-60}px;width:120px;height:120px;border-radius:50%;background:radial-gradient(${col}AA,transparent 70%)`;box.appendChild(fl);
+  fl.animate([{opacity:1,transform:'scale(.3)'},{opacity:0,transform:'scale(1.4)'}],{duration:500,fill:'forwards'}).onfinish=()=>fl.remove()}},delay)}
+function confettiWave(box,n){const cols=['#F5B700','#FFD54A','#F472B6','#60A5FA','#34D399','#A78BFA','#FB923C'];let h='';
+ for(let i=0;i<n;i++){const isE=i%4===0;h+=`<i class="cf" style="left:${Math.random()*100}vw;animation-delay:${(Math.random()*1).toFixed(2)}s;animation-duration:${(2.2+Math.random()*1.8).toFixed(2)}s;${isE?'':'background:'+cols[i%cols.length]+';'}">${isE?['🐝','⭐','🏅','🎉','✨'][i%5]:''}</i>`}
+ const w=document.createElement('div');w.style.cssText='position:absolute;inset:0;pointer-events:none;overflow:hidden';w.innerHTML=h;box.appendChild(w);setTimeout(()=>w.remove(),6000)}
+function semi85Party(){const old=document.getElementById('s85');if(old)old.remove();
  const g=ME.grade===0?'KG2':'Grade '+ME.grade;
- const d=document.createElement('div');d.id='s85';d.className='party';d.style.zIndex='9999';
- d.innerHTML=`${conf}<div class="pcard" style="max-width:520px"><div class="pemo" style="font-size:84px">🏅</div><div class="pcheer">Congratulations, ${esc(ME.first_name)}!</div><div style="font-size:21px;font-weight:800;margin:10px 0;line-height:1.4">You’ve secured 85% of your words.<br>You’re in the ${g} semi-final! 🎉</div><div class="pclap">👏👏👏</div><div class="muted" style="font-size:16px;margin:8px 0 14px">Keep practising to get ready. Your teacher will tell you the date.</div><button class="y" style="font-size:20px;padding:12px 26px" id="s85ok">Hooray! 🐝</button></div>`;
- document.body.appendChild(d);const close=()=>d.remove();d.querySelector('#s85ok').onclick=close;
- setTimeout(()=>{try{praise('Congratulations! You are in the semi-final!',true)}catch(e){}},500)}
+ const d=document.createElement('div');d.id='s85';d.className='party';d.style.cssText='z-index:9999;background:rgba(20,34,66,.72);overflow:hidden';
+ const sky=document.createElement('div');sky.style.cssText='position:absolute;inset:0;pointer-events:none';d.appendChild(sky);
+ const card=document.createElement('div');card.className='pcard';card.style.maxWidth='520px';
+ card.innerHTML=`<div class="pemo" style="font-size:84px">🏅</div><div class="pcheer">Congratulations, ${esc(ME.first_name)}!</div><div style="font-size:21px;font-weight:800;margin:10px 0;line-height:1.4">You’ve secured 85% of your words.<br>You’re in the ${g} semi-final! 🎉</div><div class="pclap">👏👏👏</div><div class="muted" style="font-size:16px;margin:8px 0 14px">Keep practising to get ready. Your teacher will tell you the date.</div><button class="y" style="font-size:20px;padding:12px 26px" id="s85ok">Hooray! 🐝</button>`;
+ d.appendChild(card);document.body.appendChild(d);
+ const close=()=>{d.classList.add('out');setTimeout(()=>d.remove(),400)};card.querySelector('#s85ok').onclick=close;
+ try{happySound(true)}catch(e){}
+ confettiWave(sky,60);setTimeout(()=>confettiWave(sky,50),1800);setTimeout(()=>confettiWave(sky,50),3600);
+ [0,350,800,1200,1700,2300,2700,3200,3700,4300,4800,5400,6000,6500].forEach(t=>fwLaunch(sky,t+300));
+ try{clapSound(true)}catch(e){}try{crowdCheer(.2,3.4)}catch(e){}
+ setTimeout(()=>{try{if(!playClip(SEMI_SAY))playClip('Hooray! You did it!')}catch(e){}},1200);
+ setTimeout(()=>{if(!d.isConnected)return;try{clapSound(true)}catch(e){}try{crowdCheer(0,3)}catch(e){}},4200)}
 function xSemi85Bar(){if(!ME||XS.semi||s85Done())return '';const t=ME.team,n=(WORDS[t]||[]).length;if(n<10)return '';const need=s85Need(),have=Math.min(mastered(t),need),pc=Math.round(have/need*100);
  return `<div class="xban semi" style="opacity:.95"><div class="e">🏅</div><div style="flex:1"><b class="f" style="font-size:20px">Road to the semi-final</b><div>Secure <b>${need}</b> of your ${n} words (85%) and you’re in! You have <b>${have}</b>${have<need?` — ${need-have} to go!`:' — checking…'}</div><div style="height:12px;background:#fff;border-radius:8px;margin-top:6px;overflow:hidden;border:1px solid #F1D27A"><div style="height:100%;width:${pc}%;background:linear-gradient(90deg,#F5B700,#FFD54A)"></div></div></div></div>`}
 /* reading support (set by the teacher) */
