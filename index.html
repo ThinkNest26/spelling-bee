@@ -369,8 +369,8 @@ const FINAL='2027-01-22';
 const DATES=[
  ['23 Nov – 4 Dec','Launch & sign-up','Find out about the Spelling Bee in assembly and sign up with your class teacher.'],
  ['Dec – Jan','Practice time','Practise your word list at home and at school — use this website every day!'],
- ['7 – 11 Dec','Class rounds','A short spelling quiz in class. The top spellers in each class move on.'],
- ['Week of 11 Jan','Grade semi-finals','Spell out loud in front of your grade. The best spellers go to the final.'],
+ ['Dec – Jan','Reach the semi-final','Secure 85% of your words on this website and you’re in the semi-final!'],
+ ['Week of 11 Jan','Online semi-finals','On your semi-final day, spell your words on this website. The best scores go to the Grand Final.'],
  ['22 Jan','Grand Final 🏆','Spellers meet on stage with families watching. Champions are crowned!'],
  ['Week of 25 Jan','Celebration','Certificates for everyone who took part and trophies for our champions.']];
 const RULES=['The pronouncer says your word, uses it in a sentence, then says it again.','You can ask to hear the word again, its meaning, or the sentence.','Say the word, spell it letter by letter, then say the word again.','You have up to 1 minute to finish spelling — watch the timer on the big screen.','Once you say a letter you can’t change it — so take your time!','If you miss a word, you are out at the end of that round. Well done for trying!','The last speller standing spells one more word to become champion.'];
@@ -809,7 +809,7 @@ function xTiles(t){if(!ME||t.id!==ME.team)return `<div class="act" data-x="rules
 function xStart(mode,list,o){list=(list||[]).filter(Boolean);if(!list.length){note('No words to practise here yet.');return}
  XD=Object.assign({mode,list,i:0,val:'',fb:null,score:0,ans:{},missed:[],done:false,t0:Date.now()},o||{});V.screen='xdrill';render();window.scrollTo(0,0);setTimeout(()=>xSayW(XD.list[0]),250)}
 function xSayW(w){if(SENT[w])sayWordSentence(w);else say(w)}
-const XTEST=m=>m==='wpre'||m==='wpost';
+const XTEST=m=>m==='wpre'||m==='wpost'||m==='stest';
 function xDrillView(){if(!XD)return xHead('Practice')+'<div class="panel">Nothing to practise.</div>';
  if(XD.done)return xDrillEnd();const w=XD.list[XD.i],test=XTEST(XD.mode);
  return xHead(XD.title||'Practice')+`<div class="prog"><i style="width:${XD.i/XD.list.length*100}%"></i></div><div class="muted" style="text-align:center;margin:6px 0">Word ${XD.i+1} of ${XD.list.length}</div>
@@ -820,13 +820,21 @@ function xDrillView(){if(!XD)return xHead('Practice')+'<div class="panel">Nothin
 function xCheck(){const v=readAns();if(!v)return;const w=XD.list[XD.i],ok=same(v,w);XD.val=v;XD.ans[w]=v;if(ok)XD.score++;else XD.missed.push(w);award(ME&&V.team===ME.team?ME.team:V.team,w,ok);
  if(XTEST(XD.mode)){xNext();return}XD.fb=ok?'ok':'bad';render();if(ok)celebrate();else oops()}
 function xNext(){if(XD.i+1<XD.list.length){XD.i++;XD.val='';XD.fb=null;render();setTimeout(()=>xSayW(XD.list[XD.i]),200)}else{XD.done=true;render();window.scrollTo(0,0);xFinish()}}
-async function xFinish(){const d=XD;const n=d.list.length;if(d.score>=n*0.7){burst();happySound(true);setTimeout(()=>clapSound(true),120)}
+async function xFinish(){const d=XD;const n=d.list.length;
+ if(d.mode==='stest'){d.saving=true;render();burst();happySound(true);setTimeout(()=>clapSound(true),120);let r=null;
+  for(let i=0;i<4&&!(r&&(r.ok||r.error==='done'));i++){r=await xRun('sb_semi_submit',{p_code:ME.code,p_answers:d.ans,p_secs:Math.round((Date.now()-d.t0)/1000)});if(!(r&&(r.ok||r.error)))await new Promise(z=>setTimeout(z,2500))}
+  d.saving=false;d.saved=!!(r&&(r.ok||r.error==='done'));if(r&&r.ok){d.score=r.score;const m=XS.semi;if(m){m.done=true;m.score=r.score;m.total=r.total;m.words=null}}
+  if(V.screen==='xdrill')render();return}
+ if(d.score>=n*0.7){burst();happySound(true);setTimeout(()=>clapSound(true),120)}
  if(XTEST(d.mode)&&d.wid){const kind=d.mode==='wpre'?'pre':'post';const res={score:d.score,total:n,answers:d.ans,challenge:!!d.challenge};
   const wk=XS.weekly.find(x=>x.id===d.wid);if(wk)wk[kind]=res;
   const r=await xRun('sb_weekly_save',{p_code:ME.code,p_id:d.wid,p_kind:kind,p_score:d.score,p_total:n,p_answers:d.ans,p_challenge:!!d.challenge});
   if(r&&r.give){const p=prog(ME.team);p.stars=(p.stars||0)+r.give;savePR();note(`+${r.give} ⭐ for your Friday test!`)}
   if(V.screen==='xdrill')render()}}
-function xDrillEnd(){const d=XD,n=d.list.length,s=d.score;const wl=a=>`<div class="wordgrid" style="max-width:640px;margin:8px auto 0">${a.map(w=>`<div class="wc" data-say="${esc(w)}">🔊 ${esc(w)}</div>`).join('')}</div>`;
+function xDrillEnd(){const d=XD,n=d.list.length,s=d.score;
+ if(d.mode==='stest'){if(d.saving)return `<div class="panel result"><div class="e">📨</div><h2 style="font-size:30px">Handing in your semi-final…</h2><p class="muted">Please wait a moment.</p></div>`;
+  if(!d.saved)return `<div class="panel result"><div class="e">📶</div><h2 style="font-size:28px">We couldn’t send your answers</h2><p>Check the internet, then press the button. Your answers are still here.</p><div class="row" style="margin-top:16px"><button class="y" data-x="stestsend">Send my answers again</button></div></div>`;
+  return `<div class="panel result"><div class="e">🏅</div><h2 style="font-size:32px">Semi-final done!</h2><div class="big">${s} / ${n}</div><p class="f" style="font-size:20px">Well done for taking part, ${esc(ME.first_name)}! Your teacher will tell you who goes to the Grand Final. 🏆</p><div class="row" style="margin-top:20px"><button class="w" data-go="team">Back to my bee</button></div></div>`}const wl=a=>`<div class="wordgrid" style="max-width:640px;margin:8px auto 0">${a.map(w=>`<div class="wc" data-say="${esc(w)}">🔊 ${esc(w)}</div>`).join('')}</div>`;
  let extra='';
  if(d.mode==='review'){const r=xRev(),m=d.list.filter(w=>r[w]&&r[w].m);extra=`${m.length?`<p><b>🎓 Mastered today:</b></p>${wl(m)}`:''}<p class="muted">Words you got right come back in a few days. Words you missed come back tomorrow.</p>`}
  if(d.mode==='wpre'){const wk=XS.weekly.find(x=>x.id===d.wid);const ch=wk&&s===n&&(wk.challenge||[]).length;
@@ -881,25 +889,34 @@ async function xSentSave(force){const v=readAns().replace(/\s+/g,' ').trim();XW.
 function xSentHint(){if(!XW||!XW.bad.length)return;const extra=Object.values(WORDS).flat();XW.sugg='💡 '+XW.bad.map(b=>{const s=SX.suggest(b.w,extra,2);return `<b>${esc(b.w)}</b>: did you mean ${s.length?s.map(x=>`<span class="sxsw">${esc(x)}</span>`).join(' or '):'…? Try sounding it out'}`}).join('<br>');render()}
 
 /* ---------- 🏅 semi-final (only for children on the confirmed list) ---------- */
-const XSF={out:{e:'🎤',t:'Spelling rounds',d:'You take turns to spell a word out loud. Spell it right and you stay in. A mistake means you’re out. The last spellers standing go to the Grand Final!'},
+const XSF={online:{e:'💻',t:'Online semi-final',d:'On your semi-final day, you spell your words here on the website. Listen to each word and type it. You only get one go, so take your time! The best scores go to the Grand Final.'},
+ out:{e:'🎤',t:'Spelling rounds',d:'You take turns to spell a word out loud. Spell it right and you stay in. A mistake means you’re out. The last spellers standing go to the Grand Final!'},
  written:{e:'📝',t:'Written round, then out loud',d:'First, everyone writes some words. The spellers with the best scores then spell out loud on stage, and the best go to the Grand Final!'},
  points:{e:'⭐',t:'Points rounds',d:'Everyone spells the same number of words out loud. You get a point for each word you spell right. The highest scores go to the Grand Final!'}};
 function xSemiDays(){const m=XS.semi;if(!m||!m.day)return null;return Math.round((Date.parse(String(m.day).slice(0,10)+'T12:00:00Z')-Date.parse(dubaiDay()+'T12:00:00Z'))/864e5)}
 function xSemiWhen(){const m=XS.semi,n=xSemiDays();if(n===null)return 'Your teacher will tell you the date soon.';const d=xDay(String(m.day).slice(0,10));return n>1?`${d} · in ${n} days`:n===1?`${d} · tomorrow!`:n===0?'Today! 🎉':`${d}`}
 function xSemiBanner(){const m=XS.semi;if(!m)return '';const n=xSemiDays();if(n!==null&&n<-3)return '';
+ if(m.online&&m.done)return `<div class="xban semi"><div class="e">🏅</div><div style="flex:1"><b class="f" style="font-size:22px">Semi-final done! You spelt ${m.score} / ${m.total}</b><div>Your teacher will tell you who goes to the Grand Final.</div></div><button class="w" data-x="semi">See →</button></div>`;
+ if(m.online&&m.open)return `<div class="xban semi"><div class="e">✏️</div><div style="flex:1"><b class="f" style="font-size:24px">Your semi-final is today!</b><div>${m.n} words · one go · take your time</div></div><button class="y" data-x="semi">Start →</button></div>`;
  return `<div class="xban semi"><div class="e">🏅</div><div style="flex:1"><b class="f" style="font-size:24px">You’re in the ${m.grade===0?'KG2':'Grade '+m.grade} semi-final!</b><div>${esc(xSemiWhen())}${m.place?' · '+esc(m.place):''}</div></div><button class="y" data-x="semi">Get ready →</button></div>`}
 function xSemiWords(){const t=V.team;const own=(WORDS[t]||[]).slice();const order=['buz','hon','bum','cha'];const nx=order[order.indexOf(t)+1];
  const score=w=>w.length+(SX.TRICKY.has(SX.low(w))?4:0)+(/([a-z])\1/.test(w)?1:0)+(/(ph|gh|kn|wr|mb|ough|tion|sion|ous|cious|ture)/.test(w)?2:0)+(wordLevel(t,w)==='secure'?-2:0);
  const hard=own.sort((a,b)=>score(b)-score(a)).slice(0,14);const extra=nx?(WORDS[nx]||[]).slice().sort((a,b)=>score(b)-score(a)).slice(0,10):[];
  return shuffle(shuffle(hard).slice(0,7).concat(shuffle(extra).slice(0,3)))}
 function xSemiView(){const m=XS.semi;if(!m)return xHead('🏅 Semi-final')+'<div class="panel">Keep practising! Your teacher will tell you about the semi-finals.</div>';const f=XSF[m.format]||XSF.out;
+ if(m.online&&m.done)return xHead('🏅 Semi-final')+`<div class="panel semip"><div style="font-size:72px">🎉</div><h2 style="font-size:32px;margin:4px 0">Semi-final done, ${esc(ME.first_name)}!</h2><div class="big" style="font-size:44px;margin:10px 0">${m.score} / ${m.total}</div><p class="f" style="font-size:20px">Well done for taking part! Your teacher will tell you who goes to the Grand Final on 22 January. 🏆</p><div class="row" style="margin-top:16px"><button class="w" data-go="team">Back to my bee</button></div></div>`;
+ if(m.online&&m.open)return xHead('🏅 Semi-final')+`<div class="panel semip"><div style="font-size:72px">✏️</div><h2 style="font-size:34px;margin:4px 0">It’s your semi-final, ${esc(ME.first_name)}!</h2>
+  <p class="f" style="font-size:21px;margin:8px 0">You will hear <b>${m.n} words</b>. Listen, then type each one.</p>
+  <div class="sxrule" style="text-align:left;background:#F0FDF4;border-color:#BBF7D0"><div class="sxrt"><span>🌟</span><b>Before you start</b></div><ol class="sxsteps" style="font-size:17px;margin:4px 0 0">
+   <li>Find a quiet place and turn the sound up 🔊</li><li>Press <b>Hear the word</b> as many times as you need.</li><li>You only get <b>one go</b>, and you’ll see your score at the end.</li><li>Take a deep breath — you’ve practised for this! 💪</li></ol></div>
+  <div class="row" style="margin-top:18px"><button class="y" data-x="stest" style="font-size:24px;padding:16px 32px">✏️ Start my semi-final</button></div></div>`;
  return xHead('🏅 Semi-final')+`<div class="panel semip"><div style="font-size:72px">🏅</div><h2 style="font-size:34px;margin:4px 0">You’re in the semi-final, ${esc(ME.first_name)}!</h2>
   <p class="f" style="font-size:22px;margin:6px 0">📅 ${esc(xSemiWhen())}${m.place?`<br>📍 ${esc(m.place)}`:''}</p>
   <p class="muted">${m.count} spellers from ${m.grade===0?'KG2':'Grade '+m.grade} · the best ${m.finalists} go to the Grand Final 🏆</p>
   <div class="sxrule" style="text-align:left"><div class="sxrt"><span>${f.e}</span><b>How your semi-final works: ${esc(f.t)}</b><button class="w sm" data-say="${esc(f.d)}">🔊</button></div><div class="sxtip">${esc(f.d)}</div></div>
   ${m.notes?`<div class="sxgrown" style="text-align:left">📣 <b>From your teacher:</b> ${esc(m.notes)}</div>`:''}
   <div class="sxrule" style="text-align:left;background:#F0FDF4;border-color:#BBF7D0"><div class="sxrt"><span>🌟</span><b>Top tips on the day</b></div><ol class="sxsteps" style="font-size:17px;margin:4px 0 0">
-   <li>Listen carefully to the word.</li><li>You can ask to hear it again, or ask for a sentence or its meaning.</li><li>Say the word, spell it slowly letter by letter, then say the word again.</li><li>Take a deep breath — you’ve practised for this! 💪</li></ol></div>
+   ${m.online?'<li>On the day, open this page and press <b>Start my semi-final</b>.</li><li>Find a quiet place and turn the sound up 🔊</li><li>Listen to each word as many times as you need, then type it carefully.</li><li>You get one go, so check each word before you press Next.</li>':'<li>Listen carefully to the word.</li><li>You can ask to hear it again, or ask for a sentence or its meaning.</li><li>Say the word, spell it slowly letter by letter, then say the word again.</li><li>Take a deep breath — you’ve practised for this! 💪</li>'}</ol></div>
   <div class="row" style="margin-top:18px"><button class="y" data-x="semiprac" style="font-size:21px">🏅 Semi-final practice</button>${ME.school&&ME.school.premium===false?'':'<button class="w" data-go="realbee">🏆 Real Bee practice</button>'}</div>
   <p class="muted small" style="margin-top:10px">Semi-final practice gives you 10 harder words, including some challenge words.</p></div>`}
 /* ---------- this week's words ---------- */
@@ -999,6 +1016,8 @@ document.addEventListener('click',e=>{if(!ME)return;
  if(d.xh){xHomeAct(d.xh,b);return}
  if(d.x){if(!V.team)V.team=ME.team;
   if(d.x==='semiprac'){V.team=ME.team;xStart('semi',xSemiWords(),{title:'🏅 Semi-final practice'});return}
+  if(d.x==='stestsend'){if(XD&&XD.mode==='stest')xFinish();return}
+  if(d.x==='stest'){const m=XS.semi;if(!m||!m.open||m.done||!Array.isArray(m.words)||!m.words.length){note('Your semi-final isn’t open right now.');return}V.team=ME.team;m.started=true;xStart('stest',m.words.slice(),{title:'🏅 My semi-final'});return}
   if(d.x==='review'){V.team=ME.team;const due=shuffle(xDue()).slice(0,10);xStart('review',due,{title:'🧠 My tricky words'});return}
   V.screen={rules:'xrules',sent:'xsent',weekly:'xweekly',family:'xfamily',semi:'xsemi'}[d.x]||'team';if(d.x==='sent')XW=null;if(['sent','weekly','family'].includes(d.x)){V.team=ME.team;xLoad(true)}render();window.scrollTo(0,0);return}
  if(d.xn){if(!XD)return;if(d.xn==='hear'){xSayW(XD.list[XD.i]);$('#ans')?.focus();return}if(d.xn==='check'){xCheck();return}if(d.xn==='next'){xNext();return}}
