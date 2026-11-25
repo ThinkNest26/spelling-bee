@@ -711,14 +711,36 @@ function xHook(team,w,ok){if(!ME||team!==ME.team||!w)return;const r=xRev(),td=du
  if(!ok&&LASTANS&&Date.now()-LASTANST<5000&&!same(LASTANS,w))xRun('sb_mistake_add',{p_code:ME.code,p_word:w,p_typed:LASTANS.slice(0,60),p_activity:String(V.screen||'').slice(0,20)});
  if(ok)setTimeout(xSemi85,1800)}
 /* 85% rule: secure 85% of your grade's words and you're in the semi-final */
+/* ✅ every activity must be finished once (family challenge and Race a friend are optional) */
+const REQ_ACTS=[['test','🎧','Spelling test'],['realbee','🏆','Real Bee practice'],['ghive','🐝','Bee to the Hive'],['gcatch','🍯','Honey Catch'],['ggarden','🌻','Grow a Garden'],['grace','🏁','Bee Race'],['gballoon','🎈','Balloon Rescue'],['lcwc','👀','Look, Cover, Write (5 words)'],['miss','🧩','Missing letters (5 words)'],['gap','📝','Fill the gap'],['rules','💡','Spelling rules'],['sent','✍️','Use it in a sentence'],['weekly','🗓️','This week’s words (Monday test)']];
+let ACTD=null,ACTN={};
+function actKey(){return 'sb-acts-'+(ME?ME.code:'')}
+function actGet(){if(ACTD&&ACTD._c===(ME&&ME.code))return ACTD;let a=[];try{a=JSON.parse(localStorage.getItem(actKey())||'[]')}catch(e){}ACTD=new Set(a);ACTD._c=ME&&ME.code;try{ACTN=JSON.parse(localStorage.getItem(actKey()+'-n')||'{}')}catch(e){ACTN={}}return ACTD}
+function actSave(){try{localStorage.setItem(actKey(),JSON.stringify([...actGet()]));localStorage.setItem(actKey()+'-n',JSON.stringify(ACTN))}catch(e){}}
+function reqActs(){return REQ_ACTS.filter(([id])=>!(id==='realbee'&&ME&&ME.school&&ME.school.premium===false)&&!(id==='weekly'&&!(XS.weekly&&XS.weekly.length)))}
+function actsLeft(){const d=actGet();return reqActs().filter(([id])=>!d.has(id))}
+async function actLoad(){if(!ME)return;const r=await xRun('sb_act_mine',{p_code:ME.code});if(Array.isArray(r)){const d=actGet();let ch=false;r.forEach(a=>{if(!d.has(a)){d.add(a);ch=true}});
+ [...d].forEach(a=>{if(!r.includes(a))xRun('sb_act_mark',{p_code:ME.code,p_act:a})});if(ch){actSave();if(V.screen==='team')render()}}}
+function actMark(id){if(!ME||V.team!==ME.team)return;const d=actGet();if(d.has(id))return;d.add(id);actSave();xRun('sb_act_mark',{p_code:ME.code,p_act:id});
+ const a=REQ_ACTS.find(x=>x[0]===id);const left=actsLeft().length;if(a&&!s85Done())setTimeout(()=>note(`✅ ${a[1]} ${a[2].replace(/ \(.*\)$/,'')} done!${left?` ${left} activit${left===1?'y':'ies'} left for the semi-final.`:' All activities done! 🎉'}`),1200);if(!left)setTimeout(xSemi85,1800)}
+function actCount(id,need){ACTN[id]=(ACTN[id]||0)+1;actSave();if(ACTN[id]>=need)actMark(id)}
+function actAfterRender(){if(!ME||V.team!==ME.team)return;const sc=V.screen;
+ if(sc==='done'&&TS&&!TS._a){TS._a=1;actMark('test')}
+ if(sc==='realbee'&&RB&&RB.done&&!RB._a){RB._a=1;actMark('realbee')}
+ if(G&&G.done&&!G._a&&['ghive','gcatch','ggarden','grace','gballoon'].includes(G.kind)&&sc===G.kind){G._a=1;actMark(G.kind)}
+ if(sc==='gap'&&GP&&GP.done&&!GP._a){GP._a=1;actMark('gap')}
+ if(sc==='lcwc'&&LC&&LC.step===3&&!LC._a){LC._a=1;actCount('lcwc',5)}
+ if(sc==='miss'&&MS&&MS.fb&&!MS._a){MS._a=1;actCount('miss',5)}
+ if(sc==='xdrill'&&XD&&XD.done&&!XD._a){XD._a=1;if(XD.mode==='family')actMark('rules');if(XD.mode==='wpre')actMark('weekly')}
+ if(sc==='xsent'&&XW&&XW.saved&&!XW._a){XW._a=1;actMark('sent')}}
 let S85_BUSY=false,S85_T=0;
 function s85Key(){return 'sb-semi85-'+(ME?ME.code+'-'+ME.grade:'')}
 function s85Done(){try{return localStorage.getItem(s85Key())==='1'}catch(e){return false}}
 function s85Need(){const n=(WORDS[ME.team]||[]).length;return Math.ceil(n*0.85)}
-async function xSemi85(){if(!ME||!db()||S85_BUSY||s85Done())return;const t=ME.team,n=(WORDS[t]||[]).length;if(n<10||mastered(t)<s85Need())return;
+async function xSemi85(){if(!ME||!db()||S85_BUSY||s85Done())return;const t=ME.team,n=(WORDS[t]||[]).length;if(n<10||mastered(t)<s85Need())return;if(actsLeft().length)return;
  if(Date.now()-S85_T<30000)return;S85_BUSY=true;S85_T=Date.now();
  try{await flush();const r=await xRun('sb_semi_claim',{p_code:ME.code,p_total:n});
-  if(r&&r.ok){try{localStorage.setItem(s85Key(),'1')}catch(e){}if(r.new)semi85Party();xLoad(true)}}
+  if(r&&r.ok){try{localStorage.setItem(s85Key(),'1')}catch(e){}if(r.new)semi85Party();xLoad(true)}else if(r&&r.acts){actLoad()}}
  finally{S85_BUSY=false}}
 const SEMI_SAY="Congratulations! You've secured eighty-five percent of your words. You're in the semi-final!";
 /* fireworks + crowd sounds, made in the browser (no files needed) */
@@ -769,7 +791,12 @@ function semi85Party(){const old=document.getElementById('s85');if(old)old.remov
  setTimeout(()=>{try{if(!playClip(SEMI_SAY))playClip('Hooray! You did it!')}catch(e){}},1200);
  setTimeout(()=>{if(!d.isConnected)return;try{clapSound(true)}catch(e){}try{crowdCheer(0,3)}catch(e){}},4200)}
 function xSemi85Bar(){if(!ME||XS.semi||s85Done())return '';const t=ME.team,n=(WORDS[t]||[]).length;if(n<10)return '';const need=s85Need(),have=Math.min(mastered(t),need),pc=Math.round(have/need*100);
- return `<div class="xban semi" style="opacity:.95"><div class="e">🏅</div><div style="flex:1"><b class="f" style="font-size:20px">Road to the semi-final</b><div>Secure <b>${need}</b> of your ${n} words (85%) and you’re in! You have <b>${have}</b>${have<need?` — ${need-have} to go!`:' — checking…'}</div><div style="height:12px;background:#fff;border-radius:8px;margin-top:6px;overflow:hidden;border:1px solid #F1D27A"><div style="height:100%;width:${pc}%;background:linear-gradient(90deg,#F5B700,#FFD54A)"></div></div></div></div>`}
+ const req=reqActs(),d=actGet(),dn=req.filter(([id])=>d.has(id)).length;
+ return `<div class="xban semi" style="opacity:.97;align-items:flex-start"><div class="e">🏅</div><div style="flex:1"><b class="f" style="font-size:20px">Road to the semi-final</b>
+  <div style="margin-top:4px"><b>1.</b> Secure <b>${need}</b> of your ${n} words (85%). You have <b>${have}</b>${have<need?` — ${need-have} to go!`:' ✅'}</div><div style="height:12px;background:#fff;border-radius:8px;margin-top:6px;overflow:hidden;border:1px solid #F1D27A"><div style="height:100%;width:${pc}%;background:linear-gradient(90deg,#F5B700,#FFD54A)"></div></div>
+  <div style="margin-top:10px"><b>2.</b> Finish every activity once: <b>${dn} of ${req.length}</b> done${dn===req.length?' ✅':''}</div>
+  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${req.map(([id,e,nm])=>`<span style="font-size:14px;padding:3px 9px;border-radius:20px;border:1px solid ${d.has(id)?'#86EFAC':'#F1D27A'};background:${d.has(id)?'#DCFCE7':'#fff'};font-weight:700">${d.has(id)?'✅':e} ${esc(nm)}</span>`).join('')}</div>
+  <div class="muted small" style="margin-top:6px">The family challenge and Race a friend are optional.</div></div></div>`}
 /* reading support (set by the teacher) */
 function xApplySupport(){document.body.classList.toggle('easyread',!!SUPPORT);
  if(SUPPORT&&!document.getElementById('lexend')){const l=document.createElement('link');l.id='lexend';l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&display=swap';document.head.appendChild(l)}}
@@ -784,7 +811,7 @@ async function xLoad(force){if(!ME||!db()||XS.loading)return;if(XS.code===ME.cod
    savePR()}
   if(Array.isArray(wk))XS.weekly=wk;if(Array.isArray(st))XS.sent=st;if(Array.isArray(fm))XS.fam=fm;if(hm&&hm.state)XS.home=hm;XS.semi=smi&&smi.grade!==undefined?smi:null;XS.ptok=ptk&&ptk.token?ptk.token:null;
   if(sp&&typeof sp.on==='boolean'){SUPPORT=sp.on;try{localStorage.setItem('sb-support-'+code,SUPPORT?'1':'0')}catch(e){}xApplySupport()}
-  if(['team','xrules','xsent','xweekly','xfamily','xsemi'].includes(V.screen))render();setTimeout(xSemi85,1200)}
+  if(['team','xrules','xsent','xweekly','xfamily','xsemi'].includes(V.screen))render();actLoad().finally(()=>setTimeout(xSemi85,800))}
  finally{XS.loading=false}}
 
 /* ---------- shared pieces ---------- */
@@ -1050,6 +1077,7 @@ function render(){
  else if(!ME){V={screen:'home',team:null};a.innerHTML=home()}
  else a.innerHTML=top()+`<main>${({team:teamView,learn:learnView,lcwc:lcwcView,test:testView,miss:missView,done:doneView,gap:gapView,games:gamesView,avatar:avatarView,realbee:rbView,wod:wodView,gballoon:balloonView,gfriend:friendView,ghive:hiveView,gcatch:catchView,ggarden:gardenView,grace:raceView,gl:glView,xdrill:xDrillView,xrules:xRulesView,xsent:xSentView,xweekly:xWeeklyView,xfamily:xFamilyView,xhtest:xHomeTestView,xsemi:xSemiView})[V.screen]()}</main>`;
  after();if(V.screen==='ghive')hiveAfter();if(V.screen==='grace')raceAfter();
+ try{actAfterRender()}catch(e){}
 }
 /* ---------- schools: product page + each school's page ---------- */
 let SCH=null,PLANLIST=null;
