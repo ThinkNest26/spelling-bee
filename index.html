@@ -776,12 +776,12 @@ function fwLaunch(box,delay){setTimeout(()=>{if(!box.isConnected)return;const W=
 function confettiWave(box,n){const cols=['#F5B700','#FFD54A','#F472B6','#60A5FA','#34D399','#A78BFA','#FB923C'];let h='';
  for(let i=0;i<n;i++){const isE=i%4===0;h+=`<i class="cf" style="left:${Math.random()*100}vw;animation-delay:${(Math.random()*1).toFixed(2)}s;animation-duration:${(2.2+Math.random()*1.8).toFixed(2)}s;${isE?'':'background:'+cols[i%cols.length]+';'}">${isE?['🐝','⭐','🏅','🎉','✨'][i%5]:''}</i>`}
  const w=document.createElement('div');w.style.cssText='position:absolute;inset:0;pointer-events:none;overflow:hidden';w.innerHTML=h;box.appendChild(w);setTimeout(()=>w.remove(),6000)}
-function semi85Party(){const old=document.getElementById('s85');if(old)old.remove();
- const g=ME.grade===0?'KG2':'Grade '+ME.grade;
+function semi85Party(who){who=who||ME;const old=document.getElementById('s85');if(old)old.remove();
+ const g=who.grade===0?'KG2':'Grade '+who.grade;
  const d=document.createElement('div');d.id='s85';d.className='party';d.style.cssText='z-index:9999;background:rgba(20,34,66,.72);overflow:hidden';
  const sky=document.createElement('div');sky.style.cssText='position:absolute;inset:0;pointer-events:none';d.appendChild(sky);
  const card=document.createElement('div');card.className='pcard';card.style.maxWidth='520px';
- card.innerHTML=`<div class="pemo" style="font-size:84px">🏅</div><div class="pcheer">Congratulations, ${esc(ME.first_name)}!</div><div style="font-size:21px;font-weight:800;margin:10px 0;line-height:1.4">You’ve secured 85% of your words.<br>You’re in the ${g} semi-final! 🎉</div><div class="pclap">👏👏👏</div><div class="muted" style="font-size:16px;margin:8px 0 14px">Keep practising to get ready. Your teacher will tell you the date.</div><button class="y" style="font-size:20px;padding:12px 26px" id="s85ok">Hooray! 🐝</button>`;
+ card.innerHTML=`<div class="pemo" style="font-size:84px">🏅</div><div class="pcheer">Congratulations, ${esc(who.first_name)}!</div><div style="font-size:21px;font-weight:800;margin:10px 0;line-height:1.4">You’ve secured 85% of your words and finished every activity.<br>You’re in the ${g} semi-final! 🎉</div><div class="pclap">👏👏👏</div><div class="muted" style="font-size:16px;margin:8px 0 14px">Keep practising to get ready. Your teacher will tell you the date.</div><button class="y" style="font-size:20px;padding:12px 26px" id="s85ok">Hooray! 🐝</button>`;
  d.appendChild(card);document.body.appendChild(d);
  const close=()=>{d.classList.add('out');setTimeout(()=>d.remove(),400)};card.querySelector('#s85ok').onclick=close;
  try{happySound(true)}catch(e){}
@@ -1887,6 +1887,10 @@ render();
 loadWords();loadSchoolPage();
 if(ME){refreshMe();flush()}
 (async()=>{try{tts=await window.claude?.use?.('tts')}catch(e){}})();
+/* preview of the semi-final celebration: school-spellingbee.com/?demo=party (changes nothing) */
+if(URLQ.get('demo')==='party'){const b=document.createElement('div');b.style.cssText='position:fixed;inset:0;z-index:9000;display:grid;place-items:center;background:rgba(20,34,66,.6)';
+ b.innerHTML='<div class="panel" style="max-width:440px;text-align:center"><div style="font-size:64px">🏅</div><h2 class="f" style="font-size:28px">Semi-final celebration preview</h2><p class="muted">This is what a child sees when they reach the semi-final. Nothing is saved.</p><button class="y" style="font-size:22px;padding:14px 28px">▶ Play the celebration</button></div>';
+ document.body.appendChild(b);b.querySelector('button').onclick=()=>{b.remove();semi85Party({first_name:(ME&&ME.first_name)||'Superstar',grade:ME?ME.grade:1})}}
 })();
 </script>
 </body>
