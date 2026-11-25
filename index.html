@@ -1162,7 +1162,7 @@ function productHome(){const plans=PLANLIST||[{id:'trial',name:'Free trial',pric
 
 function practiseBox(){
  if(ME){const t=T(ME.team);return `<div class="codecard ${t.id}"><div class="e" style="font-size:64px">${t.e}</div><h3 class="f" style="font-size:32px">Hi ${esc(ME.first_name)}! 👋</h3><div class="gr" style="font-size:18px">You’re a <b>${t.name.replace(/s$/,'')}</b> · ${gradeLabel(ME.grade)}</div>
-  <div class="muted" style="margin:8px 0 16px;font-size:17px">⭐ ${totalStars()} stars · ${mastered(t.id)}/${WORDS[t.id].length} words learnt</div>
+  <div class="muted" style="margin:8px 0 16px;font-size:17px">⭐ ${totalStars()} stars · ${mastered(t.id)}/${WORDS[t.id].length} words learnt</div>${launchBanner()}
   <button class="y" style="font-size:22px;padding:16px 30px" data-go="team" data-t="${t.id}">Let’s practise! →</button>
   <div style="margin-top:14px"><button class="back" data-logout="1">Not ${esc(ME.first_name)}? Use another code</button></div></div>`}
  return `<div class="codecard"><div class="e" style="font-size:64px">🔑</div><h3 class="f" style="font-size:30px">Type your bee code</h3><p class="muted" style="margin:6px 0 14px">Your teacher gives every speller in the Spelling Bee their own secret code.</p>
@@ -1170,11 +1170,15 @@ function practiseBox(){
   <div id="codemsg" class="codemsg"></div>
   <button class="y" style="font-size:22px;padding:14px 30px;margin-top:12px" data-code="1">Let’s go! 🐝</button>
   <p class="muted" style="margin-top:14px;font-size:15px">Want to take part? Ask your class teacher how to join the Spelling Bee.</p></div>`}
+/* 🚀 official launch date: before it, children see a "practise early" message */
+const LAUNCH='2026-12-01';
+function launchBanner(){if(!ME||dubaiDay()>=LAUNCH)return '';const n=Math.round((Date.parse(LAUNCH+'T12:00:00Z')-Date.parse(dubaiDay()+'T12:00:00Z'))/864e5);
+ return `<div class="xban semi" style="margin-bottom:16px"><div class="e">🚀</div><div style="flex:1"><b class="f" style="font-size:22px">The Spelling Bee launches on 1 December!</b><div>That’s ${n===1?'tomorrow':'in '+n+' days'} — but you can start practising early! Every word you secure now counts. 🐝</div></div></div>`}
 function teamView(){
  const t=T(V.team);const m=mastered(t.id),n=WORDS[t.id].length;
  return `<div class="row" style="justify-content:space-between;margin-bottom:14px"><button class="back" data-go="home">← Home</button><div class="f" style="font-size:22px">${t.e} ${t.name} · ${t.label}</div></div>
  <div class="panel" style="margin-bottom:18px"><div class="f" style="font-size:22px">I have learnt ${m} of ${n} words</div><div class="prog"><i style="width:${Math.round(m/n*100)}%"></i></div><div class="muted">Spell a word correctly twice to make it secure 🔵. ⭐ ${totalStars()} stars to spend</div></div>
- ${ME&&t.id===ME.team?todayPanel(t):''}
+ ${ME&&t.id===ME.team?launchBanner()+todayPanel(t):''}
  ${xTeamPanel(t)}
  ${ME&&t.id===ME.team&&!hasAvatar()?`<div class="avbanner" data-go="avatar">${avatarSVG({},70)}<div><b class="f" style="font-size:24px">Create your own avatar! 🎨</b><div>Choose a cute character, then dress it up with your stars in the Bee Shop!</div></div><button class="y">Let’s go →</button></div>`:''}
  <div class="acts">
