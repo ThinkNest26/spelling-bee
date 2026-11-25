@@ -135,6 +135,9 @@ function ago(t){if(!t)return '—';const d=(Date.now()-new Date(t))/1000;if(d<90
 
 let TAB='dash',WROWS=[],HAVE=new Set(),WTEAM='buz',sb=null,USER=null,KIDS=[],PROG={},F={grade:'all',cls:'all',q:''},SORT={k:'grade',d:1},SEL=new Set();
 if(READY){try{sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY)}catch(e){}}
+// Supabase sends at most 1,000 rows per request, so read big tables in batches of 1,000 until everything is loaded.
+async function ALL(mk,max){const N=1000,out=[];max=max||100000;for(let f=0;f<max;){const {data,error}=await mk().range(f,Math.min(f+N,max)-1);if(error)return {data:out,error};const d=data||[];out.push(...d);if(d.length<Math.min(N,max-f))break;f+=d.length}return {data:out,error:null}}
+
 let RECOVERY=false;try{sb&&sb.auth.onAuthStateChange(ev=>{if(ev==='PASSWORD_RECOVERY'){RECOVERY=true;start()}})}catch(e){}
 
 function renderLogin(msg,mode){mode=mode||'in';setTimeout(kidsLink,0);
@@ -181,7 +184,7 @@ async function start(){
 }
 async function load(){
  $('#app').innerHTML='<p class="muted">Loading…</p>';
- const [{data:k,error:e1},{data:p,error:e2}]=await Promise.all([sb.from('students').select('*').order('grade').order('class_name').order('first_name'),sb.from('progress').select('*')]);
+ const [{data:k,error:e1},{data:p,error:e2}]=await Promise.all([ALL(()=>sb.from('students').select('*').order('grade').order('class_name').order('first_name').order('id')),ALL(()=>sb.from('progress').select('*').order('student_id'))]);
  if(e1||e2){$('#app').innerHTML='<div class="card"><b>Couldn’t load the data.</b> Please refresh the page.</div>';return}
  KIDS=k||[];PROG={};(p||[]).forEach(x=>PROG[x.student_id]=x);await Promise.all([loadWords(),loadSchool(),semiCheck()]);setHeader();render();
 }
@@ -478,7 +481,7 @@ let SGR=null,SGERR=false,SGG=null,SGCLS='all';const SGCONT={};
 const SGAREA={S:'Spelling',G:'Grammar',P:'Punctuation',V:'Vocabulary',R:'Reading'};
 const SGSKILL={F:'Finding information',I:'Inference',M:'Word meaning',O:'Order and main ideas',A:'Author’s choices'};
 const SGTYPE={D:'Listen and spell',C:'Choose the right answer',E:'Find the mistake',W:'Write it correctly'};
-async function sgLoad(){const {data,error}=await sb.from('sb_gl_results').select('*').order('created_at',{ascending:false});SGR=data||[];SGERR=!!error}
+async function sgLoad(){const {data,error}=await ALL(()=>sb.from('sb_gl_results').select('*').order('created_at',{ascending:false}));SGR=data||[];SGERR=!!error}
 async function sgCont(g){if(!(g in SGCONT)){try{const r=await fetch(`content/gl-grade${g}.json`,{cache:'no-cache'});SGCONT[g]=await r.json()}catch(e){SGCONT[g]=null}}return SGCONT[g]}
 function sgP(r,n){return n?Math.round(100*r/n):0}
 function sgC(p){return p>=80?'#1E9E5A':p>=50?'#C98A00':'#D64545'}
@@ -532,7 +535,7 @@ function xSplit(s){return [...new Set(String(s||'').split(/[\n,;]+/).map(x=>x.tr
 function xSetupMsg(){return `<div class="card" style="text-align:center;padding:30px"><div style="font-size:44px">🛠️</div><h2>One quick step first</h2><p class="muted">Run <b>setup-sb-plus.sql</b> in Supabase to switch on weekly words and spelling insights.</p></div>`}
 
 /* ---------- 🗓 weekly words ---------- */
-async function wkLoad(){const [{data:w,error:e1},{data:r,error:e2}]=await Promise.all([sb.from('sb_weekly').select('*').order('created_at',{ascending:false}).limit(60),sb.from('sb_weekly_results').select('*').limit(5000)]);
+async function wkLoad(){const [{data:w,error:e1},{data:r,error:e2}]=await Promise.all([sb.from('sb_weekly').select('*').order('created_at',{ascending:false}).limit(60),ALL(()=>sb.from('sb_weekly_results').select('*').order('id'),20000)]);
  if(e1||e2){WK=false;return}WK=w||[];WKR=r||[]}
 async function renderWeekly(){if(WK===null||Date.now()-(renderWeekly.t||0)>60000){renderWeekly.t=Date.now();$('#app').innerHTML=tabs()+'<p class="muted">Loading weekly words…</p>';await wkLoad()}
  if(WK===false){$('#app').innerHTML=tabs()+xSetupMsg();bindTabs();return}
@@ -588,10 +591,10 @@ function wkBind(){const g=$('#wkg');if(g)g.onchange=e=>{WKG=+e.target.value;rend
 
 /* ---------- 🔎 spelling insights: error patterns, sentences, family challenges, reading support ---------- */
 async function insLoad(){const since=new Date(Date.now()-120*864e5).toISOString();
- const q=await Promise.all([sb.from('sb_mistakes').select('student_id,word,typed,created_at').gte('created_at',since).order('created_at',{ascending:false}).limit(8000),
-  sb.from('sb_review').select('student_id,word,mastered,due'),sb.from('sb_sentences').select('*').order('created_at',{ascending:false}).limit(600),
-  sb.from('sb_family').select('student_id,week,note,grownup'),sb.from('sb_support').select('student_id')]);
- const hm=await sb.from('sb_hometest').select('*');
+ const q=await Promise.all([ALL(()=>sb.from('sb_mistakes').select('student_id,word,typed,created_at').gte('created_at',since).order('created_at',{ascending:false}).order('id',{ascending:false}),20000),
+  ALL(()=>sb.from('sb_review').select('student_id,word,mastered,due').order('student_id').order('word')),sb.from('sb_sentences').select('*').order('created_at',{ascending:false}).limit(600),
+  ALL(()=>sb.from('sb_family').select('student_id,week,note,grownup').order('student_id').order('week')),ALL(()=>sb.from('sb_support').select('student_id').order('student_id'))]);
+ const hm=await ALL(()=>sb.from('sb_hometest').select('*').order('student_id').order('week'));
  if(q.some(r=>r.error)){INS=false;return}
  INS={mis:q[0].data||[],rev:q[1].data||[],sent:q[2].data||[],fam:q[3].data||[],sup:new Set((q[4].data||[]).map(r=>r.student_id)),home:hm&&!hm.error?(hm.data||[]):null}}
 function insKids(){return KIDS.filter(k=>k.active!==false&&(INSF.grade==='all'||+k.grade===+INSF.grade)&&(INSF.cls==='all'||k.class_name===INSF.cls))
