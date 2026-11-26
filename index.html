@@ -805,7 +805,7 @@ async function actwLoad(){if(!ME)return;const r=await xRun('sb_actw_mine',{p_cod
   a.filter(w=>!srv.includes(w)).slice(0,150).forEach(w=>xRun('sb_actw_mark',{p_code:ME.code,p_act:id,p_word:w}));if(!actLeftWords(id).length&&actTarget(id).length)actMark(id)});
  if(ch){actSave();if(['team','home'].includes(V.screen))render()}}
 function actProg(id){return `<div class="muted small" style="text-align:center;margin:4px 0 8px">For the semi-final: <b>${actDoneN(id)} of ${actTarget(id).length}</b> words done${actLeftWords(id).length?'':' ✅'}</div>`}
-function actAfterRender(){if(!ME||V.team!==ME.team)return;const sc=V.screen;
+function actAfterRender(){try{semiRulesCheck()}catch(e){}if(!ME||V.team!==ME.team)return;const sc=V.screen;
  if(sc==='done'&&TS&&!TS._a){TS._a=1;actMark('test')}
  if(sc==='realbee'&&RB&&RB.done&&!RB._a){RB._a=1;actMark('realbee')}
  if(G&&G.done&&!G._a&&['ghive','gcatch','ggarden','grace','gballoon'].includes(G.kind)&&sc===G.kind){G._a=1;actMark(G.kind)}
@@ -857,6 +857,34 @@ function fwLaunch(box,delay){setTimeout(()=>{if(!box.isConnected)return;const W=
 function confettiWave(box,n){const cols=['#F5B700','#FFD54A','#F472B6','#60A5FA','#34D399','#A78BFA','#FB923C'];let h='';
  for(let i=0;i<n;i++){const isE=i%4===0;h+=`<i class="cf" style="left:${Math.random()*100}vw;animation-delay:${(Math.random()*1).toFixed(2)}s;animation-duration:${(2.2+Math.random()*1.8).toFixed(2)}s;${isE?'':'background:'+cols[i%cols.length]+';'}">${isE?['🐝','⭐','🏅','🎉','✨'][i%5]:''}</i>`}
  const w=document.createElement('div');w.style.cssText='position:absolute;inset:0;pointer-events:none;overflow:hidden';w.innerHTML=h;box.appendChild(w);setTimeout(()=>w.remove(),6000)}
+/* 📜 semi-final rules: shown when a child qualifies; they must tick "I have read and understood" to carry on.
+   Shown again before the semi-final starts if not yet confirmed on this device. */
+function semiAckKey(){return 'sb-semirules-'+(ME?ME.code+'-'+ME.grade:'demo')}
+function semiAck(){try{return localStorage.getItem(semiAckKey())==='1'}catch(e){return false}}
+function semiRulesList(g){const secs=+g<=1?90:60;return [
+ ['📅','When','The semi-finals are on <b>Thursday 14 – Friday 15 January</b>, here on this website. Your semi-final opens on those days only.'],
+ ['1️⃣','One go only','You can do your semi-final <b>once</b>. When you press <b>Next</b>, your answer is final, so check each word carefully.'],
+ ['🌱','3 rounds','There are 3 rounds that get harder: warm-up words, tricky words, then the hardest words. <b>All the words come from your own list.</b>'],
+ ['⏱','Timer','You have <b>'+secs+' seconds</b> for each word. When the time runs out, the next word comes.'],
+ ['🔊','Listening','You can hear each word <b>up to 3 times</b>, and ask for the <b>sentence</b> and the <b>meaning</b> once each.'],
+ ['🙋','Do it on your own','No help from anyone, no books and no other apps or tabs. <b>Stay on the semi-final page</b> until you finish. Your teacher can see if you leave it.'],
+ ['🎧','Be ready','Find a quiet place, turn the sound up or use headphones, charge your device and make sure the internet is working.'],
+ ['🏆','Results','The best scores go to the <b>Grand Final on 22 January</b>. If scores are the same, the quicker time wins. Your teacher will tell you the results.']]}
+function semiRulesShow(then,g){g=g??(ME?ME.grade:3);if(document.getElementById('semirules'))return;const L=semiRulesList(g);
+ const o=document.createElement('div');o.id='semirules';o.setAttribute('role','dialog');o.setAttribute('aria-modal','true');o.setAttribute('aria-label','Semi-final rules');
+ o.style.cssText='position:fixed;inset:0;z-index:9980;background:rgba(31,42,68,.55);display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow:auto';
+ o.innerHTML=`<div style="background:#fff;border:5px solid var(--honey);border-radius:30px;max-width:640px;width:100%;padding:20px 22px;margin:auto;box-shadow:0 20px 50px rgba(0,0,0,.25)">
+  <div style="text-align:center"><div style="font-size:54px;line-height:1">🏅</div><h2 class="f" style="font-size:30px;margin:4px 0">Semi-final rules</h2><p class="muted" style="margin:0 0 10px">Please read these carefully${ME?', '+esc(ME.first_name):''}. You can ask a grown-up to read them with you.</p>
+  <button class="w" id="srread" style="margin-bottom:10px">🔊 Read it to me</button></div>
+  <div style="display:grid;gap:8px">${L.map(([e,t,d])=>`<div style="display:flex;gap:10px;align-items:flex-start;background:#FFFBEF;border:2px solid #F1E3B4;border-radius:16px;padding:10px 12px"><div style="font-size:28px;line-height:1.1">${e}</div><div><b class="f" style="font-size:18px">${t}</b><div style="font-size:16px;line-height:1.4">${d}</div></div></div>`).join('')}</div>
+  <label style="display:flex;gap:10px;align-items:center;margin:14px 0 10px;background:#EAF6FF;border:2px solid #9CCBEA;border-radius:16px;padding:12px 14px;cursor:pointer;font-weight:800;font-size:18px">
+   <input type="checkbox" id="srok" style="width:28px;height:28px;flex:none;cursor:pointer"> I have read and understood the semi-final rules.</label>
+  <div style="text-align:center"><button class="y" id="srgo" disabled style="font-size:21px;padding:13px 28px">Continue →</button></div></div>`;
+ document.body.appendChild(o);
+ const ok=o.querySelector('#srok'),go=o.querySelector('#srgo');ok.onchange=()=>{go.disabled=!ok.checked};
+ o.querySelector('#srread').onclick=()=>say('Semi-final rules. '+L.map(([,t,d])=>t+'. '+d.replace(/<[^>]+>/g,'')).join(' ')+' Now tick the box to say you have read and understood the rules.');
+ go.onclick=()=>{if(!ok.checked)return;try{if(ME)localStorage.setItem(semiAckKey(),'1')}catch(e){}try{speechSynthesis.cancel()}catch(e){}o.remove();if(then)then()}}
+function semiRulesCheck(){if(!ME||!XS.semi||XS.semi.done||semiAck()||document.getElementById('s85')||document.getElementById('sbbreak'))return;if(!['home','team','xsemi'].includes(V.screen))return;setTimeout(()=>{if(!semiAck())semiRulesShow()},700)}
 function semi85Party(who){who=who||ME;const old=document.getElementById('s85');if(old)old.remove();
  const g=who.grade===0?'KG2':'Grade '+who.grade;
  const d=document.createElement('div');d.id='s85';d.className='party';d.style.cssText='z-index:9999;background:rgba(20,34,66,.72);overflow:hidden';
@@ -864,7 +892,7 @@ function semi85Party(who){who=who||ME;const old=document.getElementById('s85');i
  const card=document.createElement('div');card.className='pcard';card.style.maxWidth='520px';
  card.innerHTML=`<div class="pemo" style="font-size:84px">🏅</div><div class="pcheer">Congratulations, ${esc(who.first_name)}!</div><div style="font-size:21px;font-weight:800;margin:10px 0;line-height:1.4">You’ve secured 85% of your words and finished every activity.<br>You’re in the ${g} semi-final! 🎉</div><div class="pclap">👏👏👏</div><div class="muted" style="font-size:16px;margin:8px 0 14px">The semi-finals are on <b>${SEMI_DATES}</b>, here on the website. Keep practising to get ready!</div><button class="y" style="font-size:20px;padding:12px 26px" id="s85ok">Hooray! 🐝</button>`;
  d.appendChild(card);document.body.appendChild(d);
- const close=()=>{d.classList.add('out');setTimeout(()=>d.remove(),400)};card.querySelector('#s85ok').onclick=close;
+ const close=()=>{d.classList.add('out');setTimeout(()=>d.remove(),400)};card.querySelector('#s85ok').onclick=()=>{close();setTimeout(()=>semiRulesShow(null,who.grade),450)};
  try{happySound(true)}catch(e){}
  confettiWave(sky,60);setTimeout(()=>confettiWave(sky,50),1800);setTimeout(()=>confettiWave(sky,50),3600);
  [0,350,800,1200,1700,2300,2700,3200,3700,4300,4800,5400,6000,6500].forEach(t=>fwLaunch(sky,t+300));
@@ -1033,10 +1061,11 @@ const XSF={online:{e:'💻',t:'Online semi-final',d:'On your semi-final day, you
  written:{e:'📝',t:'Written round, then out loud',d:'First, everyone writes some words. The spellers with the best scores then spell out loud on stage, and the best go to the Grand Final!'},
  points:{e:'⭐',t:'Points rounds',d:'Everyone spells the same number of words out loud. You get a point for each word you spell right. The highest scores go to the Grand Final!'}};
 function xSemiDays(){const m=XS.semi;if(!m||!m.day)return null;return Math.round((Date.parse(String(m.day).slice(0,10)+'T12:00:00Z')-Date.parse(dubaiDay()+'T12:00:00Z'))/864e5)}
-function xSemiWhen(){const m=XS.semi,n=xSemiDays();if(n===null)return SEMI_DATES;const d=xDay(String(m.day).slice(0,10));return n>1?`${d} · in ${n} days`:n===1?`${d} · tomorrow!`:n===0?'Today! 🎉':`${d}`}
-function xSemiBanner(){const m=XS.semi;if(!m)return '';const n=xSemiDays();if(n!==null&&n<-3)return '';
+function xSemiEnd(){const m=XS.semi;return m&&(m.day_end||m.day)?String(m.day_end||m.day).slice(0,10):null}
+function xSemiWhen(){const m=XS.semi,n=xSemiDays();if(n===null)return SEMI_DATES;const s=String(m.day).slice(0,10),e=xSemiEnd(),d=xDay(s)+(e&&e!==s?' – '+xDay(e):'');const td=dubaiDay();return n>1?`${d} · in ${n} days`:n===1?`${d} · starts tomorrow!`:td<=e?`${d} · open now! 🎉`:`${d}`}
+function xSemiBanner(){const m=XS.semi;if(!m)return '';const n=xSemiDays(),e=xSemiEnd();if(n!==null&&e&&Math.round((Date.parse(dubaiDay()+'T12:00:00Z')-Date.parse(e+'T12:00:00Z'))/864e5)>3)return '';
  if(m.online&&m.done)return `<div class="xban semi"><div class="e">🏅</div><div style="flex:1"><b class="f" style="font-size:22px">Semi-final done! You spelt ${m.score} / ${m.total}</b><div>Your teacher will tell you who goes to the Grand Final.</div></div><button class="w" data-x="semi">See →</button></div>`;
- if(m.online&&m.open)return `<div class="xban semi"><div class="e">✏️</div><div style="flex:1"><b class="f" style="font-size:24px">Your semi-final is today!</b><div>${m.n} words · one go · take your time</div></div><button class="y" data-x="semi">Start →</button></div>`;
+ if(m.online&&m.open)return `<div class="xban semi"><div class="e">✏️</div><div style="flex:1"><b class="f" style="font-size:24px">Your semi-final is open now!</b><div>${m.n} words · one go · take your time</div></div><button class="y" data-x="semi">Start →</button></div>`;
  return `<div class="xban semi"><div class="e">🏅</div><div style="flex:1"><b class="f" style="font-size:24px">You’re in the ${m.grade===0?'KG2':'Grade '+m.grade} semi-final!</b><div>${esc(xSemiWhen())}${m.place?' · '+esc(m.place):''}</div></div><button class="y" data-x="semi">Get ready →</button></div>`}
 function xSemiWords(){const t=V.team;const own=(WORDS[t]||[]).slice().sort((a,b)=>semiDiff(a)-semiDiff(b)),n=own.length;
  const lo=own.slice(0,Math.ceil(n/2)),mid=own.slice(Math.ceil(n/2),Math.ceil(n*0.8)),hi=own.slice(Math.ceil(n*0.8));
@@ -1155,7 +1184,7 @@ document.addEventListener('click',e=>{if(!ME)return;
  if(d.x){if(!V.team)V.team=ME.team;
   if(d.x==='semiprac'){V.team=ME.team;xStart('semi',xSemiWords(),{title:'🏅 Semi-final practice'});return}
   if(d.x==='stestsend'){if(XD&&XD.mode==='stest')xFinish();return}
-  if(d.x==='stest'){const m=XS.semi;if(!m||!m.open||m.done||!Array.isArray(m.words)||!m.words.length){note('Your semi-final isn’t open right now.');return}V.team=ME.team;m.started=true;xStart('stest',m.words.slice(),{title:'🏅 My semi-final'});return}
+  if(d.x==='stest'){const m=XS.semi;if(!m||!m.open||m.done||!Array.isArray(m.words)||!m.words.length){note('Your semi-final isn’t open right now.');return}if(!semiAck()){semiRulesShow(()=>b.click());return}V.team=ME.team;m.started=true;xStart('stest',m.words.slice(),{title:'🏅 My semi-final'});return}
   if(d.x==='review'){V.team=ME.team;const due=shuffle(xDue()).slice(0,10);xStart('review',due,{title:'🧠 My tricky words'});return}
   V.screen={rules:'xrules',sent:'xsent',weekly:'xweekly',family:'xfamily',semi:'xsemi'}[d.x]||'team';if(d.x==='sent')XW=null;if(['sent','weekly','family'].includes(d.x)){V.team=ME.team;xLoad(true)}render();window.scrollTo(0,0);return}
  if(d.xn){if(!XD)return;if(d.xn==='hear'){if(XD.semi)semiHear();else xSayW(XD.list[XD.i]);$('#ans')?.focus();return}if(d.xn==='sent'||d.xn==='mean'){semiAsk(d.xn);$('#ans')?.focus();return}if(d.xn==='check'){xCheck();return}if(d.xn==='next'){xNext();return}}
