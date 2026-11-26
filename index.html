@@ -207,6 +207,9 @@ button.mv{font-size:28px;padding:10px 34px}
 .remme{display:inline-flex;align-items:center;gap:8px;margin-top:12px;font-weight:800;font-size:17px;cursor:pointer;background:#FFF8E1;border:2px solid #F1D27A;border-radius:14px;padding:8px 14px}.remme input{width:24px;height:24px;cursor:pointer}
 .savedbox{margin:2px 0 6px}.savedrow{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}.savedkid{position:relative;display:inline-flex}.savedkid .y{font-size:20px;padding:12px 22px}
 .savedx{position:absolute;top:-8px;right:-8px;width:26px;height:26px;border-radius:50%;padding:0;border:2px solid #fff;background:#6B7280;color:#fff;font-size:13px;font-weight:800;cursor:pointer;line-height:1}
+.sbclock{display:inline-flex;align-items:center;gap:4px;background:#fff;color:#1F2A44;border:2px solid #F5B700;border-radius:999px;padding:5px 12px;font-weight:800;font-size:16px;white-space:nowrap;font-variant-numeric:tabular-nums;box-shadow:0 2px 0 rgba(0,0,0,.12)}
+.sbclock.soon{background:#FFF1E0;border-color:#F97316;color:#9A3412}.sbclock.idle{opacity:.6}.sbclock.idle b::after{content:' ⏸';font-size:12px}
+
 #sbbreak{position:fixed;inset:0;z-index:9990;display:grid;place-items:center;padding:16px;background:radial-gradient(circle at 50% 30%,#FFF6D2,#FFE7A0 60%,#F9D46B);overflow:auto}
 #sbbreak .brkcard{max-width:620px;width:100%;background:#fff;border:6px solid var(--honey);border-radius:40px;padding:22px 26px 26px;text-align:center;box-shadow:0 20px 50px rgba(31,42,68,.25);animation:ppop .6s cubic-bezier(.2,1.6,.4,1)}
 #sbbreak .brkbee{width:170px;margin:-6px auto 4px;animation:brkfloat 2.6s ease-in-out infinite}#sbbreak .brkbee svg{width:100%;height:auto;display:block}
@@ -517,7 +520,14 @@ function brkShow(fresh){const on=ME&&onBreak();let o=document.getElementById('sb
  <div class="brkideas"><span>🤸 Stretch and move</span><span>💧 Drink some water</span><span>🌳 Play outside</span><span>📚 Read a book</span><span>👀 Rest your eyes</span></div>
  <div class="brkback"><div>The Spelling Bee will open again in</div><div class="brkclock" id="brkclock" aria-live="off">${brkClock(b.until-Date.now())}</div><div>If you want to practise more, come back at <b>${brkTime(b.until)}</b>. See you soon! 👋</div></div></div>`;
  if(fresh){try{say('Wow, '+ME.first_name+'! You have practised for a whole hour! Now it is time for a break away from the screen. Stretch, drink some water, or play outside. If you want to practise more, come back in two hours. See you soon!')}catch(e){}}}
-setTimeout(brkShow,600);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')brkShow()});
+setTimeout(brkShow,600);
+/* ⏱ practice timer in the top corner: counts this session's active practice time; at 1 hour the break screen appears */
+function brkNowSecs(){const b=brkMine();if(!b)return 0;const now=Date.now();if(now-(b.last||0)>BRK_GAP)return 0;let x=b.secs||0;
+ if(document.visibilityState==='visible'&&now-TACT<60000&&!onBreak())x+=Math.min(5,Math.max(0,(now-(b.last||now))/1000));return Math.min(BRK_AFTER,x)}
+function clockTxt(){const x=Math.floor(brkNowSecs()),m=Math.floor(x/60),sx=x%60;return String(m).padStart(2,'0')+':'+String(sx).padStart(2,'0')}
+function clockChip(){return `<span class="sbclock" title="Your practice time. At 1 hour it’s time for a break." aria-label="Practice time">⏱ <b class="sbct">${clockTxt()}</b></span>`}
+setInterval(()=>{if(!ME)return;const els=document.querySelectorAll('.sbclock');if(!els.length)return;const x=brkNowSecs(),idle=!(document.visibilityState==='visible'&&Date.now()-TACT<60000),t=clockTxt();
+ els.forEach(e=>{const b=e.querySelector('.sbct');if(b)b.textContent=t;e.classList.toggle('soon',x>=50*60);e.classList.toggle('idle',idle)})},1000);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')brkShow()});
 setInterval(tSend,60000);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')tSend()});setTimeout(tSend,4000);
 window.addEventListener('online',flush);
 let LASTSTAR=true;function dubaiDay(){return new Date(Date.now()+4*3600e3).toISOString().slice(0,10)}
@@ -644,7 +654,7 @@ function burst(){const b=document.createElement('div');b.className='burst';for(l
 
 /* ---------- views ---------- */
 let V={screen:'home',team:null};
-function top(){return `<div class="top"><div style="width:40px;height:40px">${BEE}</div><div><div class="t">Spelling Bee</div><div class="s">${ME?'Hi '+esc(ME.first_name)+'! 🐝':'Practice Zone'}</div></div>${ME?`<button class="topav" data-go="avatar" title="My avatar">${avatarSVG(myP().avatar,44)}</button>`:''}${ME&&streakNow(ME.team)?`<div class="stars flamechip">${flameBadge(streakNow(ME.team))} ${streakNow(ME.team)}</div>`:''}<div class="stars">⭐ ${totalStars()}</div><button class="kspdb" data-kspd="1" title="How Kate reads">${{fast:'🐇',slow:'🐢',vslow:'🐌'}[kSpeed()]||'🐢'}</button>${HAVE.size?'':'<button data-voice="1">🔊 Voice</button>'}</div>`}
+function top(){return `<div class="top"><div style="width:40px;height:40px">${BEE}</div><div><div class="t">Spelling Bee</div><div class="s">${ME?'Hi '+esc(ME.first_name)+'! 🐝':'Practice Zone'}</div></div>${ME?`<button class="topav" data-go="avatar" title="My avatar">${avatarSVG(myP().avatar,44)}</button>`:''}${ME&&streakNow(ME.team)?`<div class="stars flamechip">${flameBadge(streakNow(ME.team))} ${streakNow(ME.team)}</div>`:''}<div class="stars">⭐ ${totalStars()}</div><button class="kspdb" data-kspd="1" title="How Kate reads">${{fast:'🐇',slow:'🐢',vslow:'🐌'}[kSpeed()]||'🐢'}</button>${HAVE.size?'':'<button data-voice="1">🔊 Voice</button>'}${ME?clockChip():''}</div>`}
 function voicePanel(){pv();const g=goodVoices();const cur=voice&&voice.name;
  let m=document.getElementById('vmodal');if(!m){m=document.createElement('div');m.id='vmodal';document.body.appendChild(m)}
  m.innerHTML=`<div class="vback" data-vclose="1"><div class="vcard"><h2 style="font-size:26px">🔊 Choose a voice</h2><p class="muted" style="margin:6px 0 14px">All voices here speak <b>UK English</b>. Tap <b>Try</b> to listen, then pick the one that sounds nicest. It’s remembered on this device.</p>
@@ -1278,7 +1288,7 @@ function champSplash(){if(CHAMP_DONE||document.getElementById('champ'))return;co
 function curSchool(){if(FOR_SCHOOLS)return null;if(ME&&ME.school)return ME.school;if(SCH&&!SCH.missing)return SCH;return null}
 async function loadPlans(){if(PLANLIST)return;const c=db();if(!c)return;try{const {data}=await c.from('plans').select('*').order('sort');if(Array.isArray(data)&&data.length){PLANLIST=data;if(V.screen==='home'&&!curSchool())render()}}catch(e){}}
 function fmtDay(d,opt){try{return new Date(d+'T12:00:00').toLocaleDateString('en-GB',opt||{weekday:'long',day:'numeric',month:'long',year:'numeric'})}catch(e){return d}}
-function signBar(forSchools){return `<div class="signbar">${forSchools===true?'<a class="forsch" href="./?for=schools">🏫 Are you a school? Try the Spelling Bee free for 7 days →</a>':''}${forSchools==='school'?'<span style="flex:1"></span><a class="signbtn" href="teacher.html" style="text-decoration:none">👩‍🏫 Teachers’ page</a>':''}${ME?`<span class="signme">👋 ${esc(ME.first_name)} · ⭐ ${totalStars()}</span><button class="signbtn" data-logout="1">Sign out</button>`:''}<button class="signbtn" data-signin="1">🔑 Sign in</button></div>`}
+function signBar(forSchools){return `<div class="signbar">${forSchools===true?'<a class="forsch" href="./?for=schools">🏫 Are you a school? Try the Spelling Bee free for 7 days →</a>':''}${forSchools==='school'?'<span style="flex:1"></span><a class="signbtn" href="teacher.html" style="text-decoration:none">👩‍🏫 Teachers’ page</a>':''}${ME?`${clockChip()}<span class="signme">👋 ${esc(ME.first_name)} · ⭐ ${totalStars()}</span><button class="signbtn" data-logout="1">Sign out</button>`:''}<button class="signbtn" data-signin="1">🔑 Sign in</button></div>`}
 function signModal(){let m=document.getElementById('smodal');if(!m){m=document.createElement('div');m.id='smodal';document.body.appendChild(m)}
  m.innerHTML=`<div class="smodal" data-sclose="1"><div class="sbox"><div class="f" style="font-size:30px">Sign in 🐝</div><p class="muted" style="margin-top:4px">Who are you?</p>
  <div class="schoices"><button class="schoice" data-sstudent="1"><div class="e">🧒</div><div><b>Student</b><span>${ME?'Carry on as '+esc(ME.first_name):'Type your bee code'}</span></div></button>
