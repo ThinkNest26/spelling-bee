@@ -193,6 +193,15 @@ button.mv{font-size:28px;padding:10px 34px}
 .party .cf{position:absolute;top:-30px;width:12px;height:16px;border-radius:3px;font-style:normal;font-size:26px;line-height:1;animation:cfall 2s linear forwards}
 .party .cf:not(:empty){width:auto;height:auto;background:none}
 @keyframes cfall{to{transform:translateY(112vh) rotate(540deg)}}
+.brk{}#sbbreak{position:fixed;inset:0;z-index:9990;display:grid;place-items:center;padding:16px;background:radial-gradient(circle at 50% 30%,#FFF6D2,#FFE7A0 60%,#F9D46B);overflow:auto}
+#sbbreak .brkcard{max-width:620px;width:100%;background:#fff;border:6px solid var(--honey);border-radius:40px;padding:22px 26px 26px;text-align:center;box-shadow:0 20px 50px rgba(31,42,68,.25);animation:ppop .6s cubic-bezier(.2,1.6,.4,1)}
+#sbbreak .brkbee{width:170px;margin:-6px auto 4px;animation:brkfloat 2.6s ease-in-out infinite}#sbbreak .brkbee svg{width:100%;height:auto;display:block}
+#sbbreak .bwl,#sbbreak .bwr{animation:brkwing .35s ease-in-out infinite alternate}
+@keyframes brkfloat{50%{transform:translateY(-10px)}}@keyframes brkwing{to{opacity:.55}}
+#sbbreak h2{font-size:30px;color:var(--ink);margin:4px 0 8px}#sbbreak .brkt{font-size:20px;margin:0 0 12px}
+#sbbreak .brkideas{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:0 0 14px}#sbbreak .brkideas span{background:var(--honeyL,#FFF3C4);border-radius:999px;padding:8px 14px;font-weight:800;font-size:17px}
+#sbbreak .brkback{font-size:18px;margin:0;background:#EAF6FF;border-radius:20px;padding:12px}#sbbreak .brkclock{font-family:Fredoka,Nunito,sans-serif;font-weight:700;font-size:56px;line-height:1.1;color:#1F2A44;letter-spacing:2px;font-variant-numeric:tabular-nums;margin:2px 0 4px}
+@media (prefers-reduced-motion:reduce){#sbbreak .brkbee,#sbbreak .bwl,#sbbreak .bwr,#sbbreak .brkcard{animation:none}}
 .pcard{position:relative;background:#fff;border:5px solid var(--honey);border-radius:36px;padding:26px 38px;text-align:center;box-shadow:0 18px 50px rgba(31,42,68,.25);animation:ppop .55s cubic-bezier(.2,1.6,.4,1)}
 @keyframes ppop{from{transform:scale(.3) rotate(-12deg);opacity:0}}
 .pemo{font-size:96px;line-height:1;animation:pjump .7s ease-in-out infinite alternate}
@@ -441,6 +450,51 @@ async function flush(){if(flushing||!ME||!db())return;flushing=true;
   if(!ok)break;const now=readQ();if(now.length&&now[0].id===it.id)now.shift();writeQ(now)}}
  finally{flushing=false}}
 setInterval(()=>{if(ME&&readQ().length)flush()},20000);
+/* ⏱ active time: counts seconds while a signed-in child is using the page (paused when idle 60 s or hidden), sent every minute */
+const TKEY='sb-time-pending';let TACT=Date.now(),TSENDING=false;
+['pointerdown','keydown','touchstart','scroll','input'].forEach(e=>window.addEventListener(e,()=>{TACT=Date.now()},{passive:true,capture:true}));
+function tPend(){try{const o=JSON.parse(localStorage.getItem(TKEY)||'null');return o&&o.code?o:null}catch(e){return null}}
+function tAdd(n){if(!ME)return;let o=tPend();if(!o||o.code!==ME.code)o={code:ME.code,secs:0};o.secs+=n;try{localStorage.setItem(TKEY,JSON.stringify(o))}catch(e){}}
+async function tSend(){if(TSENDING)return;const o=tPend();if(!o||o.secs<1||!db())return;TSENDING=true;try{const n=Math.min(o.secs,120);const {error}=await db().rpc('sb_time_add',{p_code:o.code,p_secs:n});
+ if(!error){const now=tPend();if(now&&now.code===o.code){now.secs=Math.max(0,now.secs-n);try{localStorage.setItem(TKEY,JSON.stringify(now))}catch(e){}}}}catch(e){}finally{TSENDING=false}}
+setInterval(()=>{if(ME&&document.visibilityState==='visible'&&Date.now()-TACT<60000&&!onBreak()){tAdd(5);brkTick(5)}brkShow()},5000);
+/* 🐝 healthy break: after 1 hour of practice (gaps under 30 min count as the same session) the child is asked to take
+   a 2-hour off-screen break on this device. Never starts in the middle of the online semi-final. */
+const BRKKEY='sb-break',BRK_AFTER=3600,BRK_FOR=2*3600e3,BRK_GAP=30*60e3;
+function brkGet(){try{const o=JSON.parse(localStorage.getItem(BRKKEY)||'{}');return o&&typeof o==='object'?o:{}}catch(e){return {}}}
+function brkMine(){if(!ME)return null;const all=brkGet();return all[ME.code]||{secs:0,last:0,until:0}}
+function brkPut(b){if(!ME)return;const all=brkGet();all[ME.code]=b;Object.keys(all).forEach(k=>{const x=all[k];if(k!==ME.code&&x&&Date.now()-Math.max(x.last||0,x.until||0)>864e5)delete all[k]});try{localStorage.setItem(BRKKEY,JSON.stringify(all))}catch(e){}}
+function onBreak(){const b=brkMine();return !!(b&&b.until>Date.now())}
+function brkTick(n){const b=brkMine();if(!b)return;const now=Date.now();if(now-(b.last||0)>BRK_GAP)b.secs=0;b.secs+=n;b.last=now;
+ if(b.secs>=BRK_AFTER&&V.screen!=='stest'){b.until=now+BRK_FOR;b.secs=0;brkPut(b);brkShow(true);brkServer(true);return}brkPut(b)}
+/* the break is also kept on the server, so switching to another device doesn't skip it */
+async function brkServer(start){if(!ME||!db())return;try{const {data,error}=await db().rpc(start?'sb_break_start':'sb_break_get',{p_code:ME.code});
+ if(error||!data||!data.until)return;const u=+data.until,b=brkMine();if(b&&u>Date.now()+5000&&Math.abs(u-(b.until||0))>60000&&(!start||u>b.until)){b.until=u;b.secs=0;brkPut(b);brkShow(!start)}}catch(e){}}
+setInterval(()=>{if(ME)brkServer(false)},60000);setTimeout(()=>{if(ME)brkServer(false)},2500);
+const BREAKBEE=`<svg viewBox="-16 -4 232 204" aria-hidden="true"><ellipse cx="28" cy="62" rx="30" ry="40" fill="#DDF0FF" stroke="#8EC5EA" stroke-width="4" transform="rotate(-30 28 62)" class="bwl"/><ellipse cx="172" cy="62" rx="30" ry="40" fill="#DDF0FF" stroke="#8EC5EA" stroke-width="4" transform="rotate(30 172 62)" class="bwr"/>
+<path d="M78 34 Q70 12 56 10" stroke="#1F2A44" stroke-width="5" fill="none" stroke-linecap="round"/><circle cx="55" cy="10" r="7" fill="#1F2A44"/><path d="M122 34 Q130 12 144 10" stroke="#1F2A44" stroke-width="5" fill="none" stroke-linecap="round"/><circle cx="145" cy="10" r="7" fill="#1F2A44"/>
+<circle cx="100" cy="112" r="72" fill="#FFC72C"/><path d="M40 140 Q100 158 160 140 L156 152 Q100 170 44 152Z" fill="#1F2A44"/><path d="M52 164 Q100 178 148 164 L140 172 Q100 186 60 172Z" fill="#1F2A44"/>
+<circle cx="74" cy="96" r="15" fill="#1F2A44"/><circle cx="126" cy="96" r="15" fill="#1F2A44"/><circle cx="79" cy="90" r="5.5" fill="#fff"/><circle cx="131" cy="90" r="5.5" fill="#fff"/>
+<ellipse cx="56" cy="122" rx="12" ry="8" fill="#FF8FA3" opacity=".75"/><ellipse cx="144" cy="122" rx="12" ry="8" fill="#FF8FA3" opacity=".75"/>
+<path d="M74 118 Q100 146 126 118" stroke="#1F2A44" stroke-width="6" fill="#fff" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+function brkTime(t){return new Date(t).toLocaleTimeString('en-GB',{hour:'numeric',minute:'2-digit',hour12:true})}
+function brkLeft(ms){const m=Math.max(1,Math.ceil(ms/60e3));return m>=60?Math.floor(m/60)+' h'+(m%60?' '+m%60+' min':''):m+' min'}
+let BRKT=null;
+function brkFreeze(on){[...document.body.children].forEach(el=>{if(el.id!=='sbbreak'){try{el.inert=on}catch(e){}if(on)el.setAttribute('aria-hidden','true');else el.removeAttribute('aria-hidden')}});
+ if(on){try{document.activeElement&&document.activeElement.blur()}catch(e){}try{window.speechSynthesis&&speechSynthesis.cancel()}catch(e){}}}
+function brkClock(ms){const t=Math.max(0,Math.ceil(ms/1000)),h=Math.floor(t/3600),m=Math.floor(t%3600/60),x=t%60;return h+':'+String(m).padStart(2,'0')+':'+String(x).padStart(2,'0')}
+function brkShow(fresh){const on=ME&&onBreak();let o=document.getElementById('sbbreak');
+ if(!on){if(o){o.remove();brkFreeze(false);clearInterval(BRKT);BRKT=null;if(ME)note('Welcome back! Ready to practise? 🐝')}return}const b=brkMine();
+ if(!o){o=document.createElement('div');o.id='sbbreak';o.setAttribute('role','dialog');o.setAttribute('aria-modal','true');o.setAttribute('aria-label','Time for a break');document.body.appendChild(o);fresh=true}
+ brkFreeze(true);if(!BRKT)BRKT=setInterval(()=>{const c=document.getElementById('brkclock');if(!onBreak()){brkShow();return}if(c)c.textContent=brkClock(brkMine().until-Date.now())},1000);
+ if(o.dataset.until===String(b.until)&&!fresh)return;o.dataset.until=String(b.until);
+ o.innerHTML=`<div class="brkcard"><div class="brkbee">${BREAKBEE}</div><h2 class="f">Wow, ${esc(ME.first_name)}! You’ve practised for a whole hour! 🎉</h2>
+ <p class="brkt">Your brain has worked really hard. Now it’s time for a <b>break away from the screen</b>.</p>
+ <div class="brkideas"><span>🤸 Stretch and move</span><span>💧 Drink some water</span><span>🌳 Play outside</span><span>📚 Read a book</span><span>👀 Rest your eyes</span></div>
+ <div class="brkback"><div>The Spelling Bee will open again in</div><div class="brkclock" id="brkclock" aria-live="off">${brkClock(b.until-Date.now())}</div><div>If you want to practise more, come back at <b>${brkTime(b.until)}</b>. See you soon! 👋</div></div></div>`;
+ if(fresh){try{say('Wow, '+ME.first_name+'! You have practised for a whole hour! Now it is time for a break away from the screen. Stretch, drink some water, or play outside. If you want to practise more, come back in two hours. See you soon!')}catch(e){}}}
+setTimeout(brkShow,600);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')brkShow()});
+setInterval(tSend,60000);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')tSend()});setTimeout(tSend,4000);
 window.addEventListener('online',flush);
 let LASTSTAR=true;function dubaiDay(){return new Date(Date.now()+4*3600e3).toISOString().slice(0,10)}
 function award(team,w,ok){const p=prog(team);p.sday=p.sday||{};bumpStreak(p,team);if(ok){const sec=(p.ok[w]||0)>=2,td=dubaiDay();if(sec&&p.sday[w]===td)LASTSTAR=false;else{p.stars++;LASTSTAR=true;if(sec)p.sday[w]=td}p.ok[w]=(p.ok[w]||0)+1}else{p.bad[w]=(p.bad[w]||0)+1}p.last[w]=!!ok;savePR();

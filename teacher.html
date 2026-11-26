@@ -188,7 +188,7 @@ async function load(){
  $('#app').innerHTML='<p class="muted">Loading…</p>';
  const [{data:k,error:e1},{data:p,error:e2}]=await Promise.all([ALL(()=>sb.from('students').select('*').order('grade').order('class_name').order('first_name').order('id')),ALL(()=>sb.from('progress').select('*').order('student_id'))]);
  if(e1||e2){$('#app').innerHTML='<div class="card"><b>Couldn’t load the data.</b> Please refresh the page.</div>';return}
- KIDS=k||[];PROG={};(p||[]).forEach(x=>PROG[x.student_id]=x);await Promise.all([loadWords(),loadSchool(),semiCheck()]);setHeader();render();
+ KIDS=k||[];PROG={};(p||[]).forEach(x=>PROG[x.student_id]=x);await Promise.all([loadWords(),loadSchool(),semiCheck(),loadTime()]);setHeader();render();
 }
 async function loadWords(){
  try{const {data,error}=await sb.rpc('teacher_words');if(!error&&Array.isArray(data)){WROWS=data;for(const t in TEAMS)TEAMS[t][2]=WROWS.filter(w=>w.team===t).length}}catch(e){}
@@ -474,10 +474,17 @@ function bindPlanBtns(){document.querySelectorAll('[data-goplan]').forEach(b=>b.
 function setHeader(){if(!SCHOOL)return;const h=document.querySelector('header .s');if(h)h.textContent=SCHOOL.name;
  const w=$('#who');if(w&&SCHOOL.is_admin&&!w.querySelector('#adminbtn')){const a=document.createElement('a');a.id='adminbtn';a.href='admin.html';a.textContent='🛠 Admin';a.style.cssText='color:#fff;font-weight:800;margin-right:6px';w.prepend(a)}}
 
+/* ⏱ time practising (needs setup-sb-time.sql) and ❌ mistakes (wrong attempts) */
+let TIME={},TIMEOK=false;
+async function loadTime(){TIME={};const wk=new Date(Date.now()+4*3600e3-6*864e5).toISOString().slice(0,10);const {data,error}=await ALL(()=>sb.from('sb_time').select('student_id,day,secs'));TIMEOK=!error;
+ (data||[]).forEach(r=>{const t=TIME[r.student_id]=TIME[r.student_id]||{all:0,wk:0};t.all+=r.secs||0;if(String(r.day)>=wk)t.wk+=r.secs||0})}
+function fmtT(s){s=s||0;if(!s)return '—';if(s<60)return '<1 min';const m=Math.round(s/60);return m<60?m+' min':Math.floor(m/60)+' h '+(m%60?m%60+' min':'')}
+function mistakes(id){const p=PROG[id];if(!p)return 0;if(typeof p.attempts==='number'&&typeof p.correct==='number')return Math.max(0,p.attempts-p.correct);return Object.values(p.tricky||{}).reduce((a,b)=>a+(+b||0),0)}
+function accuracy(id){const p=PROG[id];return p&&p.attempts?Math.round((p.correct||0)/p.attempts*100):null}
 function learnt(id){const p=PROG[id];if(!p)return 0;return Object.values(p.words||{}).filter(n=>n>=2).length}
 function tricky(id){const p=PROG[id];if(!p)return [];return Object.entries(p.tricky||{}).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0])}
 function visible(){const q=F.q.toLowerCase();return KIDS.filter(c=>(!F.nosur||!c.last_name)&&(F.grade==='all'||c.grade==F.grade)&&(F.cls==='all'||c.class_name===F.cls)&&(!q||fullName(c).toLowerCase().includes(q)||c.code.toLowerCase().includes(q.replace(/-/g,''))))
- .sort((a,b)=>{const k=SORT.k,d=SORT.d;const v=c=>k==='stars'?(PROG[c.id]?.stars||0):k==='learnt'?learnt(c.id):k==='seen'?(PROG[c.id]?.last_seen||''):k==='grade'?c.grade*1000+(c.class_name||'').charCodeAt(0):String(c[k]||'').toLowerCase();const x=v(a),y=v(b);return (x>y?1:x<y?-1:0)*d||a.first_name.localeCompare(b.first_name)})}
+ .sort((a,b)=>{const k=SORT.k,d=SORT.d;const v=c=>k==='stars'?(PROG[c.id]?.stars||0):k==='learnt'?learnt(c.id):k==='seen'?(PROG[c.id]?.last_seen||''):k==='mist'?mistakes(c.id):k==='time'?(TIME[c.id]?.all||0):k==='grade'?c.grade*1000+(c.class_name||'').charCodeAt(0):String(c[k]||'').toLowerCase();const x=v(a),y=v(b);return (x>y?1:x<y?-1:0)*d||a.first_name.localeCompare(b.first_name)})}
 /* ---------- GL practice results ---------- */
 let SGR=null,SGERR=false,SGG=null,SGCLS='all';const SGCONT={};
 const SGAREA={S:'Spelling',G:'Grammar',P:'Punctuation',V:'Vocabulary',R:'Reading'};
@@ -770,7 +777,7 @@ function render(){
   <div class="card"><div class="stat">${stars}</div><div class="small muted">stars earned in total</div></div>
   <div class="card"><div class="stat">${KIDS.filter(c=>!PROG[c.id]?.last_seen).length}</div><div class="small muted">haven’t started yet</div></div></div>
  <div class="card"><div class="row"><h2 style="font-size:20px">Spellers</h2><div class="spacer"></div>
-  <button class="y" id="add">+ Add children</button><button class="y" id="upx" title="Upload your class list from Excel — fills in surnames and classes and adds new children">📤 Upload Excel sheet</button>${kidCount()}<button class="w" id="print">🖨 Print code cards${SEL.size?' ('+SEL.size+')':''}</button><button class="w" id="csv">⬇ Download list</button><button class="w" id="refresh">↻ Refresh</button></div>
+  <button class="y" id="add">+ Add children</button><button class="y" id="upx" title="Upload your class list from Excel — fills in surnames and classes and adds new children">📤 Upload Excel sheet</button>${kidCount()}<button class="w" id="print">🖨 Print code cards${SEL.size?' ('+SEL.size+')':''}</button><button class="w" id="csv">⬇ Download list</button><button class="r" id="delsel" style="${SEL.size?'':'display:none'}">🗑 Remove ticked (${SEL.size})</button><button class="w" id="refresh">↻ Refresh</button></div>
   <div class="row" style="margin-top:12px">
    <select id="fg" style="max-width:160px"><option value="all">All grades</option>${GRADES.map(g=>`<option value="${g}" ${F.grade==g?'selected':''}>${GL(g)}</option>`).join('')}</select>
    <select id="fc" style="max-width:160px"><option value="all">All classes</option>${classes.map(c=>`<option ${F.cls===c?'selected':''}>${esc(c)}</option>`).join('')}</select>
@@ -779,35 +786,41 @@ function render(){
   ${(()=>{const n=dupPairs().length;return n?`<div class="card" style="background:#FFF7E0;border-color:#F5D58A;margin-top:10px;padding:10px 14px"><div class="row"><b>🧩 ${n} child${n===1?'':'ren'} may have been added twice by the upload (a second copy with a new code).</b><div class="spacer"></div><button class="y sm" id="dupfix">Check and fix</button></div></div>`:''})()}
   <div class="tablewrap" style="margin-top:10px"><table><thead><tr>
    <th><input type="checkbox" id="all" style="width:auto" ${list.length&&list.every(c=>SEL.has(c.id))?'checked':''}></th>
-   <th data-s="first_name">Name</th><th data-s="grade">Grade · class</th><th>Code</th><th title="The number your school uses for each child. With the Whole Nest, it links their results to Nestopia.">Student no.</th><th data-s="stars">⭐ Stars</th><th data-s="learnt">Words learnt</th><th>Tricky words</th><th data-s="seen">Last practised</th><th></th></tr></thead><tbody>
+   <th data-s="first_name">Name</th><th data-s="grade">Grade · class</th><th>Code</th><th></th><th title="The number your school uses for each child. With the Whole Nest, it links their results to Nestopia.">Student no.</th><th data-s="stars">⭐ Stars</th><th data-s="mist" title="Wrong attempts so far, with the share spelt correctly">❌ Mistakes</th><th data-s="time" title="Time actively practising on the website: in total, and in the last 7 days">⏱ Time</th><th data-s="learnt">Words learnt</th><th>Tricky words</th><th data-s="seen">Last practised</th></tr></thead><tbody>
    ${list.map(c=>{const t=teamOf(c.grade),p=PROG[c.id]||{},L=learnt(c.id),tot=TEAMS[t][2];return `<tr>
     <td><input type="checkbox" data-sel="${c.id}" style="width:auto" ${SEL.has(c.id)?'checked':''}></td>
     <td><div class="row" style="gap:6px;flex-wrap:nowrap">${avt(p.avatar,28)}<input value="${esc(c.first_name)}" data-ed="${c.id}" data-f="first_name" style="min-width:100px;font-weight:800" aria-label="First name"><input value="${esc(c.last_name||'')}" data-ed="${c.id}" data-f="last_name" placeholder="Surname" style="min-width:110px" aria-label="Surname"></div></td>
     <td><div class="row" style="gap:6px;flex-wrap:nowrap"><select data-ed="${c.id}" data-f="grade" style="width:84px">${GRADES.map(g=>`<option value="${g}" ${c.grade==g?'selected':''}>${g===0?'KG2':g}</option>`).join('')}</select><input value="${esc(c.class_name)}" data-ed="${c.id}" data-f="class_name" style="width:70px"><span class="pill ${t}" title="${TEAMS[t][0]}">${TEAMS[t][1]}</span></div></td>
     <td><span class="code">${fmtCode(c.code)}</span></td>
+    <td style="white-space:nowrap"><button class="w sm" data-recode="${c.id}" title="Give a new code">New code</button> <button class="w sm" data-del="${c.id}" title="Remove ${esc(c.first_name)}" aria-label="Remove ${esc(c.first_name)}">🗑</button></td>
     <td><input value="${esc(c.ext_ref||'')}" data-ed="${c.id}" data-f="ext_ref" placeholder="–" maxlength="30" style="width:76px" aria-label="Student number for ${esc(c.first_name)}"></td>
     <td><b>${p.stars||0}</b></td>
+    <td style="white-space:nowrap;line-height:1.2"><b>${mistakes(c.id)}</b>${accuracy(c.id)!==null?`<div class="small muted">${accuracy(c.id)}% right</div>`:''}</td>
+    <td style="white-space:nowrap;line-height:1.2">${TIMEOK?`<b>${fmtT(TIME[c.id]?.all)}</b>${TIME[c.id]?.wk?`<div class="small muted">${fmtT(TIME[c.id].wk)} this week</div>`:''}`:'<span class="small muted" title="Run setup-sb-time.sql in Supabase">not set up</span>'}</td>
     <td><div class="row" style="gap:6px;flex-wrap:nowrap"><div class="bar"><i style="width:${Math.min(100,Math.round(L/tot*100))}%"></i></div><span class="small">${L}/${tot}</span></div></td>
     <td class="tricky">${tricky(c.id).map(esc).join(', ')||'<span class="muted">—</span>'}</td>
-    <td class="small">${ago(p.last_seen)}</td>
-    <td style="white-space:nowrap"><button class="w sm" data-recode="${c.id}" title="Give a new code">New code</button> <button class="w sm" data-del="${c.id}" title="Remove">✕</button></td></tr>`}).join('')||`<tr><td colspan="9" class="muted" style="padding:22px">No spellers yet. Click <b>+ Add children</b> and paste names from your class list.</td></tr>`}
+    <td class="small">${ago(p.last_seen)}</td></tr>`}).join('')||`<tr><td colspan="12" class="muted" style="padding:22px">No spellers yet. Click <b>+ Add children</b> and paste names from your class list.</td></tr>`}
   </tbody></table></div>
   <p class="small muted" style="margin-bottom:0">A word counts as <b>learnt</b> once the child has spelt it correctly twice. Tick children to print just their cards; with none ticked, the cards for everyone shown are printed.</p></div>`;
  bind();
 }
 function bind(){
  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{TAB=b.dataset.tab;render()});
- $('#upx').onclick=pickSheet;if($('#dupfix'))$('#dupfix').onclick=()=>{DUPS=null;dupModal()};if($('#fns'))$('#fns').onchange=e=>{F.nosur=e.target.checked;render()};$('#add').onclick=addModal;$('#print').onclick=printCards;$('#csv').onclick=csv;$('#refresh').onclick=load;
+ $('#upx').onclick=pickSheet;if($('#dupfix'))$('#dupfix').onclick=()=>{DUPS=null;dupModal()};if($('#fns'))$('#fns').onchange=e=>{F.nosur=e.target.checked;render()};$('#add').onclick=addModal;$('#print').onclick=printCards;if($('#delsel'))$('#delsel').onclick=delSelected;$('#csv').onclick=csv;$('#refresh').onclick=load;
  $('#fg').onchange=e=>{F.grade=e.target.value;F.cls='all';render()};$('#fc').onchange=e=>{F.cls=e.target.value;render()};
  $('#fq').oninput=e=>{F.q=e.target.value;const pos=e.target.selectionStart;render();const i=$('#fq');i.focus();i.setSelectionRange(pos,pos)};
  $('#all').onchange=e=>{visible().forEach(c=>e.target.checked?SEL.add(c.id):SEL.delete(c.id));render()};
- document.querySelectorAll('[data-sel]').forEach(x=>x.onchange=()=>{x.checked?SEL.add(x.dataset.sel):SEL.delete(x.dataset.sel);$('#print').textContent='🖨 Print code cards'+(SEL.size?' ('+SEL.size+')':'')});
+ document.querySelectorAll('[data-sel]').forEach(x=>x.onchange=()=>{x.checked?SEL.add(x.dataset.sel):SEL.delete(x.dataset.sel);$('#print').textContent='🖨 Print code cards'+(SEL.size?' ('+SEL.size+')':'');const d=$('#delsel');d.style.display=SEL.size?'':'none';d.textContent='🗑 Remove ticked ('+SEL.size+')'});
  document.querySelectorAll('th[data-s]').forEach(x=>x.onclick=()=>{const k=x.dataset.s;SORT.d=SORT.k===k?-SORT.d:1;SORT.k=k;render()});
  document.querySelectorAll('[data-ed]').forEach(x=>x.onchange=async()=>{const id=x.dataset.ed,f=x.dataset.f;let v=x.value.trim();if(f==='grade')v=+v;if(f==='ext_ref')v=v||null;if(f==='first_name'&&!v){render();return}
   const {error}=await sb.from('students').update({[f]:v}).eq('id',id);if(error){toast(f==='ext_ref'&&/ext_ref/.test(error.message||'')?'The student number needs a quick database update first':'Couldn’t save that change');return}const c=KIDS.find(k=>k.id===id);c[f]=v;toast('Saved ✓');if(f==='grade')render()});
  document.querySelectorAll('[data-recode]').forEach(x=>x.onclick=()=>confirmBox('Give a new code?','The old code will stop working. Progress is kept.','New code',async()=>{const id=x.dataset.recode;for(let i=0;i<5;i++){const code=newCode();const {error}=await sb.from('students').update({code}).eq('id',id);if(!error){KIDS.find(k=>k.id===id).code=code;render();toast('New code: '+fmtCode(code));return}}toast('Couldn’t make a new code')}));
- document.querySelectorAll('[data-del]').forEach(x=>x.onclick=()=>{const c=KIDS.find(k=>k.id===x.dataset.del);confirmBox('Remove '+c.first_name+'?','Their code and all their progress will be deleted.','Remove',async()=>{const {error}=await sb.from('students').delete().eq('id',c.id);if(error){toast('Couldn’t remove');return}KIDS=KIDS.filter(k=>k.id!==c.id);SEL.delete(c.id);render();toast('Removed')},true)});
+ document.querySelectorAll('[data-del]').forEach(x=>x.onclick=()=>{const c=KIDS.find(k=>k.id===x.dataset.del);confirmBox('Remove '+c.first_name+(c.last_name?' '+c.last_name:'')+' ('+fmtCode(c.code)+')?','This child, their code and all their progress will be deleted. This can’t be undone.','Remove',async()=>{const {error}=await sb.from('students').delete().eq('id',c.id);if(error){toast('Couldn’t remove');return}KIDS=KIDS.filter(k=>k.id!==c.id);SEL.delete(c.id);render();toast('Removed')},true)});
 }
+function delSelected(){const ids=[...SEL].filter(id=>KIDS.some(k=>k.id===id));if(!ids.length)return;const names=KIDS.filter(k=>ids.includes(k.id)).map(k=>k.first_name+(k.last_name?' '+k.last_name:'')+' ('+fmtCode(k.code)+')');
+ confirmBox('Remove '+ids.length+' child'+(ids.length===1?'':'ren')+'?',names.slice(0,8).join(', ')+(names.length>8?' and '+(names.length-8)+' more':'')+'. Their codes and all their progress will be deleted. This can’t be undone.','Remove',async()=>{let ok=0;
+  for(const id of ids){const {error}=await sb.from('students').delete().eq('id',id);if(!error){ok++;KIDS=KIDS.filter(k=>k.id!==id);SEL.delete(id)}}
+  render();toast(ok===ids.length?'Removed '+ok:'Removed '+ok+' of '+ids.length+' — please try again')},true)}
 function confirmBox(title,text,btn,fn,danger){$('#modal').innerHTML=`<div class="modal"><div class="card"><h2 style="font-size:21px">${esc(title)}</h2><p>${esc(text)}</p><div class="row"><div class="spacer"></div><button class="w" id="mc">Cancel</button><button class="${danger?'r':'y'}" id="mo">${esc(btn)}</button></div></div></div>`;
  $('#mc').onclick=()=>$('#modal').innerHTML='';$('#mo').onclick=async()=>{$('#modal').innerHTML='';await fn()}}
 /* understands: "Mariam Ali, 1, 1A" · "Dina Saeed 1A" · "Mona Khalid KG2" · "Saeed Ahmed Grade 1 A" · "Lina Omar	Grade 5	5C" (pasted from Excel) */
@@ -961,7 +974,7 @@ function buildCards(list,z){const per=z.cols*z.rows,pages=[];for(let i=0;i<list.
  $('#cards').innerHTML=pages.map(pg=>`<div class="cpage" style="--f:${CFIT/100};--k:${(z.k*CFIT/100).toFixed(3)};grid-template-columns:repeat(${z.cols},minmax(0,1fr));grid-template-rows:repeat(${z.rows},minmax(0,1fr))">${pg.map(card).join('')}</div>`).join('');
  setTimeout(()=>window.print(),200);
 }
-function csv(){const list=visible();const rows=[['First name','Surname','Full name','Grade','Class','Student no.','Team','Code','Stars','Words learnt','Tricky words','Last practised']].concat(list.map(c=>[c.first_name,c.last_name||'',fullName(c),GL(c.grade),c.class_name||'',c.ext_ref||'',TEAMS[teamOf(c.grade)][0],fmtCode(c.code),PROG[c.id]?.stars||0,learnt(c.id),tricky(c.id).join(' '),PROG[c.id]?.last_seen?new Date(PROG[c.id].last_seen).toLocaleString('en-GB'):'']));
+function csv(){const list=visible();const rows=[['First name','Surname','Full name','Grade','Class','Student no.','Team','Code','Stars','Words learnt','Mistakes','% spelt right','Time practising (minutes)','Time in the last 7 days (minutes)','Tricky words','Last practised']].concat(list.map(c=>[c.first_name,c.last_name||'',fullName(c),GL(c.grade),c.class_name||'',c.ext_ref||'',TEAMS[teamOf(c.grade)][0],fmtCode(c.code),PROG[c.id]?.stars||0,learnt(c.id),mistakes(c.id),accuracy(c.id)??'',Math.round((TIME[c.id]?.all||0)/60),Math.round((TIME[c.id]?.wk||0)/60),tricky(c.id).join(' '),PROG[c.id]?.last_seen?new Date(PROG[c.id].last_seen).toLocaleString('en-GB'):'']));
  const txt=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+txt],{type:'text/csv'}));a.download='spelling-bee-spellers.csv';a.click()}
 window.addEventListener('beforeunload',e=>{if(DIRTY){e.preventDefault();e.returnValue=''}});
 start();

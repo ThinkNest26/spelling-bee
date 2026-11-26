@@ -38,8 +38,8 @@ main{max-width:1250px;margin:0 auto;padding:22px}
 .rep .kid{display:flex;align-items:center;gap:5mm;margin:4mm 0 2mm}
 .rep .kid svg{border-radius:50%;border:1.2mm solid #F5B700}
 .rep .kid .nm{font-family:Fredoka;font-size:10mm;line-height:1}.rep .kid .cl{color:#46506B;font-weight:800;margin-top:1mm}
-.rep .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:2.5mm;margin:2mm 0 4mm}
-.rep .st{background:#FFF8E1;border-radius:3mm;padding:3mm;text-align:center}.rep .st b{display:block;font-family:Fredoka;font-size:7mm;line-height:1.1}.rep .st span{font-size:3mm;color:#46506B;font-weight:700}
+.rep .stats{display:grid;grid-template-columns:repeat(7,1fr);gap:2.5mm;margin:2mm 0 4mm}
+.rep .st{background:#FFF8E1;border-radius:3mm;padding:3mm;text-align:center}.rep .st b{display:block;font-family:Fredoka;font-size:6mm;line-height:1.1}.rep .st span{font-size:3mm;color:#46506B;font-weight:700}
 .rep .bar{height:4mm;background:#F3EBD2;border-radius:3mm;overflow:hidden;margin:1.5mm 0}.rep .bar i{display:block;height:100%;background:linear-gradient(90deg,#7FB3F5,#3D7DD8)}
 .rep h3{font-size:4.6mm;margin:3mm 0 1.5mm;color:#1B3A6B}
 .rep .cols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:3mm}
@@ -91,13 +91,14 @@ async function start(){
  const {data:{session}}=await sb.auth.getSession();
  if(session){const {data:si}=await sb.rpc('my_school_info');if(si&&!si.premium){lockPage('Parent reports');return}if(si){SCH=si;if(!ST.logo&&si.logo)ST.logo=si.logo}}
  if(!session){$('#app').innerHTML=`<div class="card" style="max-width:520px;margin:40px auto;text-align:center"><h2>Please sign in first</h2><p class="muted">Sign in on the teacher page, then come back here.</p><a href="teacher.html"><button class="y">Go to the teacher page</button></a></div>`;return}
- const [{data:k},{data:p},{data:w},{data:rw},glr,fam,rev,hmt,ptk]=await Promise.all([
+ const [{data:k},{data:p},{data:w},{data:rw},glr,fam,rev,hmt,ptk,tim]=await Promise.all([
   sb.from('students').select('*').eq('active',true).order('grade').order('class_name').order('first_name'),
-  sb.from('progress').select('*'),sb.rpc('teacher_words'),sb.from('race_wins').select('student_id'),sb.from('sb_gl_results').select('*').order('created_at',{ascending:false}),sb.from('sb_family').select('student_id,week'),sb.from('sb_review').select('student_id,mastered'),sb.from('sb_hometest').select('*'),sb.rpc('sb_parent_tokens')]);
- KIDS=k||[];(p||[]).forEach(x=>PROG[x.student_id]=x);GLR=(glr&&!glr.error&&glr.data)||[];FAM=(fam&&!fam.error&&fam.data)||[];REV=(rev&&!rev.error&&rev.data)||[];HMT=(hmt&&!hmt.error&&hmt.data)||[];(ptk&&!ptk.error&&Array.isArray(ptk.data)?ptk.data:[]).forEach(x=>PTOK[x.student_id]=x.token);(rw||[]).forEach(r=>WINS[r.student_id]=(WINS[r.student_id]||0)+1);
+  sb.from('progress').select('*'),sb.rpc('teacher_words'),sb.from('race_wins').select('student_id'),sb.from('sb_gl_results').select('*').order('created_at',{ascending:false}),sb.from('sb_family').select('student_id,week'),sb.from('sb_review').select('student_id,mastered'),sb.from('sb_hometest').select('*'),sb.rpc('sb_parent_tokens'),sb.from('sb_time').select('student_id,secs')]);
+ KIDS=k||[];(p||[]).forEach(x=>PROG[x.student_id]=x);GLR=(glr&&!glr.error&&glr.data)||[];FAM=(fam&&!fam.error&&fam.data)||[];REV=(rev&&!rev.error&&rev.data)||[];HMT=(hmt&&!hmt.error&&hmt.data)||[];(ptk&&!ptk.error&&Array.isArray(ptk.data)?ptk.data:[]).forEach(x=>PTOK[x.student_id]=x.token);(rw||[]).forEach(r=>WINS[r.student_id]=(WINS[r.student_id]||0)+1);if(tim&&!tim.error)(tim.data||[]).forEach(r=>TSECS[r.student_id]=(TSECS[r.student_id]||0)+(r.secs||0));
  (Array.isArray(w)?w:[]).forEach(r=>(WORDS[r.team]=WORDS[r.team]||[]).push(r));
  render()}
-let GLR=[],FAM=[],REV=[],HMT=[],PTOK={};
+let GLR=[],FAM=[],REV=[],HMT=[],PTOK={},TSECS={};
+function fmtT(s){s=s||0;if(s<60)return s?'<1 min':'—';const m=Math.round(s/60);return m<60?m+' min':Math.floor(m/60)+'h '+(m%60?m%60+'m':'')}
 function homeLine(k){if(!window.SPELL)return '';const S=window.SPELL,wk=S.weekStart(),ch=S.familyFor(wk);const n=FAM.filter(f=>f.student_id===k.id).length,m=REV.filter(r=>r.student_id===k.id&&r.mastered).length,done=FAM.some(f=>f.student_id===k.id&&String(f.week).slice(0,10)===wk);
  const h=HMT.find(x=>x.student_id===k.id&&String(x.week).slice(0,10)===wk);const link=PTOK[k.id]?`${SITE}/grownup.html?p=${PTOK[k.id]}`:'';
  return `<div class="homel"><div><b>🔒 Test me at home:</b> ${k.first_name?esc(k.first_name):''} chooses 5 words, looks at them and locks them. Then you test them!${h&&h.done_at?` <b>This week: ${h.score}/${h.total} ✅</b>`:h&&h.locked_at?' <b>Words locked — ready for you to test.</b>':''}${link?`<div>📱 Your private Grown-up’s page: <b>${link}</b></div>`:'<div>Open the Grown-up’s page from the Family challenge on the Spelling Bee.</div>'}<div style="margin-top:1mm"><b>🏡 Family idea:</b> ${esc(ch.t)}${done?' ✅ done':''}</div></div><div class="homes"><span><b>${n}</b> family challenge${n===1?'':'s'} done</span>${m?`<span><b>${m}</b> tricky word${m===1?'':'s'} mastered 🎓</span>`:''}</div></div>`}
@@ -116,7 +117,7 @@ function report(k){const a=analyse(k),p=a.p;const pct=a.total?Math.round(a.sec.l
  return `<div class="rep">
  <div class="hd">${ST.logo?`<div class="logo"><img src="${ST.logo}" alt=""></div>`:'<div style="font-size:11mm">🐝</div>'}<div><h1>Spelling Bee progress report</h1><div class="sub">${esc(SCH?SCH.name:'The Big Spelling Bee')}${SCH&&SCH.settings&&SCH.settings.final_date?' · Grand Final '+new Date(SCH.settings.final_date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}):''}</div></div><div style="margin-left:auto;text-align:right;font-weight:800">${esc(ST.date)}</div></div>
  <div class="kid">${av(p.avatar,96)}<div><div class="nm">${esc(k.first_name)}</div><div class="cl">${esc(k.class_name||GL(k.grade))} · ${TEAMN[teamOf(k.grade)]}</div></div></div>
- <div class="stats"><div class="st"><b>${p.stars||0}</b><span>⭐ stars earned</span></div><div class="st"><b>${a.sec.length}/${a.total}</b><span>🔵 words secure</span></div><div class="st"><b>${p.attempts||0}</b><span>✏️ words practised</span></div><div class="st"><b>${acc}%</b><span>✅ spelt correctly</span></div><div class="st"><b>${p.best_streak||0}</b><span>🔥 best streak (days)</span></div></div>
+ <div class="stats"><div class="st"><b>${p.stars||0}</b><span>⭐ stars earned</span></div><div class="st"><b>${a.sec.length}/${a.total}</b><span>🔵 words secure</span></div><div class="st"><b>${p.attempts||0}</b><span>✏️ words practised</span></div><div class="st"><b>${acc}%</b><span>✅ spelt correctly</span></div><div class="st"><b>${Math.max(0,(p.attempts||0)-(p.correct||0))}</b><span>❌ mistakes made</span></div><div class="st"><b>${fmtT(TSECS[k.id])}</b><span>⏱ time practising</span></div><div class="st"><b>${p.best_streak||0}</b><span>🔥 best streak (days)</span></div></div>
  ${glLine(k)}${homeLine(k)}<div style="font-weight:800">Spelling list progress: ${pct}% secure</div><div class="bar"><i style="width:${pct}%"></i></div>
  <h3>How ${esc(k.first_name)} is doing with the words</h3>
  <div class="cols"><div class="box b-sec"><div class="t">🔵 Secure (${a.sec.length})</div><div class="small">Spelt correctly at least twice</div>${wl(a.sec,14)}</div>
