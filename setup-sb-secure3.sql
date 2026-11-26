@@ -2,6 +2,8 @@
 --  SPELLING BEE — a word is SECURE (blue) only after it is spelt
 --  correctly 3 TIMES IN A ROW. A mistake resets the count to 0.
 --  Once secure, a word stays secure.
+--  Warm-up words secured before 1 December stay blue but count towards
+--  the 85% semi-final rule only after one more correct spelling from 1 December.
 --  Everyone starts again from zero (words secured under the old
 --  "2 correct" rule are checked again).
 --  Paste ALL of this into Supabase -> SQL Editor -> New query -> Run.
@@ -31,7 +33,12 @@ begin
     if e.value ~ '^\d+$' and e.value::int = o + 1 then
       r := case when coalesce(NEW.runs->>e.key, '') ~ '^\d+$' then (NEW.runs->>e.key)::int else 0 end + 1;
       NEW.runs := jsonb_set(NEW.runs, array[e.key], to_jsonb(r));
-      if r >= 3 and not (NEW.secure ? e.key) then NEW.secure := jsonb_set(NEW.secure, array[e.key], to_jsonb(d)); end if;
+      if not (NEW.secure ? e.key) then
+        if r >= 3 then NEW.secure := jsonb_set(NEW.secure, array[e.key], to_jsonb(d)); end if;
+      elsif d >= '2026-12-01' and coalesce(NEW.secure->>e.key, '') < '2026-12-01' then
+        -- launch check: a word secured in the warm-up counts for the semi-final after one more correct spelling from 1 December
+        NEW.secure := jsonb_set(NEW.secure, array[e.key], to_jsonb(d));
+      end if;
     end if;
   end loop;
   return NEW;
@@ -67,7 +74,8 @@ begin
   select count(*) into missing from unnest(array['test','ghive','gcatch','ggarden','grace','gballoon','lcwc','miss','gap','rules','sent']) a
    where not exists (select 1 from public.sb_acts x where x.student_id = s.id and x.act = a);
   if missing > 0 then return json_build_object('ok', false, 'acts', missing); end if;
-  select count(*) into n from public.progress p, jsonb_object_keys(coalesce(p.secure, '{}'::jsonb)) k where p.student_id = s.id;
+  -- only words secured (or launch-checked) from 1 December count towards the 85%
+  select count(*) into n from public.progress p, jsonb_each_text(coalesce(p.secure, '{}'::jsonb)) e where p.student_id = s.id and e.value >= '2026-12-01';
   need := ceil(p_total * 0.85);
   if n < need then return json_build_object('ok', false, 'secured', n, 'need', need); end if;
   insert into public.sb_semi_auto (student_id, school_id, grade, secured, total)

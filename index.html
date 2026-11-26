@@ -415,8 +415,14 @@ try{PR=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){PR={}}
 function prog(team){PR[team]=PR[team]||{stars:0,ok:{}};PR[team].bad=PR[team].bad||{};PR[team].last=PR[team].last||{};PR[team].run=PR[team].run||{};PR[team].sec=PR[team].sec||{};return PR[team]}
 /* 🔵 a word is secure after 3 correct spellings IN A ROW (a mistake resets the count); once secure it stays secure */
 const SEC_RUN=3;
+/* 🚀 warm-up words: secured before the launch they stay blue, but count towards the 85% only after one more correct spelling from the launch day */
+function secDate(t,w){const v=prog(t).sec[w];return typeof v==='string'?v:''}
+function needsCheck(t,w){return !!prog(t).sec[w]&&dubaiDay()>=LAUNCH&&secDate(t,w)<LAUNCH}
+function wordDone(t,w){return wordLevel(t,w)==='secure'&&!needsCheck(t,w)}
+function semiCount(t){return dubaiDay()<LAUNCH?0:(WORDS[t]||[]).filter(w=>prog(t).sec[w]&&secDate(t,w)>=LAUNCH).length}
+function warmCount(t){return (WORDS[t]||[]).filter(w=>needsCheck(t,w)).length}
 async function secLoad(){if(!ME||!db())return;try{const {data,error}=await db().rpc('sb_secure_mine',{p_code:ME.code});if(error||!data)return;const p=prog(ME.team),busy=readQ().length>0;
- Object.keys(data.secure||{}).forEach(w=>p.sec[w]=1);Object.entries(data.runs||{}).forEach(([w,n])=>{n=+n||0;p.run[w]=busy?Math.max(n,p.run[w]||0):n});savePR();if(['home','team'].includes(V.screen))render()}catch(e){}}
+ Object.entries(data.secure||{}).forEach(([w,d])=>{const v=typeof d==='string'?d:'';if(!p.sec[w]||(typeof p.sec[w]!=='string')||v>p.sec[w])p.sec[w]=v||p.sec[w]||'0'});Object.entries(data.runs||{}).forEach(([w,n])=>{n=+n||0;p.run[w]=busy?Math.max(n,p.run[w]||0):n});savePR();if(['home','team'].includes(V.screen))render()}catch(e){}}
 function mergeMax(a,b){const o=Object.assign({},a||{});for(const k in (b||{}))o[k]=Math.max(+o[k]||0,+b[k]||0);return o}
 function wordLevel(team,w){const p=prog(team),ok=+p.ok[w]||0,bad=+p.bad[w]||0;if(!ok&&!bad)return '';if(p.sec&&p.sec[w])return 'secure';if(p.last[w]===false||!ok)return 'tricky';return 'almost'}
 function savePR(){try{localStorage.setItem(KEY,JSON.stringify(PR))}catch(e){}}
@@ -501,7 +507,7 @@ setTimeout(brkShow,600);document.addEventListener('visibilitychange',()=>{if(doc
 setInterval(tSend,60000);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')tSend()});setTimeout(tSend,4000);
 window.addEventListener('online',flush);
 let LASTSTAR=true;function dubaiDay(){return new Date(Date.now()+4*3600e3).toISOString().slice(0,10)}
-function award(team,w,ok){const p=prog(team);p.sday=p.sday||{};bumpStreak(p,team);p.run=p.run||{};p.sec=p.sec||{};if(ok){const sec=!!p.sec[w],td=dubaiDay();p.run[w]=(p.run[w]||0)+1;if(p.run[w]>=SEC_RUN)p.sec[w]=1;if(sec&&p.sday[w]===td)LASTSTAR=false;else{p.stars++;LASTSTAR=true;if(sec)p.sday[w]=td}p.ok[w]=(p.ok[w]||0)+1}else{p.bad[w]=(p.bad[w]||0)+1;p.run[w]=0}p.last[w]=!!ok;savePR();
+function award(team,w,ok){const p=prog(team);p.sday=p.sday||{};bumpStreak(p,team);p.run=p.run||{};p.sec=p.sec||{};if(ok){const sec=!!p.sec[w],td=dubaiDay();p.run[w]=(p.run[w]||0)+1;if(p.sec[w]){if(td>=LAUNCH&&secDate(team,w)<LAUNCH){p.sec[w]=td}}else if(p.run[w]>=SEC_RUN)p.sec[w]=td;if(sec&&p.sday[w]===td)LASTSTAR=false;else{p.stars++;LASTSTAR=true;if(sec)p.sday[w]=td}p.ok[w]=(p.ok[w]||0)+1}else{p.bad[w]=(p.bad[w]||0)+1;p.run[w]=0}p.last[w]=!!ok;savePR();
  if(ME){const q=readQ();q.push({id:Date.now()+'-'+Math.random().toString(36).slice(2,7),w,ok,a:V.screen});writeQ(q.slice(-500));flush()}xHook(team,w,ok)}
 function mastered(team){const p=prog(team);return WORDS[team].filter(w=>wordLevel(team,w)==='secure').length}
 function totalStars(){return Math.max(0,TEAMS.reduce((n,t)=>n+(PR[t.id]?.stars||0)-(PR[t.id]?.spent||0),0))}
@@ -799,7 +805,7 @@ let S85_BUSY=false,S85_T=0;
 function s85Key(){return 'sb-semi85-'+(ME?ME.code+'-'+ME.grade:'')}
 function s85Done(){try{return localStorage.getItem(s85Key())==='1'}catch(e){return false}}
 function s85Need(){const n=(WORDS[ME.team]||[]).length;return Math.ceil(n*0.85)}
-async function xSemi85(){if(!ME||!db()||S85_BUSY||s85Done())return;const t=ME.team,n=(WORDS[t]||[]).length;if(n<10||mastered(t)<s85Need())return;if(actsLeft().length)return;
+async function xSemi85(){if(!ME||!db()||S85_BUSY||s85Done())return;const t=ME.team,n=(WORDS[t]||[]).length;if(n<10||semiCount(t)<s85Need())return;if(actsLeft().length)return;
  if(Date.now()-S85_T<12000)return;S85_BUSY=true;S85_T=Date.now();
  try{await flush();const r=await xRun('sb_semi_claim',{p_code:ME.code,p_total:n});
   if(r&&r.ok){try{localStorage.setItem(s85Key(),'1')}catch(e){}if(r.new)semi85Party();xLoad(true)}else if(r&&r.acts){await actLoad()}}
@@ -852,11 +858,11 @@ function semi85Party(who){who=who||ME;const old=document.getElementById('s85');i
  try{clapSound(true)}catch(e){}try{crowdCheer(.2,3.4)}catch(e){}
  setTimeout(()=>{try{if(!playClip(SEMI_SAY))playClip('Hooray! You did it!')}catch(e){}},1200);
  setTimeout(()=>{if(!d.isConnected)return;try{clapSound(true)}catch(e){}try{crowdCheer(0,3)}catch(e){}},4200)}
-function xSemi85Bar(){if(!ME||XS.semi||s85Done())return '';const t=ME.team,n=(WORDS[t]||[]).length;if(n<10)return '';const need=s85Need(),have=Math.min(mastered(t),need),pc=Math.round(have/need*100);
+function xSemi85Bar(){if(!ME||XS.semi||s85Done())return '';const t=ME.team,n=(WORDS[t]||[]).length;if(n<10)return '';const need=s85Need(),have=Math.min(semiCount(t),need),pc=Math.round(have/need*100),warm=warmCount(t),early=dubaiDay()<LAUNCH;
  const req=reqActs(),d=actGet(),dn=req.filter(([id])=>d.has(id)).length;
  if(have>=need&&dn===req.length){setTimeout(xSemi85,1500);return `<div class="xban semi"><div class="e">🎉</div><div style="flex:1"><b class="f" style="font-size:22px">You’ve done it, ${esc(ME.first_name)}!</b><div>All your words and activities are done. Getting your semi-final place ready…</div></div></div>`}
  return `<div class="xban semi" style="opacity:.97;align-items:flex-start"><div class="e">🏅</div><div style="flex:1"><b class="f" style="font-size:20px">Road to the semi-final</b>
-  <div style="margin-top:4px"><b>1.</b> Secure <b>${need}</b> of your ${n} words (85%). You have <b>${have}</b>${have<need?` — ${need-have} to go!`:' ✅'}</div><div style="height:12px;background:#fff;border-radius:8px;margin-top:6px;overflow:hidden;border:1px solid #F1D27A"><div style="height:100%;width:${pc}%;background:linear-gradient(90deg,#F5B700,#FFD54A)"></div></div>
+  <div style="margin-top:4px"><b>1.</b> Secure <b>${need}</b> of your ${n} words (85%). ${early?'</div><div class="small" style="margin-top:4px;background:#fff;border-radius:10px;padding:6px 10px">🚀 Your Road to the semi-final starts on <b>1 December</b>. Words you secure now stay blue 🔵. From 1 December, spell each one right <b>one more time</b> and it counts!</div><div>':` You have <b>${have}</b>${have<need?` — ${need-have} to go!`:' ✅'}`}</div>${!early&&warm?`<div class="small" style="margin-top:4px;background:#fff;border-radius:10px;padding:6px 10px">🔵 <b>${warm}</b> blue word${warm===1?'':'s'} from your warm-up: spell ${warm===1?'it':'each one'} right once more to add ${warm===1?'it':'them'} to your road!</div>`:''}<div style="height:12px;background:#fff;border-radius:8px;margin-top:6px;overflow:hidden;border:1px solid #F1D27A"><div style="height:100%;width:${pc}%;background:linear-gradient(90deg,#F5B700,#FFD54A)"></div></div>
   <div style="margin-top:10px"><b>2.</b> Finish every activity once: <b>${dn} of ${req.length}</b> done${dn===req.length?' ✅':''}</div>
   <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${req.map(([id,e,nm])=>`<span style="font-size:14px;padding:3px 9px;border-radius:20px;border:1px solid ${d.has(id)?'#86EFAC':'#F1D27A'};background:${d.has(id)?'#DCFCE7':'#fff'};font-weight:700">${d.has(id)?'✅':e} ${esc(nm)}</span>`).join('')}</div>
   <div class="muted small" style="margin-top:6px">The family challenge and Race a friend are optional.</div></div></div>`}
@@ -1000,7 +1006,7 @@ function xSemiBanner(){const m=XS.semi;if(!m)return '';const n=xSemiDays();if(n!
  if(m.online&&m.open)return `<div class="xban semi"><div class="e">✏️</div><div style="flex:1"><b class="f" style="font-size:24px">Your semi-final is today!</b><div>${m.n} words · one go · take your time</div></div><button class="y" data-x="semi">Start →</button></div>`;
  return `<div class="xban semi"><div class="e">🏅</div><div style="flex:1"><b class="f" style="font-size:24px">You’re in the ${m.grade===0?'KG2':'Grade '+m.grade} semi-final!</b><div>${esc(xSemiWhen())}${m.place?' · '+esc(m.place):''}</div></div><button class="y" data-x="semi">Get ready →</button></div>`}
 function xSemiWords(){const t=V.team;const own=(WORDS[t]||[]).slice();const order=['buz','hon','bum','cha'];const nx=order[order.indexOf(t)+1];
- const score=w=>w.length+(SX.TRICKY.has(SX.low(w))?4:0)+(/([a-z])\1/.test(w)?1:0)+(/(ph|gh|kn|wr|mb|ough|tion|sion|ous|cious|ture)/.test(w)?2:0)+(wordLevel(t,w)==='secure'?-2:0);
+ const score=w=>w.length+(SX.TRICKY.has(SX.low(w))?4:0)+(/([a-z])\1/.test(w)?1:0)+(/(ph|gh|kn|wr|mb|ough|tion|sion|ous|cious|ture)/.test(w)?2:0)+(wordDone(t,w)?-2:0);
  const hard=own.sort((a,b)=>score(b)-score(a)).slice(0,14);const extra=nx?(WORDS[nx]||[]).slice().sort((a,b)=>score(b)-score(a)).slice(0,10):[];
  return shuffle(shuffle(hard).slice(0,7).concat(shuffle(extra).slice(0,3)))}
 function xSemiView(){const m=XS.semi;if(!m)return xHead('🏅 Semi-final')+'<div class="panel">Keep practising! Your teacher will tell you about the semi-finals.</div>';const f=XSF[m.format]||XSF.out;
@@ -1036,7 +1042,7 @@ function xWeekGo(kind,id){const w=XS.weekly.find(x=>String(x.id)===String(id));i
  if(kind==='post')xStart('wpost',(chal?w.challenge:w.words).slice(),{wid:w.id,title:'🏁 Friday test',challenge:chal})}
 
 /* ---------- family challenge ---------- */
-function xFamWords(){const due=xLearning();const t=ME.team;const tr=(WORDS[t]||[]).filter(w=>wordLevel(t,w)==='tricky');const al=(WORDS[t]||[]).filter(w=>wordLevel(t,w)!=='secure');
+function xFamWords(){const due=xLearning();const t=ME.team;const tr=(WORDS[t]||[]).filter(w=>wordLevel(t,w)==='tricky');const al=(WORDS[t]||[]).filter(w=>!wordDone(t,w));
  return [...new Set([...due,...tr,...al,...(WORDS[t]||[])])].slice(0,5)}
 function xFamilyView(){return xHead('🏡 Family challenge')+(xGrownLink()?`<div class="xban" style="background:#EEF6FF;border-color:#BFDBFE"><div class="e">👪</div><div style="flex:1"><b class="f" style="font-size:20px">Grown-up’s page</b><div class="small">Send your grown-up their private page. It shows your stars, tricky words and test results.</div></div><button class="w" data-xh="share">📤 Send to a grown-up</button></div>`:'')+xHomeCard()+xIdeaCard()}
 /* 🔒 Test me at home: choose 5 words, look, lock, get tested by a grown-up, unlock and learn */
@@ -1236,7 +1242,7 @@ function practiseBox(){
 /* 🚀 official launch date: before it, children see a "practise early" message */
 const LAUNCH='2026-12-01';
 function launchBanner(){if(!ME||dubaiDay()>=LAUNCH)return '';const n=Math.round((Date.parse(LAUNCH+'T12:00:00Z')-Date.parse(dubaiDay()+'T12:00:00Z'))/864e5);
- return `<div class="xban semi" style="margin-bottom:16px"><div class="e">🚀</div><div style="flex:1"><b class="f" style="font-size:22px">The Spelling Bee launches on 1 December!</b><div>That’s ${n===1?'tomorrow':'in '+n+' days'} — but you can start practising early! Every word you secure now counts. 🐝</div></div></div>`}
+ return `<div class="xban semi" style="margin-bottom:16px"><div class="e">🚀</div><div style="flex:1"><b class="f" style="font-size:22px">The Spelling Bee launches on 1 December!</b><div>That’s ${n===1?'tomorrow':'in '+n+' days'} — start warming up now! 🔵 Words you secure now stay blue, and from 1 December just spell each one right <b>one more time</b> to count it for the semi-final. 🐝</div></div></div>`}
 /* the moving message sits above #app so it keeps scrolling smoothly when the page redraws */
 function tickerSync(){const h=semiTicker(),app=document.getElementById('app');let t=document.getElementById('sbtick');
  if(!h){if(t)t.remove();return}if(!t){t=document.createElement('div');t.id='sbtick';app.parentNode.insertBefore(t,app)}if(t.dataset.h!==h){t.dataset.h=h;t.innerHTML=h}}
@@ -1279,7 +1285,7 @@ function learnView(){
 
 /* Look, Cover, Write, Check */
 let LC=null;
-function newLC(){const p=prog(V.team);const ws=WORDS[V.team];const fresh=ws.filter(w=>wordLevel(V.team,w)!=='secure');const due=ME&&V.team===ME.team?xDue():[];LC={w:due.length&&Math.random()<.5?pick(due):pick(fresh.length?fresh:ws),step:0,val:'',ok:null}}
+function newLC(){const p=prog(V.team);const ws=WORDS[V.team];const fresh=ws.filter(w=>!wordDone(V.team,w));const due=ME&&V.team===ME.team?xDue():[];LC={w:due.length&&Math.random()<.5?pick(due):pick(fresh.length?fresh:ws),step:0,val:'',ok:null}}
 function lcwcView(){
  if(!LC)newLC();const st=['Look & say','Cover','Write','Check'];
  let body='';
@@ -1292,7 +1298,7 @@ function lcwcView(){
 
 /* Spelling test */
 let TS=null;
-function newTest(){const p=prog(V.team);const ws=shuffle(WORDS[V.team]);const fresh=ws.filter(w=>wordLevel(V.team,w)!=='secure');const list=(fresh.length>=10?fresh:fresh.concat(ws.filter(w=>!fresh.includes(w)))).slice(0,10);TS={list,i:0,val:'',fb:null,score:0,missed:[]}}
+function newTest(){const p=prog(V.team);const ws=shuffle(WORDS[V.team]);const fresh=ws.filter(w=>!wordDone(V.team,w));const list=(fresh.length>=10?fresh:fresh.concat(ws.filter(w=>!fresh.includes(w)))).slice(0,10);TS={list,i:0,val:'',fb:null,score:0,missed:[]}}
 function testView(){
  if(!TS)newTest();const w=TS.list[TS.i];
  return `<div class="row" style="justify-content:space-between"><button class="back" data-go="team">← Back</button><div class="f" style="font-size:22px">🎧 Spelling test · ${TS.i+1} of ${TS.list.length}</div></div>
@@ -1310,7 +1316,7 @@ function newMiss(){const t=T(V.team);const ws=WORDS[t.id].filter(w=>w.length>=3)
 /* ---------- Fill the gap ---------- */
 let GP=null;
 function gapWords(){return WORDS[V.team].filter(w=>SENT[w]&&new RegExp('\\b'+w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','i').test(SENT[w]))}
-function newGap(){const p=prog(V.team);const ws=shuffle(gapWords());const fresh=ws.filter(w=>wordLevel(V.team,w)!=='secure');const list=(fresh.length>=10?fresh:fresh.concat(ws.filter(w=>!fresh.includes(w)))).slice(0,10);GP={list,i:0,val:'',fb:null,score:0,missed:[],done:false}}
+function newGap(){const p=prog(V.team);const ws=shuffle(gapWords());const fresh=ws.filter(w=>!wordDone(V.team,w));const list=(fresh.length>=10?fresh:fresh.concat(ws.filter(w=>!fresh.includes(w)))).slice(0,10);GP={list,i:0,val:'',fb:null,score:0,missed:[],done:false}}
 function gapSentence(w,reveal){const s=SENT[w]||'';const re=new RegExp('\\b('+w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')\\b','i');const m=s.match(re);if(!m)return esc(s);
  const i=m.index;return esc(s.slice(0,i))+(reveal?`<span class="gapw ${GP&&GP.fb==='ok'?'ok':'bad'}">${esc(m[1])}</span>`:'<span class="gapb">?</span>')+esc(s.slice(i+m[1].length))}
 function sayGap(w){say(SENT[w]||w)}
@@ -1835,7 +1841,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-avk],[data
 /* ---------- 🏆 Real Bee practice (competition rules) ---------- */
 let RB=null;
 const RB_TIME={buz:90,hon:75,bum:60,cha:45};
-function newRB(){const ws=WORDS[V.team];const order=[...shuffle(ws.filter(w=>wordLevel(V.team,w)==='tricky')),...shuffle(ws.filter(w=>wordLevel(V.team,w)!=='tricky'&&wordLevel(V.team,w)!=='secure')),...shuffle(ws.filter(w=>wordLevel(V.team,w)==='secure'))];
+function newRB(){const ws=WORDS[V.team];const order=[...shuffle(ws.filter(w=>wordLevel(V.team,w)==='tricky')),...shuffle(ws.filter(w=>wordLevel(V.team,w)!=='tricky'&&!wordDone(V.team,w))),...shuffle(ws.filter(w=>wordDone(V.team,w)))];
  RB={list:order.slice(0,10).sort(()=>Math.random()-.5),i:0,typed:'',fb:null,hearts:3,score:0,left:RB_TIME[V.team]||60,run:false,h:null,done:false,asked:{}}}
 function rbStop(){if(RB&&RB.h){clearInterval(RB.h);RB.h=null}if(RB)RB.run=false}
 function rbStart(){if(!RB||RB.run||RB.fb||RB.done)return;RB.run=true;RB.h=setInterval(()=>{if(!RB||V.screen!=='realbee'){rbStop();return}RB.left=Math.max(0,RB.left-1);const t=$('#rbt');if(t){t.textContent=RB.left;t.parentElement.classList.toggle('low',RB.left<=10)}if(RB.left===0){rbStop();rbCheck(true)}},1000)}
