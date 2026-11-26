@@ -108,7 +108,7 @@ function glLine(k){const L=['A','B'].map(f=>GLR.find(r=>r.student_id===k.id&&r.f
  return `<div class="glline">📋 <b>GL practice:</b> ${L.map(r=>`Test ${r.form} <b>${r.score}/${r.total}</b> (${Math.round(100*r.score/r.total)}%)`).join(' · ')}${w&&w[1]<.75?` · to practise: <b>${GLAREA[w[0]]}</b>`:''}</div>`}
 function visible(){return KIDS.filter(k=>(ST.grade==='all'||k.grade==ST.grade)&&(ST.cls==='all'||k.class_name===ST.cls))}
 function analyse(k){const p=PROG[k.id]||{},ok=p.words||{},bad=p.tricky||{},list=WORDS[teamOf(k.grade)]||[];
- const sec=[],alm=[],tri=[],todo=[];list.forEach(r=>{const o=+ok[r.word]||0,b=+bad[r.word]||0;if(o>=2)sec.push(r);else if(o===1&&b<=o)alm.push(r);else if(b>0)tri.push(r);else todo.push(r)});
+ const sec=[],alm=[],tri=[],todo=[];const SEC=p.secure||{};list.forEach(r=>{const o=+ok[r.word]||0,b=+bad[r.word]||0;if(SEC[r.word])sec.push(r);else if(o>0&&b<=o)alm.push(r);else if(b>0)tri.push(r);else todo.push(r)});
  tri.sort((a,b)=>(+bad[b.word]||0)-(+bad[a.word]||0));
  return {p,sec,alm,tri,todo,total:list.length}}
 function report(k){const a=analyse(k),p=a.p;const pct=a.total?Math.round(a.sec.length/a.total*100):0;const acc=p.attempts?Math.round((p.correct||0)/p.attempts*100):0;
@@ -120,7 +120,7 @@ function report(k){const a=analyse(k),p=a.p;const pct=a.total?Math.round(a.sec.l
  <div class="stats"><div class="st"><b>${p.stars||0}</b><span>⭐ stars earned</span></div><div class="st"><b>${a.sec.length}/${a.total}</b><span>🔵 words secure</span></div><div class="st"><b>${p.attempts||0}</b><span>✏️ words practised</span></div><div class="st"><b>${acc}%</b><span>✅ spelt correctly</span></div><div class="st"><b>${Math.max(0,(p.attempts||0)-(p.correct||0))}</b><span>❌ mistakes made</span></div><div class="st"><b>${fmtT(TSECS[k.id])}</b><span>⏱ time practising</span></div><div class="st"><b>${p.best_streak||0}</b><span>🔥 best streak (days)</span></div></div>
  ${glLine(k)}${homeLine(k)}<div style="font-weight:800">Spelling list progress: ${pct}% secure</div><div class="bar"><i style="width:${pct}%"></i></div>
  <h3>How ${esc(k.first_name)} is doing with the words</h3>
- <div class="cols"><div class="box b-sec"><div class="t">🔵 Secure (${a.sec.length})</div><div class="small">Spelt correctly at least twice</div>${wl(a.sec,14)}</div>
+ <div class="cols"><div class="box b-sec"><div class="t">🔵 Secure (${a.sec.length})</div><div class="small">Spelt correctly 3 times in a row</div>${wl(a.sec,14)}</div>
   <div class="box b-alm"><div class="t">🟢 Almost there (${a.alm.length})</div><div class="small">Spelt correctly once</div>${wl(a.alm,14)}</div>
   <div class="box b-tri"><div class="t">🟡 Keep practising (${a.tri.length})</div><div class="small">Words that have been tricky</div>${wl(a.tri,14)}</div></div>
  <h3>📝 Words to practise at home</h3>

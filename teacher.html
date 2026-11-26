@@ -367,7 +367,7 @@ async function renderDash(){if(!DAILY){$('#app').innerHTML=tabs()+'<p class="mut
  const streakers=kids.filter(k=>{const p=PROG[k.id]||{};return (p.streak||0)>=2&&(p.streak_day||'')>=psd});
  const pct=k=>{const t=TEAMS[teamOf(k.grade)][2]||1;return Math.round(learnt(k.id)/t*100)};
  /* trickiest words */
- const tw={};kids.forEach(k=>{const p=PROG[k.id]||{};const ok=p.words||{};Object.entries(p.tricky||{}).forEach(([w,n])=>{if((ok[w]||0)>=2)return;const t=tw[w]||(tw[w]={w,kids:0,miss:0});t.kids++;t.miss+=+n})});
+ const tw={};kids.forEach(k=>{const p=PROG[k.id]||{};const ok=p.words||{};Object.entries(p.tricky||{}).forEach(([w,n])=>{if((p.secure||{})[w])return;const t=tw[w]||(tw[w]={w,kids:0,miss:0});t.kids++;t.miss+=+n})});
  const tricky=Object.values(tw).sort((a,b)=>b.kids-a.kids||b.miss-a.miss).slice(0,12);
  const stars=practised.slice().sort((a,b)=>wk[b.id].a-wk[a.id].a).slice(0,8);
  const byClass={};kids.forEach(k=>{const c=k.class_name||GL(k.grade);const o=byClass[c]||(byClass[c]={c,g:k.grade,n:0,p:0,sec:0,st:0});o.n++;if(wk[k.id])o.p++;o.sec+=pct(k);o.st+=(PROG[k.id]?.stars||0)});
@@ -481,7 +481,7 @@ async function loadTime(){TIME={};const wk=new Date(Date.now()+4*3600e3-6*864e5)
 function fmtT(s){s=s||0;if(!s)return '—';if(s<60)return '<1 min';const m=Math.round(s/60);return m<60?m+' min':Math.floor(m/60)+' h '+(m%60?m%60+' min':'')}
 function mistakes(id){const p=PROG[id];if(!p)return 0;if(typeof p.attempts==='number'&&typeof p.correct==='number')return Math.max(0,p.attempts-p.correct);return Object.values(p.tricky||{}).reduce((a,b)=>a+(+b||0),0)}
 function accuracy(id){const p=PROG[id];return p&&p.attempts?Math.round((p.correct||0)/p.attempts*100):null}
-function learnt(id){const p=PROG[id];if(!p)return 0;return Object.values(p.words||{}).filter(n=>n>=2).length}
+function learnt(id){const p=PROG[id];if(!p)return 0;return Object.keys(p.secure||{}).length}
 function tricky(id){const p=PROG[id];if(!p)return [];return Object.entries(p.tricky||{}).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0])}
 function visible(){const q=F.q.toLowerCase();return KIDS.filter(c=>(!F.nosur||!c.last_name)&&(F.grade==='all'||c.grade==F.grade)&&(F.cls==='all'||c.class_name===F.cls)&&(!q||fullName(c).toLowerCase().includes(q)||c.code.toLowerCase().includes(q.replace(/-/g,''))))
  .sort((a,b)=>{const k=SORT.k,d=SORT.d;const v=c=>k==='stars'?(PROG[c.id]?.stars||0):k==='learnt'?learnt(c.id):k==='seen'?(PROG[c.id]?.last_seen||''):k==='mist'?mistakes(c.id):k==='time'?(TIME[c.id]?.all||0):k==='grade'?c.grade*1000+(c.class_name||'').charCodeAt(0):String(c[k]||'').toLowerCase();const x=v(a),y=v(b);return (x>y?1:x<y?-1:0)*d||a.first_name.localeCompare(b.first_name)})}
@@ -801,7 +801,7 @@ function render(){
     <td class="tricky">${tricky(c.id).map(esc).join(', ')||'<span class="muted">—</span>'}</td>
     <td class="small">${ago(p.last_seen)}</td></tr>`}).join('')||`<tr><td colspan="12" class="muted" style="padding:22px">No spellers yet. Click <b>+ Add children</b> and paste names from your class list.</td></tr>`}
   </tbody></table></div>
-  <p class="small muted" style="margin-bottom:0">A word counts as <b>learnt</b> once the child has spelt it correctly twice. Tick children to print just their cards; with none ticked, the cards for everyone shown are printed.</p></div>`;
+  <p class="small muted" style="margin-bottom:0">A word counts as <b>learnt</b> (secure 🔵) once the child has spelt it correctly 3 times in a row. Tick children to print just their cards; with none ticked, the cards for everyone shown are printed.</p></div>`;
  bind();
 }
 function bind(){

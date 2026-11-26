@@ -86,7 +86,7 @@ const TYPES=[
  {id:'custom',e:'✨',kick:'Well done',title:'Certificate of Achievement',why:()=>`for wonderful work in the Spelling Bee.`,earn:()=>false}];
 let sb=null;try{sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY)}catch(e){}
 let KIDS=[],PROG={},WINS={},TOT={},FINAL=new Set(),CHAMP=new Set();
-function secure(k){const w=PROG[k.id]?.words||{};return Object.values(w).filter(v=>+v>=2).length}
+function secure(k){return Object.keys(PROG[k.id]?.secure||{}).length}
 let ST={type:'secure25',theme:'honey',grade:'all',cls:'all',sel:new Set(),logo:'',sig1:'',role1:'Class Teacher',sig2:'',role2:'',date:new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}),title:'',why:'',school:''};
 try{const s=JSON.parse(localStorage.getItem('sb-cert')||'{}');['theme','logo','sig1','role1','sig2','role2','school'].forEach(k=>{if(s[k]!=null)ST[k]=s[k]})}catch(e){}
 function keep(){try{localStorage.setItem('sb-cert',JSON.stringify({theme:ST.theme,logo:ST.logo,sig1:ST.sig1,role1:ST.role1,sig2:ST.sig2,role2:ST.role2,school:ST.school}))}catch(e){}}

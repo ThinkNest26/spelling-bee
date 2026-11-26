@@ -412,9 +412,13 @@ function T(id){return TEAMS.find(t=>t.id===id)}
 /* progress on this device only */
 const KEY='aa-sbee-practice-v1';let PR={};
 try{PR=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){PR={}}
-function prog(team){PR[team]=PR[team]||{stars:0,ok:{}};PR[team].bad=PR[team].bad||{};PR[team].last=PR[team].last||{};return PR[team]}
+function prog(team){PR[team]=PR[team]||{stars:0,ok:{}};PR[team].bad=PR[team].bad||{};PR[team].last=PR[team].last||{};PR[team].run=PR[team].run||{};PR[team].sec=PR[team].sec||{};return PR[team]}
+/* 🔵 a word is secure after 3 correct spellings IN A ROW (a mistake resets the count); once secure it stays secure */
+const SEC_RUN=3;
+async function secLoad(){if(!ME||!db())return;try{const {data,error}=await db().rpc('sb_secure_mine',{p_code:ME.code});if(error||!data)return;const p=prog(ME.team),busy=readQ().length>0;
+ Object.keys(data.secure||{}).forEach(w=>p.sec[w]=1);Object.entries(data.runs||{}).forEach(([w,n])=>{n=+n||0;p.run[w]=busy?Math.max(n,p.run[w]||0):n});savePR();if(['home','team'].includes(V.screen))render()}catch(e){}}
 function mergeMax(a,b){const o=Object.assign({},a||{});for(const k in (b||{}))o[k]=Math.max(+o[k]||0,+b[k]||0);return o}
-function wordLevel(team,w){const p=prog(team),ok=+p.ok[w]||0,bad=+p.bad[w]||0;if(!ok&&!bad)return '';if(p.last[w]===false||!ok)return 'tricky';if(ok>=2)return 'secure';return 'almost'}
+function wordLevel(team,w){const p=prog(team),ok=+p.ok[w]||0,bad=+p.bad[w]||0;if(!ok&&!bad)return '';if(p.sec&&p.sec[w])return 'secure';if(p.last[w]===false||!ok)return 'tricky';return 'almost'}
 function savePR(){try{localStorage.setItem(KEY,JSON.stringify(PR))}catch(e){}}
 /* ---------- online accounts (bee codes) ---------- */
 const SUPABASE_URL='https://xpbkdnkfufkahaszfycd.supabase.co';
@@ -432,11 +436,11 @@ async function loginCode(code){code=cleanCode(code);if(code.length<4)return {err
  try{const {data,error}=await c.rpc('student_login',{p_code:code});if(error)throw error;if(!data)return {err:'Hmm, that code didn’t work. Check it and try again!'};
   if(data.error==='paused')return {err:`Practice for ${data.school||'your school'} is paused at the moment. Please ask your teacher.`};
   ME={code,first_name:data.first_name,grade:data.grade,team:teamOfGrade(data.grade),school:data.school||null};saveMe();
-  PR={};PR[ME.team]={stars:data.stars||0,ok:data.words||{},bad:data.tricky||{},spent:data.spent||0,owned:data.owned||[],avatar:data.avatar||{},streak:data.streak||0,bestStreak:data.best_streak||0,streakDay:data.streak_day||'',dailyDay:data.daily_done?dubaiDay():'',dayCount:data.day_count||0,dayDay:data.day_count?dubaiDay():'',sDays:Array.isArray(data.streak_days)?data.streak_days:[]};savePR();return {ok:true}}
+  PR={};PR[ME.team]={stars:data.stars||0,ok:data.words||{},bad:data.tricky||{},spent:data.spent||0,owned:data.owned||[],avatar:data.avatar||{},streak:data.streak||0,bestStreak:data.best_streak||0,streakDay:data.streak_day||'',dailyDay:data.daily_done?dubaiDay():'',dayCount:data.day_count||0,dayDay:data.day_count?dubaiDay():'',sDays:Array.isArray(data.streak_days)?data.streak_days:[]};savePR();setTimeout(secLoad,300);return {ok:true}}
  catch(e){return {err:'We couldn’t connect. Check the internet and try again.'}}}
 async function refreshMe(){if(!ME||!db())return;try{const {data,error}=await db().rpc('student_login',{p_code:ME.code});if(error)return;
  if(!data||data.error){if(data&&data.error==='paused'){ME=null;saveMe();render();note('Practice for your school is paused. Please ask your teacher.');return}ME=null;saveMe();render();return}
- ME.first_name=data.first_name;ME.grade=data.grade;ME.team=teamOfGrade(data.grade);if(data.school)ME.school=data.school;saveMe();
+ ME.first_name=data.first_name;ME.grade=data.grade;setTimeout(secLoad,300);ME.team=teamOfGrade(data.grade);if(data.school)ME.school=data.school;saveMe();
  const p=prog(ME.team);p.stars=Math.max(data.stars||0,p.stars);p.ok=mergeMax(p.ok,data.words);p.bad=mergeMax(p.bad,data.tricky);if(typeof data.spent==='number')p.spent=Math.max(data.spent,p.spent||0);if(Array.isArray(data.owned))p.owned=[...new Set([...(p.owned||[]),...data.owned])];if(data.avatar&&Object.keys(data.avatar).length&&!AVS.dirty)p.avatar=data.avatar;if(typeof data.streak==='number'&&(data.streak_day||'')>=(p.streakDay||'')){if(data.streak_day!==p.streakDay||data.streak>(p.streak||0)){p.streak=data.streak;p.streakDay=data.streak_day}}p.bestStreak=Math.max(p.bestStreak||0,data.best_streak||0);if(typeof data.day_count==='number'&&data.day_count>((p.dayDay===dubaiDay()?p.dayCount:0)||0)){p.dayCount=data.day_count;p.dayDay=dubaiDay()}if(Array.isArray(data.streak_days))p.sDays=[...new Set([...(p.sDays||[]),...data.streak_days])].sort();if(data.daily_done)p.dailyDay=dubaiDay();savePR();if(V.screen==='home'||V.screen==='team')render()}catch(e){}}
 function logout(){ME=null;saveMe();PR={};savePR();try{localStorage.removeItem(Q_KEY);localStorage.removeItem(WKEY)}catch(e){};setTimeout(()=>location.reload(),50);V={screen:'home',team:null};render();setTimeout(()=>document.getElementById('practise')?.scrollIntoView(),0)}
 let flushing=false;
@@ -497,7 +501,7 @@ setTimeout(brkShow,600);document.addEventListener('visibilitychange',()=>{if(doc
 setInterval(tSend,60000);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')tSend()});setTimeout(tSend,4000);
 window.addEventListener('online',flush);
 let LASTSTAR=true;function dubaiDay(){return new Date(Date.now()+4*3600e3).toISOString().slice(0,10)}
-function award(team,w,ok){const p=prog(team);p.sday=p.sday||{};bumpStreak(p,team);if(ok){const sec=(p.ok[w]||0)>=2,td=dubaiDay();if(sec&&p.sday[w]===td)LASTSTAR=false;else{p.stars++;LASTSTAR=true;if(sec)p.sday[w]=td}p.ok[w]=(p.ok[w]||0)+1}else{p.bad[w]=(p.bad[w]||0)+1}p.last[w]=!!ok;savePR();
+function award(team,w,ok){const p=prog(team);p.sday=p.sday||{};bumpStreak(p,team);p.run=p.run||{};p.sec=p.sec||{};if(ok){const sec=!!p.sec[w],td=dubaiDay();p.run[w]=(p.run[w]||0)+1;if(p.run[w]>=SEC_RUN)p.sec[w]=1;if(sec&&p.sday[w]===td)LASTSTAR=false;else{p.stars++;LASTSTAR=true;if(sec)p.sday[w]=td}p.ok[w]=(p.ok[w]||0)+1}else{p.bad[w]=(p.bad[w]||0)+1;p.run[w]=0}p.last[w]=!!ok;savePR();
  if(ME){const q=readQ();q.push({id:Date.now()+'-'+Math.random().toString(36).slice(2,7),w,ok,a:V.screen});writeQ(q.slice(-500));flush()}xHook(team,w,ok)}
 function mastered(team){const p=prog(team);return WORDS[team].filter(w=>wordLevel(team,w)==='secure').length}
 function totalStars(){return Math.max(0,TEAMS.reduce((n,t)=>n+(PR[t.id]?.stars||0)-(PR[t.id]?.spent||0),0))}
@@ -1248,7 +1252,7 @@ function semiTicker(){if(!ME)return '';const x=semiNewsText();if(!x)return '';co
 function teamView(){
  const t=T(V.team);const m=mastered(t.id),n=WORDS[t.id].length;
  return `<div class="row" style="justify-content:space-between;margin-bottom:14px"><button class="back" data-go="home">← Home</button><div class="f" style="font-size:22px">${t.e} ${t.name} · ${t.label}</div></div>
- <div class="panel" style="margin-bottom:18px"><div class="f" style="font-size:22px">I have learnt ${m} of ${n} words</div><div class="prog"><i style="width:${Math.round(m/n*100)}%"></i></div><div class="muted">Spell a word correctly twice to make it secure 🔵. ⭐ ${totalStars()} stars to spend</div></div>
+ <div class="panel" style="margin-bottom:18px"><div class="f" style="font-size:22px">I have learnt ${m} of ${n} words</div><div class="prog"><i style="width:${Math.round(m/n*100)}%"></i></div><div class="muted">Spell a word correctly 3 times in a row to make it secure 🔵. ⭐ ${totalStars()} stars to spend</div></div>
  ${ME&&t.id===ME.team?launchBanner()+todayPanel(t):''}
  ${xTeamPanel(t)}
  ${ME&&t.id===ME.team&&!hasAvatar()?`<div class="avbanner" data-go="avatar">${avatarSVG({},70)}<div><b class="f" style="font-size:24px">Create your own avatar! 🎨</b><div>Choose a cute character, then dress it up with your stars in the Bee Shop!</div></div><button class="y">Let’s go →</button></div>`:''}
@@ -1433,7 +1437,7 @@ function plot(w,grow){const l=wordLevel(V.team,w);const e=l==='secure'?FLOWERS[[
  return `<div class="plot ${l||'soil'} ${grow?'grow':''}" data-say="${esc(w)}" title="${esc(w)}"><span>${e}</span><small>${esc(w)}</small></div>`}
 function gardenView(){const ws=WORDS[V.team];const bloom=ws.filter(w=>wordLevel(V.team,w)==='secure').length;
  const garden=`<div class="gkey">🌰 seed · 🌱 sprout · 🌻 flower (secure)</div><div class="garden">${ws.map(w=>plot(w,w===G.grown)).join('')}</div>`;
- if(G.done)return gHead('🌻 Grow a Garden')+`<div class="panel gend"><div style="font-size:70px">🌻🌷🌹</div><h2 class="f" style="font-size:30px">Your garden has ${bloom} flower${bloom===1?'':'s'}!</h2><p style="font-size:18px">You spelt ${G.score} of ${G.list.length} words right. Spell a word right twice to make it bloom.</p><div class="row" style="margin-top:12px"><button class="y" data-g="ggarden">Keep growing 🌱</button><button class="w" data-g="menu">More games</button></div></div>${garden}`;
+ if(G.done)return gHead('🌻 Grow a Garden')+`<div class="panel gend"><div style="font-size:70px">🌻🌷🌹</div><h2 class="f" style="font-size:30px">Your garden has ${bloom} flower${bloom===1?'':'s'}!</h2><p style="font-size:18px">You spelt ${G.score} of ${G.list.length} words right. Spell a word right 3 times in a row to make it bloom.</p><div class="row" style="margin-top:12px"><button class="y" data-g="ggarden">Keep growing 🌱</button><button class="w" data-g="menu">More games</button></div></div>${garden}`;
  return gHead(`🌻 Grow a Garden · ${G.i+1} of ${G.list.length}`,`<p class="muted" style="text-align:center">🌻 ${bloom} of ${ws.length} flowers in bloom</p>`)+`<div class="panel" style="margin-bottom:16px">${gAsk()}</div>${garden}`}
 
 /* 4. Bee Race */
