@@ -380,7 +380,7 @@ const DATES=[
  ['23 Nov – 4 Dec','Launch & sign-up','Find out about the Spelling Bee in assembly and sign up with your class teacher.'],
  ['Dec – Jan','Practice time','Practise your word list at home and at school — use this website every day!'],
  ['Dec – Jan','Reach the semi-final','Secure 85% of your words on this website and you’re in the semi-final!'],
- ['Week of 11 Jan','Online semi-finals','On your semi-final day, spell your words on this website. The best scores go to the Grand Final.'],
+ ['14–15 Jan','Online semi-finals','Thursday 14 and Friday 15 January: spell your words on this website. The best scores go to the Grand Final.'],
  ['22 Jan','Grand Final 🏆','Spellers meet on stage with families watching. Champions are crowned!'],
  ['Week of 25 Jan','Celebration','Certificates for everyone who took part and trophies for our champions.']];
 const RULES=['The pronouncer says your word, uses it in a sentence, then says it again.','You can ask to hear the word again, its meaning, or the sentence.','Say the word, spell it letter by letter, then say the word again.','You have up to 1 minute to finish spelling — watch the timer on the big screen.','Once you say a letter you can’t change it — so take your time!','If you miss a word, you are out at the end of that round. Well done for trying!','The last speller standing spells one more word to become champion.'];
@@ -932,7 +932,7 @@ const XSF={online:{e:'💻',t:'Online semi-final',d:'On your semi-final day, you
  written:{e:'📝',t:'Written round, then out loud',d:'First, everyone writes some words. The spellers with the best scores then spell out loud on stage, and the best go to the Grand Final!'},
  points:{e:'⭐',t:'Points rounds',d:'Everyone spells the same number of words out loud. You get a point for each word you spell right. The highest scores go to the Grand Final!'}};
 function xSemiDays(){const m=XS.semi;if(!m||!m.day)return null;return Math.round((Date.parse(String(m.day).slice(0,10)+'T12:00:00Z')-Date.parse(dubaiDay()+'T12:00:00Z'))/864e5)}
-function xSemiWhen(){const m=XS.semi,n=xSemiDays();if(n===null)return 'Your teacher will tell you the date soon.';const d=xDay(String(m.day).slice(0,10));return n>1?`${d} · in ${n} days`:n===1?`${d} · tomorrow!`:n===0?'Today! 🎉':`${d}`}
+function xSemiWhen(){const m=XS.semi,n=xSemiDays();if(n===null)return SEMI_DATES;const d=xDay(String(m.day).slice(0,10));return n>1?`${d} · in ${n} days`:n===1?`${d} · tomorrow!`:n===0?'Today! 🎉':`${d}`}
 function xSemiBanner(){const m=XS.semi;if(!m)return '';const n=xSemiDays();if(n!==null&&n<-3)return '';
  if(m.online&&m.done)return `<div class="xban semi"><div class="e">🏅</div><div style="flex:1"><b class="f" style="font-size:22px">Semi-final done! You spelt ${m.score} / ${m.total}</b><div>Your teacher will tell you who goes to the Grand Final.</div></div><button class="w" data-x="semi">See →</button></div>`;
  if(m.online&&m.open)return `<div class="xban semi"><div class="e">✏️</div><div style="flex:1"><b class="f" style="font-size:24px">Your semi-final is today!</b><div>${m.n} words · one go · take your time</div></div><button class="y" data-x="semi">Start →</button></div>`;
@@ -1078,7 +1078,7 @@ function render(){
  else if(!ME){V={screen:'home',team:null};a.innerHTML=home()}
  else a.innerHTML=top()+`<main>${({team:teamView,learn:learnView,lcwc:lcwcView,test:testView,miss:missView,done:doneView,gap:gapView,games:gamesView,avatar:avatarView,realbee:rbView,wod:wodView,gballoon:balloonView,gfriend:friendView,ghive:hiveView,gcatch:catchView,ggarden:gardenView,grace:raceView,gl:glView,xdrill:xDrillView,xrules:xRulesView,xsent:xSentView,xweekly:xWeeklyView,xfamily:xFamilyView,xhtest:xHomeTestView,xsemi:xSemiView})[V.screen]()}</main>`;
  after();if(V.screen==='ghive')hiveAfter();if(V.screen==='grace')raceAfter();
- try{actAfterRender()}catch(e){}
+ try{actAfterRender()}catch(e){}try{semiNewsPop()}catch(e){}
 }
 /* ---------- schools: product page + each school's page ---------- */
 let SCH=null,PLANLIST=null;
@@ -1162,7 +1162,7 @@ function productHome(){const plans=PLANLIST||[{id:'trial',name:'Free trial',pric
 
 function practiseBox(){
  if(ME){const t=T(ME.team);return `<div class="codecard ${t.id}"><div class="e" style="font-size:64px">${t.e}</div><h3 class="f" style="font-size:32px">Hi ${esc(ME.first_name)}! 👋</h3><div class="gr" style="font-size:18px">You’re a <b>${t.name.replace(/s$/,'')}</b> · ${gradeLabel(ME.grade)}</div>
-  <div class="muted" style="margin:8px 0 16px;font-size:17px">⭐ ${totalStars()} stars · ${mastered(t.id)}/${WORDS[t.id].length} words learnt</div>${launchBanner()}
+  <div class="muted" style="margin:8px 0 16px;font-size:17px">⭐ ${totalStars()} stars · ${mastered(t.id)}/${WORDS[t.id].length} words learnt</div>${launchBanner()}${semiNews()}
   <button class="y" style="font-size:22px;padding:16px 30px" data-go="team" data-t="${t.id}">Let’s practise! →</button>
   <div style="margin-top:14px"><button class="back" data-logout="1">Not ${esc(ME.first_name)}? Use another code</button></div></div>`}
  return `<div class="codecard"><div class="e" style="font-size:64px">🔑</div><h3 class="f" style="font-size:30px">Type your bee code</h3><p class="muted" style="margin:6px 0 14px">Your teacher gives every speller in the Spelling Bee their own secret code.</p>
@@ -1174,11 +1174,25 @@ function practiseBox(){
 const LAUNCH='2026-12-01';
 function launchBanner(){if(!ME||dubaiDay()>=LAUNCH)return '';const n=Math.round((Date.parse(LAUNCH+'T12:00:00Z')-Date.parse(dubaiDay()+'T12:00:00Z'))/864e5);
  return `<div class="xban semi" style="margin-bottom:16px"><div class="e">🚀</div><div style="flex:1"><b class="f" style="font-size:22px">The Spelling Bee launches on 1 December!</b><div>That’s ${n===1?'tomorrow':'in '+n+' days'} — but you can start practising early! Every word you secure now counts. 🐝</div></div></div>`}
+/* 📣 official semi-final dates: every child with a code sees a banner, plus a one-time pop-up */
+const SEMI_START='2027-01-14',SEMI_END='2027-01-15',SEMI_DATES='Thursday 14 – Friday 15 January';
+function semiPhase(){const d=dubaiDay();return d<SEMI_START?'pre':d<=SEMI_END?'live':'over'}
+function semiNewsText(){const ph=semiPhase(),m=XS.semi;if(ph==='over')return null;
+ if(ph==='live')return {e:'🏅',t:'The semi-finals are on now!',d:m?`${SEMI_DATES}. Open your semi-final page and do your best, ${esc(ME.first_name)}! 🐝`:`${SEMI_DATES}. Good luck to all our semi-finalists! Keep practising your words. 🐝`};
+ const n=Math.round((Date.parse(SEMI_START+'T12:00:00Z')-Date.parse(dubaiDay()+'T12:00:00Z'))/864e5);
+ return {e:'📣',t:'Semi-finals: '+SEMI_DATES,d:`That’s ${n===1?'tomorrow':'in '+n+' days'}! `+(m?'You’re in — keep practising to get ready! 🏅':'Secure 85% of your words and finish every activity to reach the semi-final! 🐝')}}
+function semiNews(){if(!ME)return '';const x=semiNewsText();if(!x)return '';
+ return `<div class="xban semi" style="margin-bottom:16px"><div class="e">${x.e}</div><div style="flex:1"><b class="f" style="font-size:22px">${x.t}</b><div>${x.d}</div></div></div>`}
+function semiNewsPop(){if(!ME||!['home','team'].includes(V.screen)||document.getElementById('snews'))return;const x=semiNewsText();if(!x)return;
+ const k='sb-semi-news-'+semiPhase()+'-'+ME.code;try{if(localStorage.getItem(k))return}catch(e){return}
+ const d=document.createElement('div');d.id='snews';d.className='party';d.style.cssText='z-index:9998;background:rgba(20,34,66,.6)';
+ d.innerHTML=`<div class="pcard" style="max-width:480px"><div style="font-size:72px">${x.e}</div><h2 class="f" style="font-size:30px;margin:6px 0">${x.t}</h2><div style="font-size:19px;line-height:1.45;margin:8px 0 18px">${x.d}</div><button class="y" style="font-size:22px;padding:14px 30px">Got it! 👍</button></div>`;
+ d.querySelector('button').onclick=()=>{try{localStorage.setItem(k,'1')}catch(e){}d.remove()};document.body.appendChild(d)}
 function teamView(){
  const t=T(V.team);const m=mastered(t.id),n=WORDS[t.id].length;
  return `<div class="row" style="justify-content:space-between;margin-bottom:14px"><button class="back" data-go="home">← Home</button><div class="f" style="font-size:22px">${t.e} ${t.name} · ${t.label}</div></div>
  <div class="panel" style="margin-bottom:18px"><div class="f" style="font-size:22px">I have learnt ${m} of ${n} words</div><div class="prog"><i style="width:${Math.round(m/n*100)}%"></i></div><div class="muted">Spell a word correctly twice to make it secure 🔵. ⭐ ${totalStars()} stars to spend</div></div>
- ${ME&&t.id===ME.team?launchBanner()+todayPanel(t):''}
+ ${ME&&t.id===ME.team?launchBanner()+semiNews()+todayPanel(t):''}
  ${xTeamPanel(t)}
  ${ME&&t.id===ME.team&&!hasAvatar()?`<div class="avbanner" data-go="avatar">${avatarSVG({},70)}<div><b class="f" style="font-size:24px">Create your own avatar! 🎨</b><div>Choose a cute character, then dress it up with your stars in the Bee Shop!</div></div><button class="y">Let’s go →</button></div>`:''}
  <div class="acts">

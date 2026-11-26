@@ -667,7 +667,7 @@ function semiSuggest(g,n){const kids=KIDS.filter(k=>k.active!==false&&+k.grade==
   if(!rd)return {cls:c,round:null,picks:[]};return {cls:c,round:rd,picks:semiRank(rd.state).filter(s=>ids.has(s.id)).slice(0,n).map(s=>s.id)}})}
 function semiAuto(g){const ids=new Set(KIDS.filter(k=>+k.grade===+g).map(k=>k.id));return (SM&&SM.auto||[]).filter(a=>+a.grade===+g&&ids.has(a.student_id)).map(a=>a.student_id)}
 function semiDraft(g){const m=SM.semis.find(x=>+x.grade===+g);const au=semiAuto(g);if(m){const d=JSON.parse(JSON.stringify(m));d.qualifiers=[...new Set([...(d.qualifiers||[]),...au])];return d}
- const d={grade:+g,day:'',place:'',format:'online',per_class:5,finalists:3,notes:'',status:'draft',qualifiers:[...new Set(au)],words:[]};return d}
+ const d={grade:+g,day:'2027-01-14',place:'',format:'online',per_class:5,finalists:3,notes:'',status:'draft',qualifiers:[...new Set(au)],words:[]};return d}
 function semiPick(g,n){const t=teamOf(g);const all=[...new Set((WROWS||[]).filter(w=>w.team===t).map(w=>String(w.word||'').trim()).filter(Boolean))];
  return shuffle(all.map(w=>[w,w.length+Math.random()*4]).sort((a,b)=>b[1]-a[1]).slice(0,Math.max(n*2,n)).map(x=>x[0])).slice(0,n)}
 let SMR=null,SMRID=null;
@@ -689,7 +689,7 @@ async function renderSemi(){if(SEMIORG===false){TAB='dash';render();return}
    <p class="muted small" style="margin:8px 0 0">🌟 Children who secure <b>85% of their words</b> through practice on the website are in automatically. You can also add a child by hand. Choose the date and the words, then confirm. Qualifiers see “🏅 You’re in the semi-final!” on their page, and on the day they spell the words on the website.</p></div>
  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr));margin-bottom:14px">
   <div class="card"><h3 style="margin:0 0 10px">📅 Details</h3>
-   <div class="grid" style="grid-template-columns:1fr 1fr"><div><label>Date</label><input type="date" id="sm-day" value="${esc(d.day||'')}"></div><div><label>Place</label><input id="sm-place" value="${esc(d.place)}" placeholder="${d.format==='online'?'e.g. At home or in class':'e.g. School hall'}"></div>
+   <div class="grid" style="grid-template-columns:1fr 1fr"><div><label>Date</label><input type="date" id="sm-day" value="${esc(d.day||'')}"><div class="small muted">Official semi-finals: Thu 14 – Fri 15 January</div></div><div><label>Place</label><input id="sm-place" value="${esc(d.place)}" placeholder="${d.format==='online'?'e.g. At home or in class':'e.g. School hall'}"></div>
     ${d.format==='online'?`<div><label>Number of words</label><input type="number" min="5" max="40" id="sm-nw" value="${(d.words||[]).length||15}"></div>`:`<div><label>Top spellers from each class</label><input type="number" min="1" max="30" id="sm-per" value="${d.per_class}"></div>`}<div><label>Go through to the Grand Final</label><input type="number" min="1" max="30" id="sm-fin" value="${d.finalists}"></div></div>
    <label style="margin-top:10px">How the semi-final works</label><div class="smfmt">${Object.entries(SFMT).map(([k,f])=>`<label class="smf ${d.format===k?'on':''}"><input type="radio" name="smf" value="${k}" ${d.format===k?'checked':''}><b>${f.e} ${f.t}</b><span class="small muted">${f.d}</span></label>`).join('')}</div>
    <label style="margin-top:10px">Message for the qualifiers <span class="muted">(optional)</span></label><textarea id="sm-notes" rows="2" placeholder="e.g. Wear your school uniform and arrive by 8:15.">${esc(d.notes)}</textarea>
