@@ -204,6 +204,9 @@ button.mv{font-size:28px;padding:10px 34px}
 #champ .chtap{margin-top:18px;background:#FFD54A;color:#1F2A44;border:0;border-radius:999px;padding:14px 26px;font-family:Fredoka,Nunito,sans-serif;font-weight:700;font-size:clamp(18px,2.4vw,24px);box-shadow:0 6px 0 #B7791F,0 0 30px rgba(255,213,74,.6);cursor:pointer;animation:chtap 1.2s ease-in-out infinite}
 @keyframes chtap{50%{transform:scale(1.07)}}
 @media (prefers-reduced-motion:reduce){.chrays,#champ .chtro,#champ .chmsg,#champ .chsub{animation:none}}
+.remme{display:inline-flex;align-items:center;gap:8px;margin-top:12px;font-weight:800;font-size:17px;cursor:pointer;background:#FFF8E1;border:2px solid #F1D27A;border-radius:14px;padding:8px 14px}.remme input{width:24px;height:24px;cursor:pointer}
+.savedbox{margin:2px 0 6px}.savedrow{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}.savedkid{position:relative;display:inline-flex}.savedkid .y{font-size:20px;padding:12px 22px}
+.savedx{position:absolute;top:-8px;right:-8px;width:26px;height:26px;border-radius:50%;padding:0;border:2px solid #fff;background:#6B7280;color:#fff;font-size:13px;font-weight:800;cursor:pointer;line-height:1}
 #sbbreak{position:fixed;inset:0;z-index:9990;display:grid;place-items:center;padding:16px;background:radial-gradient(circle at 50% 30%,#FFF6D2,#FFE7A0 60%,#F9D46B);overflow:auto}
 #sbbreak .brkcard{max-width:620px;width:100%;background:#fff;border:6px solid var(--honey);border-radius:40px;padding:22px 26px 26px;text-align:center;box-shadow:0 20px 50px rgba(31,42,68,.25);animation:ppop .6s cubic-bezier(.2,1.6,.4,1)}
 #sbbreak .brkbee{width:170px;margin:-6px auto 4px;animation:brkfloat 2.6s ease-in-out infinite}#sbbreak .brkbee svg{width:100%;height:auto;display:block}
@@ -1339,8 +1342,10 @@ function practiseBox(){
   <div class="muted" style="margin:8px 0 16px;font-size:17px">⭐ ${totalStars()} stars · ${mastered(t.id)}/${WORDS[t.id].length} words learnt</div>${launchBanner()}
   <button class="y" style="font-size:22px;padding:16px 30px" data-go="team" data-t="${t.id}">Let’s practise! →</button>
   <div style="margin-top:14px"><button class="back" data-logout="1">Not ${esc(ME.first_name)}? Use another code</button></div></div>`}
- return `<div class="codecard"><div class="e" style="font-size:64px">🔑</div><h3 class="f" style="font-size:30px">Type your bee code</h3><p class="muted" style="margin:6px 0 14px">Your teacher gives every speller in the Spelling Bee their own secret code.</p>
-  <form id="codeform"><input id="codein" class="ans" style="max-width:360px;text-transform:uppercase" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="e.g. 7KQ-2MP" maxlength="12"></form>
+ return `<div class="codecard"><div class="e" style="font-size:64px">🔑</div><h3 class="f" style="font-size:30px">${savedGet().length?'Welcome back! 🐝':'Type your bee code'}</h3><p class="muted" style="margin:6px 0 14px">Your teacher gives every speller in the Spelling Bee their own secret code.</p>
+  ${savedBox()}<form id="codeform"><input id="codein" class="ans" style="max-width:360px;text-transform:uppercase" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="e.g. 7KQ-2MP" maxlength="12"></form>
+  <label class="remme"><input type="checkbox" id="coderem"> ⭐ Remember me on this device</label>
+  <div class="muted" style="font-size:13px;margin-top:2px">Next time, just tap your name. Best on your own or your family’s device.</div>
   <div id="codemsg" class="codemsg"></div>
   <button class="y" style="font-size:22px;padding:14px 30px;margin-top:12px" data-code="1">Let’s go! 🐝</button>
   <p class="muted" style="margin-top:14px;font-size:15px">Want to take part? Ask your class teacher how to join the Spelling Bee.</p></div>`}
@@ -2049,9 +2054,18 @@ async function wodCheck(){const v=readAns();if(!v||!WD||WD.fb==='ok'||WD.fb==='g
 document.addEventListener('click',e=>{const b=e.target.closest('[data-wd]');if(b&&V.screen==='wod')wodCheck()});
 document.addEventListener('keydown',e=>{if(V.screen==='wod'&&e.key==='Enter'&&e.target.id==='ans'){e.preventDefault();wodCheck()}});
 
+/* ⭐ remembered children on this device: tap your name instead of typing the code */
+const SAVEDK='sb-saved-codes';
+function savedGet(){try{const a=JSON.parse(localStorage.getItem(SAVEDK)||'[]');return Array.isArray(a)?a:[]}catch(e){return []}}
+function savedPut(a){try{localStorage.setItem(SAVEDK,JSON.stringify(a.slice(0,12)))}catch(e){}}
+function savedAdd(){if(!ME)return;const a=savedGet().filter(x=>x.c!==ME.code);a.unshift({c:ME.code,n:ME.first_name,t:ME.team});savedPut(a)}
+function savedBox(){const a=savedGet();if(!a.length)return '';return `<div class="savedbox"><div class="f" style="font-size:20px;margin-bottom:8px">Tap your name 👇</div><div class="savedrow">${a.map(x=>`<span class="savedkid"><button class="y" data-saved="${esc(x.c)}">${(T(x.t)||{}).e||'🐝'} ${esc(x.n)}</button><button class="savedx" data-forget="${esc(x.c)}" title="Forget ${esc(x.n)} on this device" aria-label="Forget ${esc(x.n)} on this device">✕</button></span>`).join('')}</div><div class="muted" style="margin:12px 0 6px;font-size:15px">Someone new? Type your bee code:</div></div>`}
+document.addEventListener('click',e=>{const s=e.target.closest('[data-saved]'),f=e.target.closest('[data-forget]');
+ if(f){e.preventDefault();e.stopPropagation();savedPut(savedGet().filter(x=>x.c!==f.dataset.forget));render();return}
+ if(s){e.preventDefault();e.stopPropagation();const i=$('#codein');if(i){i.value=s.dataset.saved;const r=$('#coderem');if(r)r.checked=true;s.disabled=true;submitCode()}}},true);
 async function submitCode(){const i=$('#codein'),m=$('#codemsg');if(!i)return;const btn=document.querySelector('[data-code]');
  if(btn){btn.disabled=true;btn.textContent='Checking… 🐝'}const r=await loginCode(i.value);
- if(r.ok){loadWords();V={screen:'team',team:ME.team};render();window.scrollTo(0,0);happySound(false);setTimeout(()=>say("Hello! Let's practise your spellings!"),300);flush()}
+ if(r.ok){{const rm=$('#coderem');if(rm&&rm.checked)savedAdd();else if(savedGet().some(x=>x.c===ME.code))savedAdd()}loadWords();V={screen:'team',team:ME.team};render();window.scrollTo(0,0);happySound(false);setTimeout(()=>say("Hello! Let's practise your spellings!"),300);flush()}
  else{if(btn){btn.disabled=false;btn.textContent='Let’s go! 🐝'}if(m){m.textContent=r.err;m.classList.add('show')}gentleSound()}}
 document.addEventListener('submit',e=>{if(e.target.id==='codeform'){e.preventDefault();submitCode()}});
 /* spelling lists come from the teachers' Word lists (database); built-in lists are the backup */
