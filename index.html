@@ -837,15 +837,22 @@ async function xSemi85(){if(!ME||!db()||S85_BUSY||s85Done())return;const t=ME.te
  finally{S85_BUSY=false}}
 const SEMI_SAY="Congratulations! You've secured eighty-five percent of your words. You're in the semi-final!";
 /* fireworks + crowd sounds, made in the browser (no files needed) */
+/* 🎆 firework sounds: a rocket "fwoosh", a deep boom with a bright crack, then a crackling sparkle tail */
+function fwNoise(a,sec){const len=Math.max(1,Math.floor(a.sampleRate*sec)),b=a.createBuffer(1,len,a.sampleRate),d=b.getChannelData(0);for(let i=0;i<len;i++)d[i]=Math.random()*2-1;return b}
 function fwPop(t,big){const a=ac();if(!a)return;const r=room()||a.destination;const n=a.currentTime+(t||0);
- const len=Math.floor(a.sampleRate*(big?1.1:.7)),buf=a.createBuffer(1,len,a.sampleRate),d=buf.getChannelData(0);
- for(let i=0;i<len;i++){const x=i/len;d[i]=(Math.random()*2-1)*Math.pow(1-x,big?2.2:3)*(x<.02?x/.02:1)}
- const src=a.createBufferSource();src.buffer=buf;const lp=a.createBiquadFilter();lp.type='lowpass';lp.frequency.value=big?900:1400;const g=a.createGain();g.gain.value=big?.9:.55;
- src.connect(lp);lp.connect(g);g.connect(r);src.start(n);
- for(let k=0;k<14;k++){const c=a.createBufferSource(),cb=a.createBuffer(1,Math.floor(a.sampleRate*.03),a.sampleRate),cd=cb.getChannelData(0);for(let i=0;i<cd.length;i++)cd[i]=(Math.random()*2-1)*(1-i/cd.length);
-  c.buffer=cb;const hp=a.createBiquadFilter();hp.type='highpass';hp.frequency.value=2500;const cg=a.createGain();cg.gain.value=.25*Math.random()+.1;c.connect(hp);hp.connect(cg);cg.connect(r);c.start(n+.25+Math.random()*.9)}}
-function fwWhistle(t){const a=ac();if(!a)return;const r=room()||a.destination;const n=a.currentTime+(t||0);const o=a.createOscillator(),g=a.createGain();o.type='sine';
- o.frequency.setValueAtTime(700,n);o.frequency.exponentialRampToValueAtTime(2200,n+.55);g.gain.setValueAtTime(0.0001,n);g.gain.exponentialRampToValueAtTime(.05,n+.05);g.gain.exponentialRampToValueAtTime(0.0001,n+.6);o.connect(g);g.connect(r);o.start(n);o.stop(n+.65)}
+ // deep boom you can feel
+ const o=a.createOscillator(),og=a.createGain();o.type='sine';o.frequency.setValueAtTime(big?95:120,n);o.frequency.exponentialRampToValueAtTime(38,n+.6);
+ og.gain.setValueAtTime(0.0001,n);og.gain.exponentialRampToValueAtTime(big?1:.8,n+.01);og.gain.exponentialRampToValueAtTime(0.0001,n+.75);o.connect(og);og.connect(r);o.start(n);o.stop(n+.8);
+ // the bang itself
+ const s=a.createBufferSource();s.buffer=fwNoise(a,1.4);const lp=a.createBiquadFilter();lp.type='lowpass';lp.frequency.setValueAtTime(big?2600:3200,n);lp.frequency.exponentialRampToValueAtTime(300,n+1.2);
+ const g=a.createGain();g.gain.setValueAtTime(0.0001,n);g.gain.exponentialRampToValueAtTime(big?.9:.7,n+.008);g.gain.exponentialRampToValueAtTime(0.0001,n+1.3);s.connect(lp);lp.connect(g);g.connect(r);s.start(n);s.stop(n+1.4);
+ // crackling sparkles as the stars fall
+ const N=big?34:24;for(let k=0;k<N;k++){const c=a.createBufferSource();c.buffer=fwNoise(a,.018+Math.random()*.02);const hp=a.createBiquadFilter();hp.type='bandpass';hp.frequency.value=2500+Math.random()*3500;hp.Q.value=1.2;
+  const cg=a.createGain();cg.gain.value=.12+Math.random()*.22;c.connect(hp);hp.connect(cg);cg.connect(r);c.start(n+.35+Math.random()*1.1)}}
+function fwWhistle(t){const a=ac();if(!a)return;const r=room()||a.destination;const n=a.currentTime+(t||0);
+ // rocket going up: rising airy "fwoosh"
+ const s=a.createBufferSource();s.buffer=fwNoise(a,.7);const bp=a.createBiquadFilter();bp.type='bandpass';bp.Q.value=3;bp.frequency.setValueAtTime(500,n);bp.frequency.exponentialRampToValueAtTime(3200,n+.6);
+ const g=a.createGain();g.gain.setValueAtTime(0.0001,n);g.gain.exponentialRampToValueAtTime(.35,n+.12);g.gain.exponentialRampToValueAtTime(0.0001,n+.65);s.connect(bp);bp.connect(g);g.connect(r);s.start(n);s.stop(n+.7)}
 function crowdCheer(t,dur){const a=ac();if(!a)return;const r=room()||a.destination;const n=a.currentTime+(t||0);dur=dur||3.2;
  const len=Math.floor(a.sampleRate*dur),buf=a.createBuffer(2,len,a.sampleRate);for(let c=0;c<2;c++){const d=buf.getChannelData(c);for(let i=0;i<len;i++)d[i]=Math.random()*2-1}
  [[380,6],[750,7],[1150,8],[2400,9]].forEach(([f,q],k)=>{const s=a.createBufferSource();s.buffer=buf;const bp=a.createBiquadFilter();bp.type='bandpass';bp.Q.value=q;
@@ -1229,7 +1236,7 @@ const URLQ=new URLSearchParams(location.search);const SLUG=(URLQ.get('s')||'').t
 try{if(SLUG)SCH=JSON.parse(localStorage.getItem('sb-school-'+SLUG)||'null')}catch(e){}
 async function loadSchoolPage(){if(!SLUG)return;const c=db();if(!c)return;try{const {data}=await c.rpc('school_public',{p_slug:SLUG});
  if(data){const was=JSON.stringify(SCH);SCH=data;try{localStorage.setItem('sb-school-'+SLUG,JSON.stringify(data))}catch(e){}if(was!==JSON.stringify(data)&&V.screen==='home')render()}else if(!SCH){SCH={missing:true};if(V.screen==='home')render()}}catch(e){}}
-/* 🏆 opening screen: a big gold trophy, "Who will be the … Spelling Bee Champion?" and fireworks for 30 seconds,
+/* 🏆 opening screen: a big gold trophy, "Who will be the … Spelling Bee Champion?" and fireworks for 10 seconds,
    every time a school's Spelling Bee page is opened. The message can be changed in School settings (Trophy message). */
 const TROPHY=`<svg viewBox="0 0 240 290" aria-hidden="true"><defs><linearGradient id="tg" x1="0" x2="1"><stop offset="0" stop-color="#B7791F"/><stop offset=".25" stop-color="#FFD54A"/><stop offset=".5" stop-color="#FFF3B0"/><stop offset=".75" stop-color="#F5B700"/><stop offset="1" stop-color="#A86B12"/></linearGradient>
 <linearGradient id="tg2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE47A"/><stop offset="1" stop-color="#B7791F"/></linearGradient></defs>
@@ -1263,8 +1270,8 @@ function champSplash(){if(CHAMP_DONE||document.getElementById('champ'))return;co
   try{if(AC&&AC.state!=='running'){try{AC.close()}catch(x){}AC=null;ROOM=null}const a=ac();if(a&&a.resume)a.resume()}catch(x){}
   if(!e||!e.target||e.target.id!=='chskip')setTimeout(()=>{try{happySound(true);setTimeout(()=>clapSound(true),200)}catch(x){}[0,250,600].forEach(t=>fwLaunch(sky,t))},60)};
  EVS.forEach(t=>document.addEventListener(t,unlock,true));
- const end=()=>{if(!o.isConnected)return;o.classList.add('out');setTimeout(()=>o.remove(),450)};o.querySelector('#chskip').onclick=end;setTimeout(end,30000);
- confettiWave(sky,50);for(let t=0;t<29000;t+=Math.random()<.5?380:700)fwLaunch(sky,t+200);[6000,13000,20000].forEach(t=>setTimeout(()=>{if(o.isConnected)confettiWave(sky,40)},t))}
+ const end=()=>{if(!o.isConnected)return;o.classList.add('out');setTimeout(()=>{o.remove();try{say("Hello! Let's practise your spellings!")}catch(x){}},450)};o.querySelector('#chskip').onclick=end;setTimeout(end,10000);
+ confettiWave(sky,50);for(let t=0;t<9000;t+=Math.random()<.5?380:700)fwLaunch(sky,t+200);setTimeout(()=>{if(o.isConnected)confettiWave(sky,40)},5000)}
 function curSchool(){if(FOR_SCHOOLS)return null;if(ME&&ME.school)return ME.school;if(SCH&&!SCH.missing)return SCH;return null}
 async function loadPlans(){if(PLANLIST)return;const c=db();if(!c)return;try{const {data}=await c.from('plans').select('*').order('sort');if(Array.isArray(data)&&data.length){PLANLIST=data;if(V.screen==='home'&&!curSchool())render()}}catch(e){}}
 function fmtDay(d,opt){try{return new Date(d+'T12:00:00').toLocaleDateString('en-GB',opt||{weekday:'long',day:'numeric',month:'long',year:'numeric'})}catch(e){return d}}
