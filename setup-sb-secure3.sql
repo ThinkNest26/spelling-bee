@@ -71,7 +71,7 @@ begin
     return json_build_object('ok', true, 'new', false);
   end if;
   if p_total is null or p_total < 10 or p_total > 500 then return json_build_object('error','total'); end if;
-  select count(*) into missing from unnest(array['test','ghive','gcatch','ggarden','grace','gballoon','lcwc','miss','gap','rules','sent']) a
+  select count(*) into missing from unnest(array['test','ghive','gcatch','ggarden','grace','gballoon','lcwca','missa','gap','rules','sent']) a
    where not exists (select 1 from public.sb_acts x where x.student_id = s.id and x.act = a);
   if missing > 0 then return json_build_object('ok', false, 'acts', missing); end if;
   -- only words secured (or launch-checked) from 1 December count towards the 85%
