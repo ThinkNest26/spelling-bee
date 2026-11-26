@@ -199,6 +199,8 @@ button.mv{font-size:28px;padding:10px 34px}
 #champ .chtro svg{width:100%;height:auto;display:block}
 @keyframes chpop{from{transform:scale(.2) rotate(-12deg);opacity:0}}@keyframes chfloat{50%{transform:translateY(-12px)}}
 #champ .chmsg{font-family:Fredoka,Nunito,sans-serif;font-weight:700;font-size:clamp(30px,5.6vw,60px);line-height:1.12;margin:18px 0 8px;color:#FFD54A;text-shadow:0 4px 0 #9A5F0E,0 10px 30px rgba(0,0,0,.5);animation:chrise .9s ease-out .4s both}
+#champ .chenter{margin-top:22px;background:linear-gradient(180deg,#FFE47A,#F5B700);color:#1F2A44;border:3px solid #FFF3B0;border-radius:999px;padding:16px 34px;font-family:Fredoka,Nunito,sans-serif;font-weight:700;font-size:clamp(20px,3vw,30px);box-shadow:0 7px 0 #9A5F0E,0 0 36px rgba(255,213,74,.7);cursor:pointer;animation:chrise .9s ease-out 1.3s both,chbeat 1.4s ease-in-out 2.2s infinite;transition:opacity .35s,transform .35s}
+#champ .chenter.gone{opacity:0;transform:scale(.6)}@keyframes chbeat{50%{transform:scale(1.06)}}
 #champ .chsub{color:#FFF6D6;font-size:clamp(18px,2.6vw,26px);font-weight:800;margin:0;animation:chrise .9s ease-out .9s both}
 @keyframes chrise{from{opacity:0;transform:translateY(24px)}}
 @media (prefers-reduced-motion:reduce){.chrays,#champ .chtro,#champ .chmsg,#champ .chsub{animation:none}}
@@ -1254,24 +1256,24 @@ function champSplash(){if(CHAMP_DONE||document.getElementById('champ'))return;co
  const o=document.createElement('div');o.id='champ';o.className='party';o.setAttribute('role','dialog');o.setAttribute('aria-label',champMsg(sc));
  o.style.cssText='z-index:9995;background:radial-gradient(circle at 50% 38%,#24407A 0%,#14244A 55%,#0B1530 100%);overflow:hidden;cursor:default';
  o.innerHTML=`<div class="chsky" style="position:absolute;inset:0;pointer-events:none"></div><div class="chrays"></div>
- <button id="chskip" style="position:absolute;top:14px;right:14px;z-index:3;background:rgba(255,255,255,.14);color:#fff;border:2px solid rgba(255,255,255,.35);border-radius:999px;padding:8px 16px;font-weight:800;font-size:15px;cursor:pointer">Skip ▸</button>
  <div style="position:relative;z-index:2;text-align:center;padding:20px;max-width:880px">
   <div class="chtro">${TROPHY}</div>
   <h1 class="chmsg">${esc(champMsg(sc))}</h1>
-  <p class="chsub">Practise every day. It could be <b>YOU!</b> 🐝</p></div>`;
+  <p class="chsub">Practise every day. It could be <b>YOU!</b> 🐝</p>
+  <button class="chenter" id="chenter">🏆 Enter the Spelling Bee</button></div>`;
  document.body.appendChild(o);const sky=o.querySelector('.chsky');
- /* sound: plays straight away where the browser allows it; otherwise the first touch, click or key anywhere turns it on (no message).
-    Safari only unlocks sound on a finished tap/click, and iPads mute web sound when the silent switch is on unless a media element has played,
-    so the unlock also plays a tiny silent audio clip and sets the audio session to "playback". */
- const EVS=['touchend','click','pointerup','mousedown','keydown'];
- const unlock=e=>{if(!o.isConnected)return;EVS.forEach(t=>document.removeEventListener(t,unlock,true));
+ /* browsers (Safari on Mac and iPhone above all) only allow sound after a tap, so the fireworks start when Enter is tapped:
+    then the sound always plays. The tap also plays a tiny silent clip so iPhones play it even with the silent switch on. */
+ const end=()=>{if(!o.isConnected)return;o.classList.add('out');setTimeout(()=>{o.remove();try{say("Hello! Let's practise your spellings!")}catch(x){}},450)};
+ const btn=o.querySelector('#chenter');
+ btn.onclick=()=>{if(btn.dataset.go)return;btn.dataset.go='1';
   try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch(x){}
   try{const el=new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=');el.play().catch(()=>{})}catch(x){}
   try{if(AC&&AC.state!=='running'){try{AC.close()}catch(x){}AC=null;ROOM=null}const a=ac();if(a&&a.resume)a.resume()}catch(x){}
-  if(!e||!e.target||e.target.id!=='chskip')setTimeout(()=>{try{happySound(true);setTimeout(()=>clapSound(true),200)}catch(x){}[0,250,600].forEach(t=>fwLaunch(sky,t))},60)};
- EVS.forEach(t=>document.addEventListener(t,unlock,true));
- const end=()=>{if(!o.isConnected)return;o.classList.add('out');setTimeout(()=>{o.remove();try{say("Hello! Let's practise your spellings!")}catch(x){}},450)};o.querySelector('#chskip').onclick=end;setTimeout(end,10000);
- confettiWave(sky,50);for(let t=0;t<9000;t+=Math.random()<.5?380:700)fwLaunch(sky,t+200);setTimeout(()=>{if(o.isConnected)confettiWave(sky,40)},5000)}
+  btn.classList.add('gone');setTimeout(()=>btn.remove(),400);
+  try{happySound(true);setTimeout(()=>clapSound(true),250)}catch(x){}
+  confettiWave(sky,60);for(let t=0;t<9200;t+=Math.random()<.5?380:700)fwLaunch(sky,t+100);setTimeout(()=>{if(o.isConnected)confettiWave(sky,45)},5000);setTimeout(end,10000)};
+ setTimeout(()=>{try{btn.focus({preventScroll:true})}catch(x){}},900)}
 function curSchool(){if(FOR_SCHOOLS)return null;if(ME&&ME.school)return ME.school;if(SCH&&!SCH.missing)return SCH;return null}
 async function loadPlans(){if(PLANLIST)return;const c=db();if(!c)return;try{const {data}=await c.from('plans').select('*').order('sort');if(Array.isArray(data)&&data.length){PLANLIST=data;if(V.screen==='home'&&!curSchool())render()}}catch(e){}}
 function fmtDay(d,opt){try{return new Date(d+'T12:00:00').toLocaleDateString('en-GB',opt||{weekday:'long',day:'numeric',month:'long',year:'numeric'})}catch(e){return d}}
