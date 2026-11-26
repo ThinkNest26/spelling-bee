@@ -11,6 +11,8 @@ cd "$(dirname "$0")" || exit 1
 SUPABASE_URL="https://xpbkdnkfufkahaszfycd.supabase.co"
 SUPABASE_KEY="sb_publishable_QIAV_9tLUBbDCu7FHqaTEw_zYQ0teEG"
 VOICE="$1"
+# optional 2nd word: a second voice kept in its own folder, e.g.  bash make-audio.sh "Jamie (Premium)" jamie
+DIR="audio"; [ -n "$2" ] && DIR="audio-$2"
 if [ -z "$VOICE" ]; then
   for pref in "Serena (Premium)" "Kate (Premium)" "Stephanie (Premium)" "Martha (Premium)" \
               "Serena (Enhanced)" "Kate (Enhanced)" "Stephanie (Enhanced)" "Martha (Enhanced)"; do
@@ -53,6 +55,9 @@ k-10	Ten in a row! You're a champion bee!
 perfect	Wow! A perfect score! Well done!
 semi85	Congratulations! You've secured eighty-five percent of your words. You're in the semi-final!
 g-speed	Hello! This is how I will read your words.
+brk	Wow! You have practised for a whole hour! Now it is time for a break away from the screen. Stretch, drink some water, or play outside. If you want to practise more, come back in two hours. See you soon!
+rules-60	Semi-final rules. The semi-finals are on Thursday the fourteenth and Friday the fifteenth of January, here on this website. You can do your semi-final once, so check each word carefully before you press next. There are three rounds that get harder, and all the words come from your own list. You have sixty seconds for each word. You can hear each word up to three times, and ask for the sentence and the meaning once each. Do it on your own, with no help, and stay on the semi-final page until you finish. Find a quiet place, turn the sound up, and charge your device. The best scores go to the Grand Final on the twenty-second of January. Now tick the box to say you have read and understood the rules.
+rules-90	Semi-final rules. The semi-finals are on Thursday the fourteenth and Friday the fifteenth of January, here on this website. You can do your semi-final once, so check each word carefully before you press next. There are three rounds that get harder, and all the words come from your own list. You have ninety seconds for each word. You can hear each word up to three times, and ask for the sentence and the meaning once each. Do it on your own, with no help, and stay on the semi-final page until you finish. Find a quiet place, turn the sound up, and charge your device. The best scores go to the Grand Final on the twenty-second of January. Now tick the box to say you have read and understood the rules.
 FIXED
 # GL practice questions (spelling, grammar and punctuation tests)
 [ -s content/gl-audio.tsv ] && cat content/gl-audio.tsv >> "$LIST"
@@ -75,12 +80,12 @@ else
   echo "  Couldn't reach the word lists (check the internet). Recording the fixed phrases only."
 fi
 echo "  Recording with: $VOICE"
-mkdir -p audio
+mkdir -p "$DIR"
 TMP="${TMPDIR:-/tmp}/sbclip.aiff"
 n=0; made=0
 while IFS=$'\t' read -r name text; do
   [ -z "$name" ] && continue
-  out="audio/$name.m4a"
+  out="$DIR/$name.m4a"
   if [ ! -s "$out" ]; then
     n=$((n+1))
     if say -v "$VOICE" -r 165 -o "$TMP" -- "$text" && afconvert -f m4af -d aac -b 64000 "$TMP" "$out"; then made=$((made+1)); fi
@@ -91,14 +96,14 @@ rm -f "$TMP" "$JSON" "$LIST"
 {
   printf '['
   first=1
-  for f in audio/*.m4a; do
+  for f in "$DIR"/*.m4a; do
     [ -s "$f" ] || continue
     b=$(basename "$f" .m4a)
     if [ $first -eq 1 ]; then first=0; else printf ','; fi
     printf '"%s"' "$b"
   done
   printf ']\n'
-} > audio/manifest.json
+} > "$DIR/manifest.json"
 echo ""
 if [ $made -eq 0 ]; then echo "  Everything already has Kate's voice — nothing new to record.";
 else echo "  Done! $made new recording(s) made."; echo "  Now open GitHub Desktop, commit and Push origin."; fi

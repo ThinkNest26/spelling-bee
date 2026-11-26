@@ -487,6 +487,7 @@ async function tSend(){if(TSENDING)return;const o=tPend();if(!o||o.secs<1||!db()
 setInterval(()=>{if(ME&&document.visibilityState==='visible'&&Date.now()-TACT<60000&&!onBreak()){tAdd(5);brkTick(5)}brkShow()},5000);
 /* 🐝 healthy break: after 1 hour of practice (gaps under 30 min count as the same session) the child is asked to take
    a 2-hour off-screen break on this device. Never starts in the middle of the online semi-final. */
+const BREAK_SAY='Wow! You have practised for a whole hour! Now it is time for a break away from the screen. Stretch, drink some water, or play outside. If you want to practise more, come back in two hours. See you soon!';
 const BRKKEY='sb-break',BRK_AFTER=3600,BRK_FOR=2*3600e3,BRK_GAP=30*60e3;
 function brkGet(){try{const o=JSON.parse(localStorage.getItem(BRKKEY)||'{}');return o&&typeof o==='object'?o:{}}catch(e){return {}}}
 function brkMine(){if(!ME)return null;const all=brkGet();return all[ME.code]||{secs:0,last:0,until:0}}
@@ -519,7 +520,7 @@ function brkShow(fresh){const on=ME&&onBreak();let o=document.getElementById('sb
  <p class="brkt">Your brain has worked really hard. Now it’s time for a <b>break away from the screen</b>.</p>
  <div class="brkideas"><span>🤸 Stretch and move</span><span>💧 Drink some water</span><span>🌳 Play outside</span><span>📚 Read a book</span><span>👀 Rest your eyes</span></div>
  <div class="brkback"><div>The Spelling Bee will open again in</div><div class="brkclock" id="brkclock" aria-live="off">${brkClock(b.until-Date.now())}</div><div>If you want to practise more, come back at <b>${brkTime(b.until)}</b>. See you soon! 👋</div></div></div>`;
- if(fresh){try{say('Wow, '+ME.first_name+'! You have practised for a whole hour! Now it is time for a break away from the screen. Stretch, drink some water, or play outside. If you want to practise more, come back in two hours. See you soon!')}catch(e){}}}
+ if(fresh){try{say(BREAK_SAY)}catch(e){}}}
 setTimeout(brkShow,600);
 /* ⏱ practice timer in the top corner: counts this session's active practice time; at 1 hour the break screen appears */
 function brkNowSecs(){const b=brkMine();if(!b)return 0;const now=Date.now();if(now-(b.last||0)>BRK_GAP)return 0;let x=b.secs||0;
@@ -538,7 +539,7 @@ function totalStars(){return Math.max(0,TEAMS.reduce((n,t)=>n+(PR[t.id]?.stars||
 
 /* speech */
 let tts=null,voice=null;
-const KSPEED={fast:1,slow:.85,vslow:.7};function kSpeed(){try{return localStorage.getItem('kate-speed')||'slow'}catch(e){return 'slow'}}function kRate(){const r=KSPEED[kSpeed()]||.85;return SUPPORT?Math.min(r,.7):r}
+const KSPEED={fast:1.1,slow:1,vslow:.85} /* Kate's recordings are already spoken slowly: 1 = her natural voice (no stretching, no glitches) */;function kSpeed(){try{return localStorage.getItem('kate-speed')||'slow'}catch(e){return 'slow'}}function kRate(){const r=KSPEED[kSpeed()]||.85;return SUPPORT?Math.min(r,.85):r}
 const HAS_SPEECH=('speechSynthesis' in window)&&('SpeechSynthesisUtterance' in window);
 /* novelty / robotic voices that sound strange to children */
 const BADV=/^(Eddy|Flo|Grandma|Grandpa|Reed|Rocko|Sandy|Shelley|Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Good News|Jester|Organ|Pipe Organ|Superstar|Trinoids|Whisper|Wobble|Zarvox|Fred|Junior|Ralph|Kathy|Princess|Deranged|Hysterical|Agnes|Bruce|Vicki|Victoria)\b/i;
@@ -563,8 +564,14 @@ let DBROWS=null;
 function buildClips(){if(DBROWS){DBROWS.forEach(r=>{CLIP[r.word]=r.w_clip;if(r.meaning&&r.m_clip)CLIP[r.meaning]=r.m_clip;if(r.sentence){CLIP[r.sentence]=r.s_clip;CLIP[r.word+'. '+r.sentence+' '+r.word+'.']=r.ws_clip}})}
  else{for(const t of TEAMS)for(const w of WORDS[t.id])CLIP[w]='w-'+slugW(w);for(const w in SENT){CLIP[SENT[w]]='s-'+slugW(w);CLIP[w+'. '+SENT[w]+' '+w+'.']='ws-'+slugW(w)}}
  CLIP["Hello! Let's practise your spellings!"]='g-start';CLIP['Hello! This is how I will read your words.']='g-speed';
- CHEERS.forEach((c,i)=>CLIP[c[1]]='p-'+(i+1));ENCOURAGE.forEach((t,i)=>CLIP[t]='e-'+(i+1));for(const k in STREAK_SAY)CLIP[STREAK_SAY[k]]='k-'+k;CLIP[PERFECT_SAY]='perfect';CLIP["Congratulations! You've secured eighty-five percent of your words. You're in the semi-final!"]='semi85'}
+ CHEERS.forEach((c,i)=>CLIP[c[1]]='p-'+(i+1));ENCOURAGE.forEach((t,i)=>CLIP[t]='e-'+(i+1));for(const k in STREAK_SAY)CLIP[STREAK_SAY[k]]='k-'+k;CLIP[PERFECT_SAY]='perfect';CLIP["Congratulations! You've secured eighty-five percent of your words. You're in the semi-final!"]='semi85';
+ try{CLIP[BREAK_SAY]='brk';CLIP[RULES_SAY60]='rules-60';CLIP[RULES_SAY90]='rules-90'}catch(e){}}
 let HAVE=new Set(),curAudio=null,HAVE_LOADED=false,PLAYTOK=0;
+/* 🎙 two voices: Kate (audio/) and Jamie (audio-jamie/). The child chooses in "Voice and speed". A clip Jamie doesn't have yet plays in Kate's voice. */
+function vSet(){try{return localStorage.getItem('sb-voice')==='jamie'?'jamie':'kate'}catch(e){return 'kate'}}
+function vName(){return vSet()==='jamie'?'Jamie':'Kate'}
+let HAVE_J=new Set();
+fetch('audio-jamie/manifest.json',{cache:'no-cache'}).then(r=>r.ok?r.json():[]).then(a=>{if(Array.isArray(a))HAVE_J=new Set(a)}).catch(()=>{});
 const HAVE_P=(function(){if(location.protocol.indexOf('http')!==0){HAVE_LOADED=true;return Promise.resolve()}
  return Promise.race([fetch('audio/manifest.json',{cache:'no-cache'}).then(r=>r.ok?r.json():[]).then(a=>{if(Array.isArray(a)){HAVE=new Set(a);if(HAVE.size&&(!V||!/^g/.test(V.screen)))try{render()}catch(e){}}}).catch(()=>{}),new Promise(r=>setTimeout(r,4000))]).then(()=>{HAVE_LOADED=true})})();
 /* one audio player for Kate, unlocked by the child's first tap, so phones and iPads always let her speak */
@@ -576,7 +583,9 @@ function openKate(){if(KATE_OPEN)return;KATE_OPEN=true;try{if(!KATE.src){KATE.sr
 ['pointerdown','touchend','keydown'].forEach(ev=>document.addEventListener(ev,openKate,{capture:true,passive:true}));
 function playFile(u,onFail){PLAYTOK++;try{KATE.pause()}catch(e){}try{speechSynthesis.cancel()}catch(e){}
  KATE.src=u;curAudio=KATE;try{KATE.currentTime=0}catch(e){}try{KATE.preservesPitch=true;KATE.webkitPreservesPitch=true;KATE.defaultPlaybackRate=KATE.playbackRate=kRate()}catch(e){}const p=KATE.play();if(p&&p.catch)p.catch(err=>{if(err&&err.name==='AbortError')return;if(onFail)onFail(err)});return PLAYTOK}
-function playClip(t){const n=CLIP[t];if(!n||!HAVE.has(n))return false;
+function playClip(t){const n=CLIP[t];if(!n)return false;
+ if(vSet()==='jamie'&&HAVE_J.has(n)){try{playFile('audio-jamie/'+n+'.m4a',err=>{if(err&&err.name==='NotAllowedError'){note('Tap 🔊 to hear Jamie.');return}HAVE_J.delete(n);say(t)});return true}catch(e){}}
+ if(!HAVE.has(n))return false;
  try{playFile('audio/'+n+'.m4a',err=>{if(err&&err.name==='NotAllowedError'){note('Tap 🔊 to hear Kate.');return}HAVE.delete(n);say(t)});return true}catch(e){return false}}
 let lastU=null; /* keep a reference so Safari/Chrome don't cut the word off */
 function say(t,el,opts){if(!t)return;opts=opts||{};if(!CLIP[t]&&!Object.keys(CLIP).length)buildClips();
@@ -654,7 +663,7 @@ function burst(){const b=document.createElement('div');b.className='burst';for(l
 
 /* ---------- views ---------- */
 let V={screen:'home',team:null};
-function top(){return `<div class="top"><div style="width:40px;height:40px">${BEE}</div><div><div class="t">Spelling Bee</div><div class="s">${ME?'Hi '+esc(ME.first_name)+'! 🐝':'Practice Zone'}</div></div>${ME?`<button class="topav" data-go="avatar" title="My avatar">${avatarSVG(myP().avatar,44)}</button>`:''}${ME&&streakNow(ME.team)?`<div class="stars flamechip">${flameBadge(streakNow(ME.team))} ${streakNow(ME.team)}</div>`:''}<div class="stars">⭐ ${totalStars()}</div><button class="kspdb" data-kspd="1" title="How Kate reads">${{fast:'🐇',slow:'🐢',vslow:'🐌'}[kSpeed()]||'🐢'}</button>${HAVE.size?'':'<button data-voice="1">🔊 Voice</button>'}${ME?clockChip():''}</div>`}
+function top(){return `<div class="top"><div style="width:40px;height:40px">${BEE}</div><div><div class="t">Spelling Bee</div><div class="s">${ME?'Hi '+esc(ME.first_name)+'! 🐝':'Practice Zone'}</div></div>${ME?`<button class="topav" data-go="avatar" title="My avatar">${avatarSVG(myP().avatar,44)}</button>`:''}${ME&&streakNow(ME.team)?`<div class="stars flamechip">${flameBadge(streakNow(ME.team))} ${streakNow(ME.team)}</div>`:''}<div class="stars">⭐ ${totalStars()}</div><button class="kspdb" data-kspd="1" title="Voice and speed">${vSet()==='jamie'?'👨':'👩'}${{fast:'🐇',slow:'🐢',vslow:'🐌'}[kSpeed()]||'🐢'}</button>${HAVE.size?'':'<button data-voice="1">🔊 Voice</button>'}${ME?clockChip():''}</div>`}
 function voicePanel(){pv();const g=goodVoices();const cur=voice&&voice.name;
  let m=document.getElementById('vmodal');if(!m){m=document.createElement('div');m.id='vmodal';document.body.appendChild(m)}
  m.innerHTML=`<div class="vback" data-vclose="1"><div class="vcard"><h2 style="font-size:26px">🔊 Choose a voice</h2><p class="muted" style="margin:6px 0 14px">All voices here speak <b>UK English</b>. Tap <b>Try</b> to listen, then pick the one that sounds nicest. It’s remembered on this device.</p>
@@ -890,6 +899,8 @@ function confettiWave(box,n){const cols=['#F5B700','#FFD54A','#F472B6','#60A5FA'
  const w=document.createElement('div');w.style.cssText='position:absolute;inset:0;pointer-events:none;overflow:hidden';w.innerHTML=h;box.appendChild(w);setTimeout(()=>w.remove(),6000)}
 /* 📜 semi-final rules: shown when a child qualifies; they must tick "I have read and understood" to carry on.
    Shown again before the semi-final starts if not yet confirmed on this device. */
+const RULES_SAY_T=s=>'Semi-final rules. The semi-finals are on Thursday the fourteenth and Friday the fifteenth of January, here on this website. You can do your semi-final once, so check each word carefully before you press next. There are three rounds that get harder, and all the words come from your own list. You have '+s+' seconds for each word. You can hear each word up to three times, and ask for the sentence and the meaning once each. Do it on your own, with no help, and stay on the semi-final page until you finish. Find a quiet place, turn the sound up, and charge your device. The best scores go to the Grand Final on the twenty-second of January. Now tick the box to say you have read and understood the rules.';
+const RULES_SAY60=RULES_SAY_T('sixty'),RULES_SAY90=RULES_SAY_T('ninety');
 function semiAckKey(){return 'sb-semirules-'+(ME?ME.code+'-'+ME.grade:'demo')}
 function semiAck(){try{return localStorage.getItem(semiAckKey())==='1'}catch(e){return false}}
 function semiRulesList(g){const secs=+g<=1?90:60;return [
@@ -913,7 +924,7 @@ function semiRulesShow(then,g){g=g??(ME?ME.grade:3);if(document.getElementById('
   <div style="text-align:center"><button class="y" id="srgo" disabled style="font-size:21px;padding:13px 28px">Continue →</button></div></div>`;
  document.body.appendChild(o);
  const ok=o.querySelector('#srok'),go=o.querySelector('#srgo');ok.onchange=()=>{go.disabled=!ok.checked};
- o.querySelector('#srread').onclick=()=>say('Semi-final rules. '+L.map(([,t,d])=>t+'. '+d.replace(/<[^>]+>/g,'')).join(' ')+' Now tick the box to say you have read and understood the rules.');
+ o.querySelector('#srread').onclick=()=>say(+g<=1?RULES_SAY90:RULES_SAY60);
  go.onclick=()=>{if(!ok.checked)return;try{if(ME)localStorage.setItem(semiAckKey(),'1')}catch(e){}try{speechSynthesis.cancel()}catch(e){}o.remove();if(then)then()}}
 function semiRulesCheck(){if(!ME||!XS.semi||XS.semi.done||semiAck()||document.getElementById('s85')||document.getElementById('sbbreak'))return;if(!['home','team','xsemi'].includes(V.screen))return;setTimeout(()=>{if(!semiAck())semiRulesShow()},700)}
 function semi85Party(who){who=who||ME;const old=document.getElementById('s85');if(old)old.remove();
@@ -2104,9 +2115,13 @@ async function loadWords(){const c=db();if(!c||!ME)return;try{const {data,error}
 /* how Kate reads: fast, slow or very slow (saved on this device) */
 document.addEventListener('click',e=>{const b=e.target.closest('[data-kspd]');if(!b)return;e.preventDefault();e.stopPropagation();
  const ov=document.createElement('div');ov.className='kspov';const cur=kSpeed();
- ov.innerHTML=`<div class="kspcard"><div style="display:flex;align-items:center"><b style="font-family:Fredoka,Arial;font-size:24px;color:#1F2A44;flex:1">How Kate reads</b><button class="ksp" data-kx="1" style="flex:0;padding:6px 12px">✕</button></div><div style="color:#6B7280;font-weight:700;margin-top:4px">Choose how fast Kate speaks.</div><div class="ksprow">${[['fast','🐇 Fast'],['slow','🐢 Slow'],['vslow','🐌 Very slow']].map(([k,l])=>`<button class="ksp ${cur===k?'on':''}" data-kv="${k}">${l}</button>`).join('')}</div></div>`;
+ const cv=vSet();ov.innerHTML=`<div class="kspcard"><div style="display:flex;align-items:center"><b style="font-family:Fredoka,Arial;font-size:24px;color:#1F2A44;flex:1">Voice and speed</b><button class="ksp" data-kx="1" style="flex:0;padding:6px 12px">✕</button></div>
+ <div style="color:#6B7280;font-weight:700;margin-top:6px">Who reads your words?</div><div class="ksprow">${[['kate','👩 Kate'],['jamie','👨 Jamie']].map(([k,l])=>`<button class="ksp ${cv===k?'on':''}" data-vv="${k}">${l}</button>`).join('')}</div>
+ <div style="color:#6B7280;font-weight:700;margin-top:10px">How fast?</div><div class="ksprow">${[['fast','🐇 Fast'],['slow','🐢 Normal'],['vslow','🐌 Slow']].map(([k,l])=>`<button class="ksp ${cur===k?'on':''}" data-kv="${k}">${l}</button>`).join('')}</div></div>`;
  document.body.appendChild(ov);
- ov.addEventListener('click',ev=>{if(ev.target===ov||ev.target.closest('[data-kx]')){ov.remove();try{render()}catch(err){}return}const o=ev.target.closest('[data-kv]');if(!o)return;
+ ov.addEventListener('click',ev=>{if(ev.target===ov||ev.target.closest('[data-kx]')){ov.remove();try{render()}catch(err){}return}
+  const vv=ev.target.closest('[data-vv]');if(vv){try{localStorage.setItem('sb-voice',vv.dataset.vv)}catch(err){}ov.querySelectorAll('[data-vv]').forEach(x=>x.classList.toggle('on',x===vv));say('Hello! This is how I will read your words.');return}
+  const o=ev.target.closest('[data-kv]');if(!o)return;
   try{localStorage.setItem('kate-speed',o.dataset.kv)}catch(err){}ov.querySelectorAll('[data-kv]').forEach(x=>x.classList.toggle('on',x===o));say('Hello! This is how I will read your words.')})},true);
 buildClips();
 render();
