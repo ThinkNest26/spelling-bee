@@ -81,6 +81,10 @@ code{background:#F3EBD2;padding:1px 6px;border-radius:6px;font-size:13px}
 .bbar{width:100%;max-width:38px;background:linear-gradient(var(--honey2),var(--honey));border-radius:8px 8px 3px 3px;min-height:2px}
 .bval{font-size:11.5px;font-weight:800;color:var(--ink2);margin-bottom:3px}
 .blab{position:absolute;bottom:-32px;font-size:11px;color:var(--muted);text-align:center;line-height:1.2}.blab.today{color:var(--ink);font-weight:800}
+.heat{border-collapse:collapse;font-size:12.5px}.heat th{font-size:11px;padding:4px 3px;text-align:center;white-space:nowrap}.heat th.today{color:var(--ink);font-weight:800}
+.heat td{padding:3px;text-align:center;border:1px solid #F4EEDC;min-width:26px}.heat td.hk{text-align:left;white-space:nowrap;padding:4px 8px;position:sticky;left:0;background:#fff}
+.heat td.hc{font-weight:800;color:#5B4300}.heat .l0{background:#fff;color:#C9BFA6}.heat .l1{background:#FFF6D1}.heat .l2{background:#FFE58A}.heat .l3{background:#FFCC33}.heat .l4{background:#F5A400;color:#fff}
+.dkid{cursor:pointer}.dkid:hover{background:#FFFBEA}
 .dgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:14px}
 .dlist{max-height:330px;overflow:auto;margin-top:6px}
 .drow{display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid #F4EEDC}.drow svg{border-radius:50%;flex:none}
@@ -347,60 +351,117 @@ function addWordsModal(){
   if(error){b.disabled=false;b.textContent='Add words';const m=$('#wmsg');m.textContent='Couldn’t add the words. Please try again.';m.classList.add('show');return}
   $('#modal').innerHTML='';await loadWords();render();toast(add.length+' word'+(add.length>1?'s':'')+' added'+(dup.length?' ('+dup.length+' already there)':'')+' — remember to record Kate’s voice')};
 }
-/* ---------- dashboard ---------- */
-let DF={grade:'all',cls:'all'},DAILY=null,DAILY_T=0;
+/* ---------- dashboard: filter by day, week, month or any dates ---------- */
+let DF={grade:'all',cls:'all'},DAILY=null,DAILY_T=0,DP={mode:'week',from:'',to:'',metric:'words'},DMIS=null,DMIS_T=0;
 function dayStr(d){return new Date(d.getTime()+4*3600e3).toISOString().slice(0,10)}
+function dAdd(s,n){return new Date(Date.parse(s+'T12:00:00Z')+n*864e5).toISOString().slice(0,10)}
+function dList(a,b){const o=[];for(let d=a;d<=b&&o.length<400;d=dAdd(d,1))o.push(d);return o}
+function dNice(s,o){return new Date(s+'T12:00:00').toLocaleDateString('en-GB',o||{weekday:'short',day:'numeric',month:'short'})}
 function avt(a,px){try{return window.SBAvatar?window.SBAvatar.svg(a||{},px):''}catch(e){return ''}}
-async function loadDaily(){if(DAILY&&Date.now()-DAILY_T<60000)return;try{const {data,error}=await sb.rpc('teacher_daily',{p_days:14});DAILY=error?[]:(data||[]);DAILY_T=Date.now()}catch(e){DAILY=[]}}
-async function renderDash(){if(!DAILY){$('#app').innerHTML=tabs()+'<p class="muted">Loading the dashboard…</p>';await loadDaily()}
- const kids=KIDS.filter(c=>(DF.grade==='all'||c.grade==DF.grade)&&(DF.cls==='all'||c.class_name===DF.cls));const ids=new Set(kids.map(k=>k.id));
+async function loadDaily(){if(DAILY&&Date.now()-DAILY_T<60000)return;try{const {data,error}=await sb.rpc('teacher_daily',{p_days:120});DAILY=error?[]:(data||[]);DAILY_T=Date.now()}catch(e){DAILY=[]}}
+async function loadDMis(){if(DMIS&&Date.now()-DMIS_T<60000)return;const since=new Date(Date.now()-120*864e5).toISOString();
+ try{const {data,error}=await ALL(()=>sb.from('sb_mistakes').select('student_id,word,created_at').gte('created_at',since).order('created_at',{ascending:false}),30000);DMIS=error?[]:(data||[])}catch(e){DMIS=[]}DMIS_T=Date.now()}
+/* the chosen period as [from, to] (Dubai days) */
+function dRange(){const t=dayStr(new Date()),wd=new Date(t+'T12:00:00Z').getUTCDay(),mon=dAdd(t,-((wd+6)%7));
+ switch(DP.mode){case 'today':return [t,t];case 'yday':{const y=dAdd(t,-1);return [y,y]}case 'week':return [mon,t];case 'lastweek':return [dAdd(mon,-7),dAdd(mon,-1)];
+  case 'month':return [t.slice(0,8)+'01',t];case 'custom':{let a=DP.from||t,b=DP.to||a;if(b<a)[a,b]=[b,a];if(b>t)b=t;return [a,b]}}return [mon,t]}
+function dLabel(){const [a,b]=dRange();const L={today:'today',yday:'yesterday',week:'this week',lastweek:'last week',month:'this month'}[DP.mode];
+ return L||(a===b?'on '+dNice(a):dNice(a,{day:'numeric',month:'short'})+' – '+dNice(b,{day:'numeric',month:'short'}))}
+function minsTxt(s){s=Math.round((s||0)/60);return s<60?s+' min':Math.floor(s/60)+' h'+(s%60?' '+s%60+' min':'')}
+/* per child totals for a set of days */
+function dStats(ids,days){const set=new Set(days),o={};
+ (DAILY||[]).forEach(r=>{if(!set.has(String(r.day).slice(0,10))||!ids.has(r.student_id))return;const w=o[r.student_id]||(o[r.student_id]={a:0,c:0,d:new Set(),s:0});w.a+=+r.attempts||0;w.c+=+r.correct||0;w.d.add(String(r.day).slice(0,10))});
+ (TROWS||[]).forEach(r=>{if(!set.has(String(r.day).slice(0,10))||!ids.has(r.student_id))return;const w=o[r.student_id]||(o[r.student_id]={a:0,c:0,d:new Set(),s:0});w.s+=+r.secs||0;w.d.add(String(r.day).slice(0,10))});
+ return o}
+function newSecure(id,a,b){const s=(PROG[id]||{}).secure||{};return Object.values(s).filter(d=>typeof d==='string'&&d>=a&&d<=b).length}
+async function renderDash(){if(!DAILY||!DMIS){$('#app').innerHTML=tabs()+'<p class="muted">Loading the dashboard…</p>';await Promise.all([loadDaily(),loadDMis()])}
+ const kids=KIDS.filter(c=>c.active!==false&&(DF.grade==='all'||c.grade==DF.grade)&&(DF.cls==='all'||c.class_name===DF.cls));const ids=new Set(kids.map(k=>k.id));
  const classes=[...new Set(KIDS.filter(c=>DF.grade==='all'||c.grade==DF.grade).map(c=>c.class_name).filter(Boolean))].sort();
- const today=dayStr(new Date());const days=[...Array(14)].map((_,i)=>dayStr(new Date(Date.now()-(13-i)*864e5)));const week=new Set(days.slice(7));
- const rows=(DAILY||[]).filter(r=>ids.has(r.student_id));
- const perDay={};days.forEach(d=>perDay[d]={a:0,c:0,kids:new Set()});rows.forEach(r=>{if(perDay[r.day]){perDay[r.day].a+=r.attempts;perDay[r.day].c+=r.correct;perDay[r.day].kids.add(r.student_id)}});
- const wk={};rows.filter(r=>week.has(r.day)).forEach(r=>{const w=wk[r.student_id]||(wk[r.student_id]={a:0,c:0,d:0});w.a+=r.attempts;w.c+=r.correct;w.d++});
- const practised=kids.filter(k=>wk[k.id]);const notYet=kids.filter(k=>!wk[k.id]);
- const wa=Object.values(wk).reduce((n,w)=>n+w.a,0),wc=Object.values(wk).reduce((n,w)=>n+w.c,0);
- const secureAll=kids.reduce((n,k)=>n+learnt(k.id),0);
- const yday=dayStr(new Date(Date.now()-864e5));
+ const today=dayStr(new Date()),[from,to]=dRange(),days=dList(from,to),lab=dLabel();
+ const st=dStats(ids,days),act=k=>st[k.id]&&(st[k.id].a||st[k.id].s);
+ const practised=kids.filter(act),notYet=kids.filter(k=>!act(k));
+ const tot=Object.values(st).reduce((n,w)=>({a:n.a+w.a,c:n.c+w.c,s:n.s+w.s}),{a:0,c:0,s:0});
+ const secNew=kids.reduce((n,k)=>n+newSecure(k.id,from,to),0);
  const psd=(()=>{const d=new Date(today+'T12:00:00Z');const w=d.getUTCDay();return new Date(d.getTime()-(w===1?3:w===0?2:1)*864e5).toISOString().slice(0,10)})();
  const streakers=kids.filter(k=>{const p=PROG[k.id]||{};return (p.streak||0)>=2&&(p.streak_day||'')>=psd});
  const pct=k=>{const t=TEAMS[teamOf(k.grade)][2]||1;return Math.round(learnt(k.id)/t*100)};
- /* trickiest words */
- const tw={};kids.forEach(k=>{const p=PROG[k.id]||{};const ok=p.words||{};Object.entries(p.tricky||{}).forEach(([w,n])=>{if((p.secure||{})[w])return;const t=tw[w]||(tw[w]={w,kids:0,miss:0});t.kids++;t.miss+=+n})});
- const tricky=Object.values(tw).sort((a,b)=>b.kids-a.kids||b.miss-a.miss).slice(0,12);
- const stars=practised.slice().sort((a,b)=>wk[b.id].a-wk[a.id].a).slice(0,8);
- const byClass={};kids.forEach(k=>{const c=k.class_name||GL(k.grade);const o=byClass[c]||(byClass[c]={c,g:k.grade,n:0,p:0,sec:0,st:0});o.n++;if(wk[k.id])o.p++;o.sec+=pct(k);o.st+=(PROG[k.id]?.stars||0)});
+ /* trickiest words in the period (from the mistakes children typed); if none, the words they keep missing overall */
+ const tw={};(DMIS||[]).forEach(m=>{const d=dayStr(new Date(m.created_at));if(d<from||d>to||!ids.has(m.student_id))return;const w=String(m.word).toLowerCase();const t=tw[w]||(tw[w]={w,kids:new Set(),miss:0});t.kids.add(m.student_id);t.miss++});
+ let tricky=Object.values(tw).map(t=>({w:t.w,kids:t.kids.size,miss:t.miss})),trickyAll=false;
+ if(!tricky.length){trickyAll=true;const t2={};kids.forEach(k=>{const p=PROG[k.id]||{};Object.entries(p.tricky||{}).forEach(([w,n])=>{if((p.secure||{})[w])return;const t=t2[w]||(t2[w]={w,kids:0,miss:0});t.kids++;t.miss+=+n})});tricky=Object.values(t2)}
+ tricky=tricky.sort((a,b)=>b.kids-a.kids||b.miss-a.miss).slice(0,12);
+ const busy=practised.slice().sort((a,b)=>st[b.id].a-st[a.id].a||st[b.id].s-st[a.id].s).slice(0,10);
+ const byClass={};kids.forEach(k=>{const c=k.class_name||GL(k.grade);const o=byClass[c]||(byClass[c]={c,g:k.grade,n:0,p:0,a:0,cc:0,s:0,sec:0});o.n++;const w=st[k.id];if(act(k))o.p++;if(w){o.a+=w.a;o.cc+=w.c;o.s+=w.s}o.sec+=pct(k)});
  const cls=Object.values(byClass).sort((a,b)=>a.g-b.g||a.c.localeCompare(b.c,undefined,{numeric:true}));
- const maxA=Math.max(1,...days.map(d=>perDay[d].a));
- const kidRow=(k,extra)=>`<div class="drow">${avt(PROG[k.id]?.avatar,30)}<b>${esc(k.first_name)}</b><span class="muted small">${esc(k.class_name||GL(k.grade))}</span><span class="spacer"></span>${extra}</div>`;
+ /* chart: the chosen days (or the 14 days up to the chosen day) */
+ const cdays=days.length>1?days.slice(-62):dList(dAdd(to,-13),to);const cset=new Set(days);
+ const pd={};cdays.forEach(d=>pd[d]={a:0,s:0,k:new Set()});(DAILY||[]).forEach(r=>{const d=String(r.day).slice(0,10);if(pd[d]&&ids.has(r.student_id)){pd[d].a+=+r.attempts||0;pd[d].k.add(r.student_id)}});
+ (TROWS||[]).forEach(r=>{const d=String(r.day).slice(0,10);if(pd[d]&&ids.has(r.student_id))pd[d].s+=+r.secs||0});
+ const mv=d=>DP.metric==='mins'?Math.round(pd[d].s/60):pd[d].a,maxV=Math.max(1,...cdays.map(mv));
+ const kidRow=(k,extra)=>`<div class="drow dkid" data-kid="${k.id}" title="See ${esc(k.first_name)}’s last 30 days">${avt(PROG[k.id]?.avatar,30)}<b>${esc(k.first_name)}</b><span class="muted small">${esc(k.class_name||GL(k.grade))}</span><span class="spacer"></span>${extra}</div>`;
+ /* daily activity table (up to 31 days) */
+ const hdays=days.slice(-31),hmax=Math.max(1,...kids.map(k=>Math.max(0,...hdays.map(d=>dayCell(k.id,d).a))));
+ const PB=[['today','Today'],['yday','Yesterday'],['week','This week'],['lastweek','Last week'],['month','This month'],['custom','📅 Choose dates']];
  $('#app').innerHTML=tabs()+schoolBanner()+`
- <div class="row" style="margin-bottom:14px"><select id="dg" style="max-width:170px"><option value="all">All grades</option>${GRADES.map(g=>`<option value="${g}" ${DF.grade==g?'selected':''}>${GL(g)}</option>`).join('')}</select>
-  <select id="dc" style="max-width:170px"><option value="all">All classes</option>${classes.map(c=>`<option ${DF.cls===c?'selected':''}>${esc(c)}</option>`).join('')}</select><span class="spacer"></span><button class="w" id="drefresh">↻ Refresh</button></div>
+ <div class="card" style="margin-bottom:14px;padding:12px 14px"><div class="row" style="gap:6px;flex-wrap:wrap">${PB.map(([k,l])=>`<button class="${DP.mode===k?'y':'w'} sm" data-dp="${k}">${l}</button>`).join('')}
+   ${DP.mode==='custom'?`<span class="row" style="gap:6px;align-items:center;flex-wrap:nowrap"><input type="date" id="dpf" value="${from}" max="${today}" style="width:auto"><span class="small muted">to</span><input type="date" id="dpt" value="${to}" max="${today}" style="width:auto"></span>`:''}</div>
+  <div class="row" style="margin-top:10px;gap:8px"><select id="dg" style="max-width:170px"><option value="all">All grades</option>${GRADES.map(g=>`<option value="${g}" ${DF.grade==g?'selected':''}>${GL(g)}</option>`).join('')}</select>
+   <select id="dc" style="max-width:170px"><option value="all">All classes</option>${classes.map(c=>`<option ${DF.cls===c?'selected':''}>${esc(c)}</option>`).join('')}</select>
+   <span class="small" style="font-weight:800">Showing: ${esc(lab)}${days.length>1?` <span class="muted">(${dNice(from,{day:'numeric',month:'short'})} – ${dNice(to,{day:'numeric',month:'short'})})</span>`:''}</span><span class="spacer"></span><button class="w sm" id="dcsv">⬇ Download (Excel)</button><button class="w sm" id="drefresh">↻ Refresh</button></div></div>
  <div class="grid g4" style="margin-bottom:14px">
-  <div class="card"><div class="stat">${kids.length}</div><div class="small muted">spellers</div></div>
-  <div class="card"><div class="stat">${practised.length}<span class="small muted"> / ${kids.length}</span></div><div class="small muted">practised this week (${kids.length?Math.round(practised.length/kids.length*100):0}%)</div></div>
-  <div class="card"><div class="stat">${wa}</div><div class="small muted">words practised this week · ${wa?Math.round(wc/wa*100):0}% correct</div></div>
-  <div class="card"><div class="stat">${secureAll}</div><div class="small muted">words secure 🔵 in total</div></div>
-  <div class="card"><div class="stat">${streakers.length}</div><div class="small muted">children on a 🔥 streak</div></div></div>
- <div class="card" style="margin-bottom:14px"><div class="row"><h3 style="font-size:18px">Practice over the last 2 weeks</h3><span class="spacer"></span><span class="small muted">words practised each day</span></div>
-  <div class="bars">${days.map(d=>{const v=perDay[d];const dt=new Date(d+'T12:00:00');return `<div class="bcol" title="${v.a} words · ${v.kids.size} children"><div class="bval">${v.a||''}</div><div class="bbar" style="height:${Math.round(v.a/maxA*100)}%"></div><div class="blab ${d===today?'today':''}">${dt.toLocaleDateString('en-GB',{weekday:'short'})}<br>${dt.getDate()}</div></div>`}).join('')}</div></div>
+  <div class="card"><div class="stat">${practised.length}<span class="small muted"> / ${kids.length}</span></div><div class="small muted">practised ${esc(lab)} (${kids.length?Math.round(practised.length/kids.length*100):0}%)</div></div>
+  <div class="card"><div class="stat">${tot.a}</div><div class="small muted">words practised · ${tot.a?Math.round(tot.c/tot.a*100):0}% right</div></div>
+  <div class="card"><div class="stat">${Math.max(0,tot.a-tot.c)}</div><div class="small muted">❌ mistakes</div></div>
+  <div class="card"><div class="stat">${TIMEOK?minsTxt(tot.s):'—'}</div><div class="small muted">⏱ practice time${TIMEOK&&practised.length?` · about ${minsTxt(tot.s/practised.length)} each`:''}</div></div>
+  <div class="card"><div class="stat">${secNew}</div><div class="small muted">🔵 new words secured</div></div>
+  <div class="card"><div class="stat">${streakers.length}</div><div class="small muted">children on a 🔥 streak now</div></div></div>
+ <div class="card" style="margin-bottom:14px"><div class="row"><h3 style="font-size:18px">📊 Day by day</h3><span class="spacer"></span><button class="${DP.metric==='words'?'y':'w'} sm" data-dm="words">Words</button><button class="${DP.metric==='mins'?'y':'w'} sm" data-dm="mins">Minutes</button></div>
+  <div class="bars">${cdays.map(d=>{const v=mv(d),dt=new Date(d+'T12:00:00'),on=cset.has(d);return `<div class="bcol" title="${dNice(d)}: ${pd[d].a} words · ${Math.round(pd[d].s/60)} min · ${pd[d].k.size} children"><div class="bval">${v||''}</div><div class="bbar" style="height:${Math.round(v/maxV*100)}%;${on?'':'opacity:.3'}"></div><div class="blab ${d===today?'today':''}">${dt.toLocaleDateString('en-GB',{weekday:'short'}).slice(0,2)}<br>${dt.getDate()}</div></div>`}).join('')}</div>
+  ${days.length===1?'<p class="small muted" style="margin:4px 0 0">The chosen day is darker; the 13 days before it are shown lighter.</p>':''}</div>
  <div class="dgrid">
-  <div class="card"><div class="row"><h3 style="font-size:18px">😴 Not practised this week</h3><span class="pill need">${notYet.length}</span><span class="spacer"></span>${notYet.length?'<button class="w sm" id="copynames">Copy names</button>':''}</div>
-   <div class="dlist">${notYet.sort((a,b)=>a.grade-b.grade||(a.class_name||'').localeCompare(b.class_name||'')).map(k=>kidRow(k,`<span class="small muted">${PROG[k.id]?.last_seen?'last: '+ago(PROG[k.id].last_seen):'not started'}</span>`)).join('')||'<p class="muted">Everyone has practised this week! 🎉</p>'}</div></div>
-  <div class="card"><h3 style="font-size:18px">🧩 Trickiest words</h3><p class="small muted" style="margin:4px 0 8px">Words these children keep missing (not yet secure). Great for a class lesson!</p>
+  <div class="card"><div class="row"><h3 style="font-size:18px">😴 Not practised ${esc(lab)}</h3><span class="pill need">${notYet.length}</span><span class="spacer"></span>${notYet.length?'<button class="w sm" id="copynames">Copy names</button>':''}</div>
+   <div class="dlist">${notYet.sort((a,b)=>a.grade-b.grade||(a.class_name||'').localeCompare(b.class_name||'')).map(k=>kidRow(k,`<span class="small muted">${PROG[k.id]?.last_seen?'last: '+ago(PROG[k.id].last_seen):'not started'}</span>`)).join('')||'<p class="muted">Everyone practised! 🎉</p>'}</div></div>
+  <div class="card"><h3 style="font-size:18px">🧩 Trickiest words ${trickyAll?'':esc(lab)}</h3><p class="small muted" style="margin:4px 0 8px">${trickyAll?'No mistakes recorded in this period, so these are the words children keep missing overall (not yet secure).':'Words children spelt wrong in this period. Great for a class lesson!'}</p>
    <div class="dlist">${tricky.map(t=>`<div class="drow"><b style="font-size:16px">${esc(t.w)}</b><span class="spacer"></span><span class="small"><b>${t.kids}</b> ${t.kids===1?'child':'children'}</span><span class="small muted">· ${t.miss} misses</span></div>`).join('')||'<p class="muted">No tricky words yet.</p>'}</div></div>
-  <div class="card"><h3 style="font-size:18px">⭐ Busiest spellers this week</h3>
-   <div class="dlist">${stars.map((k,i)=>kidRow(k,`<span class="small"><b>${wk[k.id].a}</b> words · ${wk[k.id].d} day${wk[k.id].d>1?'s':''}</span>${i<3?` <span>${['🥇','🥈','🥉'][i]}</span>`:''}`)).join('')||'<p class="muted">No practice yet this week.</p>'}</div></div>
-  <div class="card"><h3 style="font-size:18px">🏫 Classes</h3>
-   <table style="margin-top:6px"><thead><tr><th>Class</th><th>Children</th><th>Practised this week</th><th>Words secure</th><th>⭐ Stars</th></tr></thead><tbody>
-   ${cls.map(o=>`<tr><td><b>${esc(o.c)}</b> <span class="pill ${teamOf(o.g)}">${GL(o.g)}</span></td><td>${o.n}</td><td><div class="row" style="gap:6px;flex-wrap:nowrap"><div class="bar"><i style="width:${Math.round(o.p/o.n*100)}%"></i></div><span class="small">${Math.round(o.p/o.n*100)}%</span></div></td><td><div class="row" style="gap:6px;flex-wrap:nowrap"><div class="bar"><i style="width:${Math.round(o.sec/o.n)}%"></i></div><span class="small">${Math.round(o.sec/o.n)}%</span></div></td><td>${o.st}</td></tr>`).join('')||'<tr><td colspan="5" class="muted">No classes yet.</td></tr>'}</tbody></table></div>
- </div>`;
+  <div class="card"><h3 style="font-size:18px">⭐ Busiest spellers ${esc(lab)}</h3>
+   <div class="dlist">${busy.map((k,i)=>{const w=st[k.id];return kidRow(k,`<span class="small"><b>${w.a}</b> words · ${w.a?Math.round(w.c/w.a*100):0}% · ${TIMEOK?minsTxt(w.s)+' · ':''}${w.d.size} day${w.d.size>1?'s':''}</span>${i<3?` <span>${['🥇','🥈','🥉'][i]}</span>`:''}`)}).join('')||'<p class="muted">No practice in this period.</p>'}</div></div>
+  <div class="card"><h3 style="font-size:18px">🏫 Classes ${esc(lab)}</h3>
+   <div class="tablewrap"><table style="margin-top:6px"><thead><tr><th>Class</th><th>Children</th><th>Practised</th><th>Words</th><th>% right</th><th>⏱ Time</th><th>Secure (all)</th></tr></thead><tbody>
+   ${cls.map(o=>`<tr><td><b>${esc(o.c)}</b> <span class="pill ${teamOf(o.g)}">${GL(o.g)}</span></td><td>${o.n}</td><td><div class="row" style="gap:6px;flex-wrap:nowrap"><div class="bar"><i style="width:${Math.round(o.p/o.n*100)}%"></i></div><span class="small">${Math.round(o.p/o.n*100)}%</span></div></td><td>${o.a}</td><td>${o.a?Math.round(o.cc/o.a*100)+'%':'—'}</td><td class="small">${TIMEOK?minsTxt(o.s):'—'}</td><td><span class="small">${Math.round(o.sec/o.n)}%</span></td></tr>`).join('')||'<tr><td colspan="7" class="muted">No classes yet.</td></tr>'}</tbody></table></div></div>
+ </div>
+ <div class="card" style="margin-top:14px"><div class="row"><h3 style="font-size:18px">🗓 Daily activity</h3><span class="small muted">words practised each day${TIMEOK?' (hover or tap for minutes)':''}${days.length>31?' · last 31 days of the period':''}</span><span class="spacer"></span></div>
+  <div class="tablewrap" style="margin-top:8px"><table class="heat"><thead><tr><th style="text-align:left">Child</th>${hdays.map(d=>{const dt=new Date(d+'T12:00:00');return `<th class="${d===today?'today':''}">${dt.toLocaleDateString('en-GB',{weekday:'short'}).slice(0,2)}<br>${dt.getDate()}</th>`}).join('')}<th>Words</th><th>⏱</th></tr></thead><tbody>
+  ${kids.slice().sort((a,b)=>a.grade-b.grade||(a.class_name||'').localeCompare(b.class_name||'')||a.first_name.localeCompare(b.first_name)).map(k=>{const w=st[k.id]||{a:0,s:0};return `<tr><td class="hk"><a href="#" data-kid="${k.id}">${esc(k.first_name)}</a> <span class="muted small">${esc(k.class_name||GL(k.grade))}</span></td>${hdays.map(d=>{const c=dayCell(k.id,d);const lv=c.a?Math.min(4,1+Math.floor(c.a/hmax*4)):0;return `<td class="hc l${lv}" title="${esc(k.first_name)} · ${dNice(d)}: ${c.a} words${c.a?`, ${Math.round(c.c/c.a*100)}% right`:''}${TIMEOK?`, ${Math.round(c.s/60)} min`:''}">${c.a||(c.s?'·':'')}</td>`}).join('')}<td><b>${w.a}</b></td><td class="small">${TIMEOK?minsTxt(w.s):'—'}</td></tr>`}).join('')}</tbody></table></div>
+  <p class="small muted" style="margin:6px 0 0">Darker = more words that day. Tap a child’s name for their own 30-day timeline.</p></div>`;
  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{TAB=b.dataset.tab;render()});
+ document.querySelectorAll('[data-dp]').forEach(b=>b.onclick=()=>{DP.mode=b.dataset.dp;if(DP.mode==='custom'&&!DP.from){DP.from=from;DP.to=to}renderDash()});
+ document.querySelectorAll('[data-dm]').forEach(b=>b.onclick=()=>{DP.metric=b.dataset.dm;renderDash()});
+ const f=$('#dpf'),t2=$('#dpt');if(f)f.onchange=()=>{DP.from=f.value;if(!DP.to||DP.to<DP.from)DP.to=DP.from;renderDash()};if(t2)t2.onchange=()=>{DP.to=t2.value;renderDash()};
  $('#dg').onchange=e=>{DF.grade=e.target.value;DF.cls='all';renderDash()};$('#dc').onchange=e=>{DF.cls=e.target.value;renderDash()};
- $('#drefresh').onclick=async()=>{DAILY=null;await load()};bindPlanBtns();
+ $('#drefresh').onclick=async()=>{DAILY=null;DMIS=null;await load()};bindPlanBtns();
+ $('#dcsv').onclick=()=>dashCsv(kids,days,st);
+ document.querySelectorAll('[data-kid]').forEach(x=>x.onclick=e=>{e.preventDefault();kidTimeline(x.dataset.kid)});
  const cp=$('#copynames');if(cp)cp.onclick=()=>{const t=notYet.map(k=>`${k.first_name} (${k.class_name||GL(k.grade)})`).join('\n');navigator.clipboard.writeText(t).then(()=>toast('Names copied ✓'),()=>toast('Couldn’t copy'))};
 }
+/* one child, one day (indexed once per data load) */
+let DAILY_IDX={},TIDX={},DAILY_IDX_FOR=null,TIDX_FOR=null;
+function dayCell(id,d){if(DAILY_IDX_FOR!==DAILY){DAILY_IDX={};(DAILY||[]).forEach(r=>{const k=r.student_id+'|'+String(r.day).slice(0,10);(DAILY_IDX[k]=DAILY_IDX[k]||[]).push(r)});DAILY_IDX_FOR=DAILY}
+ if(TIDX_FOR!==TROWS){TIDX={};(TROWS||[]).forEach(r=>{const k=r.student_id+'|'+String(r.day).slice(0,10);(TIDX[k]=TIDX[k]||[]).push(r)});TIDX_FOR=TROWS}
+ let a=0,c=0,s=0;(DAILY_IDX[id+'|'+d]||[]).forEach(r=>{a+=+r.attempts||0;c+=+r.correct||0});(TIDX[id+'|'+d]||[]).forEach(r=>{s+=+r.secs||0});return {a,c,s}}
+/* download: one row per child, one column per day + totals (opens in Excel) */
+function dashCsv(kids,days,st){const hd=days.slice(-62);const head=['First name','Surname','Grade','Class',...hd.map(d=>dNice(d,{day:'numeric',month:'short'})),'Words','% right','Mistakes','Minutes','Days practised','New words secured'];
+ const rows=kids.map(k=>{const w=st[k.id]||{a:0,c:0,s:0,d:new Set()};return [k.first_name,k.last_name||'',GL(k.grade),k.class_name||'',...hd.map(d=>dayCell(k.id,d).a||''),w.a,w.a?Math.round(w.c/w.a*100):'',Math.max(0,w.a-w.c),Math.round(w.s/60),w.d.size,newSecure(k.id,days[0],days[days.length-1])]});
+ const csvs=[head,...rows].map(r=>r.map(x=>`"${String(x??'').replace(/"/g,'""')}"`).join(',')).join('\r\n');
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+csvs],{type:'text/csv'}));a.download=`spelling-bee-activity-${days[0]}-to-${days[days.length-1]}.csv`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
+/* one child's last 30 days */
+function kidTimeline(id){const k=KIDS.find(x=>x.id===id);if(!k)return;const today=dayStr(new Date()),ds=dList(dAdd(today,-29),today);
+ const rows=ds.map(d=>({d,...dayCell(id,d),n:newSecure(id,d,d)}));const mx=Math.max(1,...rows.map(r=>r.a));const T={a:0,c:0,s:0,n:0,days:0};rows.forEach(r=>{T.a+=r.a;T.c+=r.c;T.s+=r.s;T.n+=r.n;if(r.a||r.s)T.days++});
+ $('#modal').innerHTML=`<div class="modal"><div class="card" style="max-width:820px;width:100%;max-height:92vh;overflow:auto"><div class="row"><div>${avt(PROG[id]?.avatar,44)}</div><div><h2 style="font-size:22px;margin:0">${esc(k.first_name)} ${esc(k.last_name||'')}</h2><div class="small muted">${esc(k.class_name||'')} · ${GL(k.grade)} · last 30 days</div></div><div class="spacer"></div><button class="w" id="ktx">✕ Close</button></div>
+ <div class="grid g4" style="margin:12px 0"><div class="card"><div class="stat">${T.days}</div><div class="small muted">days practised</div></div><div class="card"><div class="stat">${T.a}</div><div class="small muted">words · ${T.a?Math.round(T.c/T.a*100):0}% right</div></div><div class="card"><div class="stat">${Math.max(0,T.a-T.c)}</div><div class="small muted">❌ mistakes</div></div><div class="card"><div class="stat">${TIMEOK?minsTxt(T.s):'—'}</div><div class="small muted">⏱ practice time</div></div><div class="card"><div class="stat">${T.n}</div><div class="small muted">🔵 new words secured</div></div></div>
+ <div class="bars" style="height:150px">${rows.map(r=>{const dt=new Date(r.d+'T12:00:00');return `<div class="bcol" title="${dNice(r.d)}: ${r.a} words${TIMEOK?', '+Math.round(r.s/60)+' min':''}"><div class="bval">${r.a||''}</div><div class="bbar" style="height:${Math.round(r.a/mx*100)}%"></div><div class="blab ${r.d===today?'today':''}">${dt.getDate()}</div></div>`}).join('')}</div>
+ <div class="tablewrap" style="margin-top:14px"><table><thead><tr><th>Day</th><th>Words</th><th>% right</th><th>Mistakes</th><th>⏱ Time</th><th>New secure 🔵</th></tr></thead><tbody>
+ ${rows.slice().reverse().filter(r=>r.a||r.s||r.n).map(r=>`<tr><td>${dNice(r.d)}</td><td><b>${r.a}</b></td><td>${r.a?Math.round(r.c/r.a*100)+'%':'—'}</td><td>${Math.max(0,r.a-r.c)}</td><td>${TIMEOK?minsTxt(r.s):'—'}</td><td>${r.n||''}</td></tr>`).join('')||'<tr><td colspan="6" class="muted">No practice in the last 30 days.</td></tr>'}</tbody></table></div></div></div>`;
+ $('#ktx').onclick=()=>$('#modal').innerHTML='';$('#modal .modal').onclick=e=>{if(e.target.classList.contains('modal'))$('#modal').innerHTML=''}}
 
 /* ---------- school settings, teachers, plan ---------- */
 let SCHOOL=null,PLANS=[],SDRAFT=null,TEACH=[];
@@ -476,8 +537,8 @@ function setHeader(){if(!SCHOOL)return;const h=document.querySelector('header .s
  const w=$('#who');if(w&&SCHOOL.is_admin&&!w.querySelector('#adminbtn')){const a=document.createElement('a');a.id='adminbtn';a.href='admin.html';a.textContent='🛠 Admin';a.style.cssText='color:#fff;font-weight:800;margin-right:6px';w.prepend(a)}}
 
 /* ⏱ time practising (needs setup-sb-time.sql) and ❌ mistakes (wrong attempts) */
-let TIME={},TIMEOK=false;
-async function loadTime(){TIME={};const wk=new Date(Date.now()+4*3600e3-6*864e5).toISOString().slice(0,10);const {data,error}=await ALL(()=>sb.from('sb_time').select('student_id,day,secs'));TIMEOK=!error;
+let TIME={},TIMEOK=false,TROWS=[];
+async function loadTime(){TIME={};const wk=new Date(Date.now()+4*3600e3-6*864e5).toISOString().slice(0,10);const {data,error}=await ALL(()=>sb.from('sb_time').select('student_id,day,secs'));TIMEOK=!error;TROWS=data||[];
  (data||[]).forEach(r=>{const t=TIME[r.student_id]=TIME[r.student_id]||{all:0,wk:0};t.all+=r.secs||0;if(String(r.day)>=wk)t.wk+=r.secs||0})}
 function fmtT(s){s=s||0;if(!s)return '—';if(s<60)return '<1 min';const m=Math.round(s/60);return m<60?m+' min':Math.floor(m/60)+' h '+(m%60?m%60+' min':'')}
 function mistakes(id){const p=PROG[id];if(!p)return 0;if(typeof p.attempts==='number'&&typeof p.correct==='number')return Math.max(0,p.attempts-p.correct);return Object.values(p.tricky||{}).reduce((a,b)=>a+(+b||0),0)}
