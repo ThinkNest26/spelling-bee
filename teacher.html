@@ -821,12 +821,12 @@ let LDALL={};
 function secN(id){const p=PROG[id];return p&&p.secure&&typeof p.secure==='object'?Object.keys(p.secure).length:0}
 function renderLeaders(){
  const kids=KIDS.filter(k=>k.active!==false);const grades=[...new Set(kids.map(k=>+k.grade))].sort((a,b)=>a-b);const medal=['🥇','🥈','🥉'];
- const card=g=>{const rows=kids.filter(k=>+k.grade===g).map(k=>({k,n:secN(k.id)})).filter(r=>r.n>0).sort((a,b)=>b.n-a.n||String(a.k.first_name).localeCompare(b.k.first_name));
+ const card=g=>{const hid=kids.filter(k=>+k.grade===g&&k.leader_hidden);const rows=kids.filter(k=>+k.grade===g&&!k.leader_hidden).map(k=>({k,n:secN(k.id)})).filter(r=>r.n>0).sort((a,b)=>b.n-a.n||String(a.k.first_name).localeCompare(b.k.first_name));
   let place=0,prev=-1;rows.forEach((r,i)=>{if(r.n!==prev){place=i+1;prev=r.n}r.place=place});
   const show=LDALL[g]?rows:rows.slice(0,10);
   return `<div class="card"><div class="row" style="margin-bottom:8px"><h3 style="margin:0">🏅 ${GL(g)}</h3><span class="pill bum">${rows.length} on the board</span></div>
   ${rows.length?`<table style="width:100%;border-collapse:collapse">${show.map(r=>`<tr style="border-top:1px solid #eee"><td style="width:40px;text-align:center;font-size:${r.place<=3?'22px':'15px'};padding:6px 0">${medal[r.place-1]||r.place}</td><td style="width:40px">${SBAvatar.svg((PROG[r.k.id]||{}).avatar||{},32)}</td><td><b>${esc(r.k.first_name)}</b> ${esc(r.k.last_name||'')} <span class="small muted">${esc(r.k.class_name||'')}</span></td><td style="text-align:right;white-space:nowrap">🔵 ${r.n}</td></tr>`).join('')}</table>
-  ${rows.length>10?`<button class="w sm" style="margin-top:8px" data-ldall="${g}">${LDALL[g]?'Show top 10':'Show all '+rows.length}</button>`:''}`:'<p class="small muted">Nobody has a secure word yet.</p>'}</div>`};
+  ${rows.length>10?`<button class="w sm" style="margin-top:8px" data-ldall="${g}">${LDALL[g]?'Show top 10':'Show all '+rows.length}</button>`:''}`:'<p class="small muted">Nobody has a secure word yet.</p>'}${hid.length?`<p class="small muted" style="margin:8px 0 0">🙈 Hidden from children: ${hid.map(k=>esc(k.first_name)+(k.class_name?' ('+esc(k.class_name)+')':'')).join(', ')}</p>`:''}</div>`};
  $('#app').innerHTML=tabs()+`<div class="card" style="margin-bottom:14px"><h2 style="font-size:20px;margin:0 0 6px">🏅 Leaderboards</h2><p class="small muted" style="margin:0">Children are ranked by their secure 🔵 words (spelt correctly 3 times in a row). Each child sees only <b>their own grade’s</b> leaderboard (top 10 and their own place). You can see every grade here.</p><div class="row" style="margin-top:8px"><button class="w sm" id="ld-ref">↻ Refresh</button></div></div>
  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr))">${grades.map(card).join('')||'<p class="muted">No children yet.</p>'}</div>`;
  bindTabs();
