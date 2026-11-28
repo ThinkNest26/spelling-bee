@@ -1248,7 +1248,7 @@ function render(){
  const a=$('#app');
  if(V.screen==='home')a.innerHTML=home();
  else if(!ME){V={screen:'home',team:null};a.innerHTML=home()}
- else a.innerHTML=top()+`<main>${({team:teamView,learn:learnView,lcwc:lcwcView,test:testView,miss:missView,done:doneView,gap:gapView,games:gamesView,avatar:avatarView,realbee:rbView,wod:wodView,gballoon:balloonView,gfriend:friendView,ghive:hiveView,gcatch:catchView,ggarden:gardenView,grace:raceView,gl:glView,xdrill:xDrillView,xrules:xRulesView,xsent:xSentView,xweekly:xWeeklyView,xfamily:xFamilyView,xhtest:xHomeTestView,xsemi:xSemiView})[V.screen]()}</main>`;
+ else a.innerHTML=top()+`<main>${({team:teamView,learn:learnView,lcwc:lcwcView,test:testView,miss:missView,done:doneView,gap:gapView,games:gamesView,avatar:avatarView,realbee:rbView,wod:wodView,gballoon:balloonView,gfriend:friendView,ghive:hiveView,gcatch:catchView,ggarden:gardenView,grace:raceView,gl:glView,xdrill:xDrillView,xrules:xRulesView,xsent:xSentView,xweekly:xWeeklyView,xfamily:xFamilyView,xhtest:xHomeTestView,xsemi:xSemiView,lboard:lbGradeView})[V.screen]()}</main>`;
  after();if(V.screen==='ghive')hiveAfter();if(V.screen==='grace')raceAfter();
  try{actAfterRender()}catch(e){}
  try{tickerSync()}catch(e){}
@@ -1415,6 +1415,7 @@ function teamView(){
   <div class="act" data-go="miss"><div class="e">🧩</div><h3>Missing letters</h3><p>Find the letters that fell out of the word!</p></div>
   <div class="act" data-go="gap"><div class="e">📝</div><h3>Fill the gap</h3><p>Listen to the sentence and spell the missing word.</p></div>
   ${xTiles(t)}
+  ${ME&&t.id===ME.team?`<div class="act" data-go="lboard"><div class="e">🏅</div><h3>${esc(gradeName(ME.grade))} leaderboard</h3><p>See who has the most secure words in your grade!</p></div>`:''}
   ${ME&&t.id===ME.team?`<div class="act gl" data-glopen="1"><div class="e">📋</div><h3>GL Practice</h3><p>Practise for your GL English test: Test A and Test B.</p></div>`:''}
  </div>`;
 }
@@ -1734,6 +1735,20 @@ function friendView(){const head=gHead('🌐 Race a friend');
   :`<div class="panel gend"><div style="font-size:80px">🐝💨</div><h2 class="f" style="font-size:32px">${esc(d.winner||'Your friend')} won this time!</h2><p style="font-size:20px">You spelt ${me?me.pos:0} words. Great racing! Practise and race again!</p>`)+
   `<div class="row" style="margin-top:14px"><button class="y" data-g="gfriend">New race 🔁</button><button class="w" data-g="menu">More games</button></div></div>${lbHTML()}`}
 let LB={team:null,rows:null,busy:false};
+/* 🏅 grade leaderboard: the child sees only their own grade at their own school (the database checks this) */
+function gradeName(g){g=+g;return g===0?'KG2':'Grade '+g}
+let LBG={d:null,busy:false,at:0};
+function lbGradeView(){if(LBG.code!==ME.code)LBG={d:null,busy:false,at:0,code:ME.code};if(!LBG.busy&&(!LBG.d||Date.now()-LBG.at>30000))setTimeout(lbGradeLoad,0);
+ const g=gradeName(ME.grade),d=LBG.d,medal=['🥇','🥈','🥉'];let body;
+ if(!d)body='<p class="muted">Loading…</p>';
+ else if(d.error)body='<p class="muted">The leaderboard isn’t available right now. Try again soon.</p>';
+ else if(!d.top.length)body='<p class="muted" style="font-size:18px">Nobody has a secure word yet. Spell a word correctly 3 times in a row to be the first! 🐝</p>';
+ else body=`<ol class="lbl">${d.top.map(x=>`<li class="${x.me?'me':''}"><span class="lbm">${medal[x.place-1]||x.place}</span>${avatarSVG(x.avatar||{},38)}<span class="lbn">${esc(x.name)}${x.me?' (you)':''}${x.cls?` <span class="lbw">· ${esc(x.cls)}</span>`:''}</span><span class="lbw">🔵 ${x.sec}</span></li>`).join('')}</ol>`;
+ const mine=d&&!d.error?(d.mine?(d.top.some(x=>x.me)?`<p style="font-size:20px;margin-top:12px">You are number <b>${d.mine.place}</b> in ${esc(g)}! 🎉</p>`:`<p style="font-size:20px;margin-top:12px">You are number <b>${d.mine.place}</b> of ${d.players} with 🔵 ${d.mine.sec} secure words. Keep practising to climb up! 💪</p>`):(d.top.length?'<p style="font-size:18px;margin-top:12px">Secure your first word to join the leaderboard! 🐝</p>':'')):'';
+ return `<div class="row" style="justify-content:space-between;margin-bottom:14px"><button class="back" data-go="team">← Back</button><div class="f" style="font-size:22px">🏅 ${esc(g)} leaderboard</div></div>
+ <div class="panel lb" style="margin-top:0"><h3 class="f" style="font-size:26px;margin:0 0 6px">🏅 Top spellers in ${esc(g)}</h3><p class="muted" style="margin:0 0 12px">Who has the most secure 🔵 words? A word is secure when you spell it right 3 times in a row.</p>${body}${mine}</div>`}
+async function lbGradeLoad(){if(!ME||LBG.busy)return;LBG.busy=true;try{await flush()}catch(e){}
+ const d=await xRun('sb_grade_leaders',{p_code:ME.code});LBG.busy=false;if(LBG.code!==ME.code)return;LBG.at=Date.now();LBG.d=(d&&Array.isArray(d.top))?d:{error:1};if(V.screen==='lboard')render()}
 function lbHTML(){const t=LB.team||ME.team;if(LB.team!==t||!LB.rows)setTimeout(()=>lbLoad(t),0);
  const medal=['🥇','🥈','🥉'];
  return `<div class="panel lb" id="lb"><h3 class="f" style="font-size:26px;margin:0 0 10px">🏆 Race leaderboard</h3>
